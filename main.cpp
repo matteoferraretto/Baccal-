@@ -18,18 +18,15 @@
 
 int main(int argc, char* argv[]){
     
-    std::string random_position_fen = "4k2r/4r3/8/8/8/8/4R3/R3K3 w Qk - 0 1";
+    std::string random_position_fen = "k7/3P4/8/8/8/8/8/K7 w Qk - 0 1";
     Position pos = Position(random_position_fen);
     pos.PrintBoard();
     std::cout << "\n";
-    PrintMask(pos.black_covered_squares_mask);
 
     std::vector<Move> legal_moves = pos.LegalMoves();
     for(Move& move: legal_moves){
         move.PrintMove();
-        std::cout << "is this move legal? " << pos.IsLegal(move) << "\n";
     }
-    std::cout << pos.material_value << "\n";
 
 
     /*

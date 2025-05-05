@@ -11,10 +11,24 @@ Move::Move(Square current_square, Square target_square, char piece, bool is_capt
     this->piece = piece;
     this->is_special_move = false; 
     this->is_capture = is_capture;
+    this->new_piece = 'z'; // conventionally means that this move was not a pawn promotion.
+}
+
+Move::Move(Square target_square, char new_piece){
+    this->target_square = target_square;
+    this->new_piece = new_piece;
+    this->is_capture = false;
+    this->current_square.j = target_square.j;
+    if(target_square.i == 0){ this->piece = 'P'; this->current_square.i = target_square.i+1; }
+    else if(target_square.i == 7){ this->piece = 'p'; this->current_square.i = target_square.i-1; }
 }
 
 void Move::PrintMove(){
-    std::cout << "the piece " << this->piece << " moves from (" << this->current_square.i << ", " << this->current_square.j << ") to (" << this->target_square.i << ", " << this->target_square.j << "). ";
+    std::cout << this->piece << " (" << this->current_square.i << ", " << this->current_square.j << ") -> (" << this->target_square.i << ", " << this->target_square.j << ") ";
+    // if pawn promotion
+    if(this->new_piece != 'z'){
+        std::cout << this->new_piece << ". ";
+    }
     if(this->is_capture){ std::cout << "This is a capture."; }
     std::cout << "\n";
 }
@@ -159,26 +173,109 @@ std::vector<Move> Position::LegalMoves(){
             char c = this->board[i][j];
             if(this->white_to_move){
                 // if it's white to move, ignore empty squares or squares with black pieces
-                if(c==' ' || c=='p' || c=='k' || c=='q' || c=='r' || c=='b' || c=='n'){
-                    continue;
-                }
-                // instead, depending on the piece create the vector of target squares where the piece can go
+                if(c==' ' || c=='p' || c=='k' || c=='q' || c=='r' || c=='b' || c=='n'){ continue; }
+                // instead, depending on the piece, create the vector of target squares where the piece can go
                 else{
                     current_square.i = i; current_square.j = j;
-                    switch (c)
-                    {
-                    case 'R': // Rook moves: for every target square, build the corresponding move
-                        target_squares = RookTargetSquares(current_square, this->white_pieces_mask, this->black_pieces_mask);
-                        for(Square& target_square: target_squares){
+                    // Rook moves: for every target square, build the corresponding move
+                    if(c == 'R'){
+                        for(Square& target_square: RookTargetSquares(current_square, this->white_pieces_mask, this->black_pieces_mask)){
                             Move move = Move(current_square, target_square, c, this->black_pieces_mask[target_square.i][target_square.j]);
-                            moves.push_back(move);
+                            if(IsLegal(move)){ moves.push_back(move); }
                         }
-                        break;
-                    case 'Q':
-                        break;
-                    
-                    default:
-                        break;
+                    }
+                    else if(c == 'B'){
+                        for(Square& target_square: BishopTargetSquares(current_square, this->white_pieces_mask, this->black_pieces_mask)){
+                            Move move = Move(current_square, target_square, c, this->black_pieces_mask[target_square.i][target_square.j]);
+                            if(IsLegal(move)){ moves.push_back(move); }
+                        }
+                    }
+                    else if(c == 'Q'){
+                        for(Square& target_square: QueenTargetSquares(current_square, this->white_pieces_mask, this->black_pieces_mask)){
+                            Move move = Move(current_square, target_square, c, this->black_pieces_mask[target_square.i][target_square.j]);
+                            if(IsLegal(move)){ moves.push_back(move); }
+                        }
+                    }
+                    else if(c == 'K'){
+                        for(Square& target_square: KingTargetSquares(current_square, this->white_pieces_mask)){
+                            Move move = Move(current_square, target_square, c, this->black_pieces_mask[target_square.i][target_square.j]);
+                            if(IsLegal(move)){ moves.push_back(move); }
+                        }
+                    }
+                    else if(c == 'N'){
+                        for(Square& target_square: KnightTargetSquares(current_square, this->white_pieces_mask)){
+                            Move move = Move(current_square, target_square, c, this->black_pieces_mask[target_square.i][target_square.j]);
+                            if(IsLegal(move)){ moves.push_back(move); }
+                        }
+                    }
+                    else if(c == 'P'){
+                        for(Square& target_square: WhitePawnTargetSquares(current_square, this->white_pieces_mask, this->black_pieces_mask)){
+                            // pawn promotion
+                            if(target_square.i == 0){
+                                for(int a=0; a<4; a++){
+                                    Move move = Move(target_square, pieces_white_pawn_becomes[a]);
+                                    if(IsLegal(move)){ moves.push_back(move); }
+                                }
+                            }
+                            // normal pawn moves
+                            else{
+                                Move move = Move(current_square, target_square, c, this->black_pieces_mask[target_square.i][target_square.j]);
+                                if(IsLegal(move)){ moves.push_back(move); }
+                            }
+                        }
+                    }
+                }
+            }
+            // if it is black to move do the specular operations
+            else{
+                if(c==' ' || c=='P' || c=='K' || c=='Q' || c=='R' || c=='B' || c=='N'){ continue; }
+                else{
+                    current_square.i = i; current_square.j = j;
+                    if(c == 'r'){
+                        for(Square& target_square: RookTargetSquares(current_square, this->black_pieces_mask, this->white_pieces_mask)){
+                            Move move = Move(current_square, target_square, c, this->white_pieces_mask[target_square.i][target_square.j]);
+                            if(IsLegal(move)){ moves.push_back(move); }
+                        }
+                    }
+                    else if(c == 'b'){
+                        for(Square& target_square: BishopTargetSquares(current_square, this->black_pieces_mask, this->white_pieces_mask)){
+                            Move move = Move(current_square, target_square, c, this->white_pieces_mask[target_square.i][target_square.j]);
+                            if(IsLegal(move)){ moves.push_back(move); }
+                        }
+                    }
+                    else if(c == 'q'){
+                        for(Square& target_square: QueenTargetSquares(current_square, this->black_pieces_mask, this->white_pieces_mask)){
+                            Move move = Move(current_square, target_square, c, this->white_pieces_mask[target_square.i][target_square.j]);
+                            if(IsLegal(move)){ moves.push_back(move); }
+                        }
+                    }
+                    else if(c == 'k'){
+                        for(Square& target_square: KingTargetSquares(current_square, this->black_pieces_mask)){
+                            Move move = Move(current_square, target_square, c, this->white_pieces_mask[target_square.i][target_square.j]);
+                            if(IsLegal(move)){ moves.push_back(move); }
+                        }
+                    }
+                    else if(c == 'n'){
+                        for(Square& target_square: KnightTargetSquares(current_square, this->black_pieces_mask)){
+                            Move move = Move(current_square, target_square, c, this->white_pieces_mask[target_square.i][target_square.j]);
+                            if(IsLegal(move)){ moves.push_back(move); }
+                        }
+                    }
+                    else if(c == 'p'){
+                        for(Square& target_square: BlackPawnTargetSquares(current_square, this->black_pieces_mask, this->white_pieces_mask)){
+                            // pawn promotion
+                            if(target_square.i == 7){
+                                for(int a=0; a<4; a++){
+                                    Move move = Move(target_square, pieces_black_pawn_becomes[a]);
+                                    if(IsLegal(move)){ moves.push_back(move); }
+                                }
+                            }
+                            // normal pawn moves
+                            else{
+                                Move move = Move(current_square, target_square, c, this->white_pieces_mask[target_square.i][target_square.j]);
+                                if(IsLegal(move)){ moves.push_back(move); }
+                            }
+                        }
                     }
                 }
             }

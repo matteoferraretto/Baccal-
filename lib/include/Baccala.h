@@ -50,6 +50,8 @@ const int knight_deltas[8][2] = {
 const int king_deltas[8][2] = {
     {1, 1}, {0, 1}, {-1, 1}, {1, 0}, {-1, 0}, {1, -1}, {0, -1}, {-1, -1}
 };
+const char pieces_white_pawn_becomes[4] = {'Q', 'R', 'B', 'N'};
+const char pieces_black_pawn_becomes[4] = {'q', 'r', 'b', 'n'};
 
 // useful functions
 void PrintMask(Mask mask);
@@ -68,10 +70,13 @@ public:
     bool is_special_move;
     bool is_capture;
     bool is_check;
+    char new_piece; // used for pawn promotion
     //bool is_check_mate;
 
-    // constructors
+    // constructor for a normal move
     Move(Square current_square, Square target_square, char piece, bool is_capture);
+    // constructor for pawn promotion
+    Move(Square target_square, char new_piece);
     //Move(std::string special_move);
 
     // methods
