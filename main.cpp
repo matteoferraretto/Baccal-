@@ -18,16 +18,16 @@
 
 int main(int argc, char* argv[]){
     
-    std::string random_position_fen = "k7/3P4/8/8/8/8/8/K7 w Qk - 0 1";
+    std::string random_position_fen = "k7/8/2p5/pP6/8/8/8/Kb6 w KQkq a6 3 50";
     Position pos = Position(random_position_fen);
     pos.PrintBoard();
+    std::cout << pos.half_move_counter << " " << pos.move_counter << "\n";
     std::cout << "\n";
 
     std::vector<Move> legal_moves = pos.LegalMoves();
     for(Move& move: legal_moves){
-        move.PrintMove();
+        std::cout << move.AlgebraicNotation() << "\n";
     }
-
 
     /*
     Square current_square; current_square.i = 6; current_square.j = 1;
@@ -41,5 +41,8 @@ int main(int argc, char* argv[]){
     //PrintMoves(moves);
     */
 
+    std::cout << (int)('a') << std::endl;
+    std::cout << ((int)('1') - 48) << std::endl;
+    
     return 0;
 }

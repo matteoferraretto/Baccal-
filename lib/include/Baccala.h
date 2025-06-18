@@ -43,7 +43,7 @@ const Board empty_board = {
     {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
     {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '}
 };
-const std::string starting_position_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w Kk - 0 1";
+const std::string starting_position_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const int knight_deltas[8][2] = {
     {1, 2}, {2, 1}, {2, -1}, {1, -2}, {-1, -2}, {-2, -1}, {-2, 1}, {-1, 2}
 };
@@ -57,6 +57,8 @@ const char pieces_black_pawn_becomes[4] = {'q', 'r', 'b', 'n'};
 void PrintMask(Mask mask);
 void PrintMoves(std::vector<Square> moves);
 int PieceValue(char piece);
+std::string SquareToAlphabet(Square square);
+Square AlphabetToSquare(std::basic_string<char> square_string);
 
 // Class for chess move
 class Move
@@ -67,16 +69,19 @@ public:
     Square target_square;
     char piece;
     char side_to_move;
-    bool is_special_move;
     bool is_capture;
     bool is_check;
+    bool is_castling = false;
     char new_piece; // used for pawn promotion
+    char castling_side; // 'K': white castles kingside, 'Q' white castles queenside, 'k' and 'q' are analogues for black
     //bool is_check_mate;
 
     // constructor for a normal move
     Move(Square current_square, Square target_square, char piece, bool is_capture);
     // constructor for pawn promotion
     Move(Square target_square, char new_piece);
+    // constructor for castling
+    Move(char castling_side);
     //Move(std::string special_move);
 
     // methods
@@ -96,7 +101,6 @@ public:
     bool white_to_move; // 1 = white; 0 = black
     Board board = empty_board;
     char castling_rights;
-    std::string en_passant_target_square;
     bool can_white_castle_kingside = false;
     bool can_white_castle_queenside = false;
     bool can_black_castle_kingside = false;
@@ -108,8 +112,11 @@ public:
     Mask black_covered_squares_mask = empty_mask;
     Square white_king_square;
     Square black_king_square;
+    Square en_passant_target_square = {0, 0}; // if no en passant is possible, conventionally the square is (0,0) = a8. This will never be a valid target square!
     bool is_check;
     int material_value = 0;
+    int move_counter = 0;
+    int half_move_counter = 0;
 
     // constructors
     Position(std::string fen);
@@ -144,9 +151,9 @@ Mask KingMovesMask(Square current_square, Mask your_pieces_mask);
 Mask KingCoveredSquaresMask(Square current_square);
 std::vector<Square> KingTargetSquares(Square current_square, Mask your_pieces_mask);
 
-Mask WhitePawnMovesMask(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask);
+Mask WhitePawnMovesMask(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask, Square en_passant_target_square);
 Mask WhitePawnCoveredSquaresMask(Square current_square);
-std::vector<Square> WhitePawnTargetSquares(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask);
+std::vector<Square> WhitePawnTargetSquares(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask, Square en_passant_target_square);
 
 Mask BlackPawnMovesMask(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask);
 Mask BlackPawnCoveredSquaresMask(Square current_square);
@@ -157,3 +164,4 @@ Mask BlackPiecesMask(Board board);
 Mask AllPiecesMask(Board board);
 Mask WhiteCoveredSquaresMask(Board board);
 Mask BlackCoveredSquaresMask(Board board);
+Position NewPosition(Position old_position, Move move);

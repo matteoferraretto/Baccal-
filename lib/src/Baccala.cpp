@@ -3,13 +3,13 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <typeinfo>
 
 
 Move::Move(Square current_square, Square target_square, char piece, bool is_capture){
     this->current_square = current_square; 
     this->target_square = target_square; 
     this->piece = piece;
-    this->is_special_move = false; 
     this->is_capture = is_capture;
     this->new_piece = 'z'; // conventionally means that this move was not a pawn promotion.
 }
@@ -23,7 +23,17 @@ Move::Move(Square target_square, char new_piece){
     else if(target_square.i == 7){ this->piece = 'p'; this->current_square.i = target_square.i-1; }
 }
 
+Move::Move(char castling_side){
+    this->castling_side = castling_side;
+    this->is_castling = true;
+}
+
 void Move::PrintMove(){
+    if(this->is_castling){
+        if(this->castling_side == 'K' || this->castling_side == 'k'){ std::cout << "O-O" << "\n"; }
+        else if(this->castling_side == 'Q' || this->castling_side == 'q'){ std::cout << "O-O-O" << "\n"; }
+        return;
+    }
     std::cout << this->piece << " (" << this->current_square.i << ", " << this->current_square.j << ") -> (" << this->target_square.i << ", " << this->target_square.j << ") ";
     // if pawn promotion
     if(this->new_piece != 'z'){
@@ -34,7 +44,28 @@ void Move::PrintMove(){
 }
 
 std::string Move::AlgebraicNotation(){
-    return "not supported yet";
+    std::string algebraic_notation;
+    // castling
+    if(this->is_castling){
+        if(this->castling_side == 'K' || this->castling_side == 'k'){ algebraic_notation = "O-O"; }
+        else if(this->castling_side == 'Q' || this->castling_side == 'q'){ algebraic_notation = "O-O-O"; }
+    }
+    // normal move
+    else{
+        // pawn moves
+        if(this->piece=='P' || this->piece=='p'){
+            algebraic_notation = std::string(); 
+            if(this->is_capture){ algebraic_notation += SquareToAlphabet(this->current_square)[0]; algebraic_notation += 'x'; }
+            algebraic_notation += SquareToAlphabet(this->target_square);
+            if(this->new_piece != 'z'){ algebraic_notation += '='; algebraic_notation += this->new_piece; }
+        }
+        else{
+            algebraic_notation = std::string() + this->piece + SquareToAlphabet(this->current_square);
+            if(this->is_capture){ algebraic_notation += 'x'; }
+            algebraic_notation += SquareToAlphabet(this->target_square);
+        }
+    }
+    return algebraic_notation;
 }
 
 Move::~Move(){};
@@ -76,6 +107,15 @@ Position::Position(std::string fen)
         else if(c == 'k') { this->can_black_castle_kingside = true; continue; }
         else if(c == 'q') { this->can_black_castle_queenside = true; continue; }
     }
+
+    // set en-passant target square if different from '-'
+    if(words[3] != "-"){
+        this->en_passant_target_square = AlphabetToSquare(words[3]);
+    }
+
+    // set half move counter and move counter from fen
+    this->half_move_counter = std::stoi(words[4]);
+    this->move_counter = std::stoi(words[5]);
 
     // evaluate masks of white, black and all pieces, position of the kings and material value
     for(int i=0; i<8; i++){
@@ -143,21 +183,35 @@ void Position::PrintBoard(void){
 };
 
 bool Position::IsLegal(Move move){
-    // create a new board after the move
     Board new_board = this->board;
-    new_board[move.current_square.i][move.current_square.j] = ' ';
-    new_board[move.target_square.i][move.target_square.j] = move.piece;
-    // generate the mask of covered squares by the opponent after the move
-    // then check if your king is in a square attacked by the opponent after the move
     Mask opponent_covered_squares_mask;
     bool is_legal;
-    if(this->white_to_move){
-        opponent_covered_squares_mask = BlackCoveredSquaresMask(new_board);
-        is_legal = !(opponent_covered_squares_mask[this->white_king_square.i][this->white_king_square.j]);
+    // for a normal move which is not castling
+    if(!move.is_castling){
+        // create a new board after the move
+        new_board[move.current_square.i][move.current_square.j] = ' ';
+        new_board[move.target_square.i][move.target_square.j] = move.piece;
+        // generate the mask of covered squares by the opponent after the move
+        // then check if your king is in a square attacked by the opponent after the move
+        if(this->white_to_move){
+            opponent_covered_squares_mask = BlackCoveredSquaresMask(new_board);
+            is_legal = !(opponent_covered_squares_mask[this->white_king_square.i][this->white_king_square.j]);
+        }
+        else{
+            opponent_covered_squares_mask = WhiteCoveredSquaresMask(new_board);      
+            is_legal = !(opponent_covered_squares_mask[this->black_king_square.i][this->black_king_square.j]);
+        }
     }
+    // manage castling: here we don't need to build the new board, we can manage every case independently
     else{
-        opponent_covered_squares_mask = WhiteCoveredSquaresMask(new_board);      
-        is_legal = !(opponent_covered_squares_mask[this->black_king_square.i][this->black_king_square.j]);
+        if(move.castling_side == 'K'){
+            opponent_covered_squares_mask = BlackCoveredSquaresMask(board);
+            is_legal = !opponent_covered_squares_mask[7][4] && !opponent_covered_squares_mask[7][5] && !opponent_covered_squares_mask[7][6];
+        }
+        else if(move.castling_side == 'Q'){
+            opponent_covered_squares_mask = BlackCoveredSquaresMask(board);
+            is_legal = !opponent_covered_squares_mask[7][4] && !opponent_covered_squares_mask[7][3] && !opponent_covered_squares_mask[7][2];
+        }
     }
     return is_legal;
 }
@@ -165,8 +219,10 @@ bool Position::IsLegal(Move move){
 std::vector<Move> Position::LegalMoves(){
     // initialize stuff
     std::vector<Move> moves;
+    moves.reserve(80);
     Square current_square; 
     std::vector<Square> target_squares;
+    bool is_capture;
     // scan the board to find the pieces
     for(int i=0; i<8; i++){
         for(int j=0; j<8; j++){
@@ -209,7 +265,7 @@ std::vector<Move> Position::LegalMoves(){
                         }
                     }
                     else if(c == 'P'){
-                        for(Square& target_square: WhitePawnTargetSquares(current_square, this->white_pieces_mask, this->black_pieces_mask)){
+                        for(Square& target_square: WhitePawnTargetSquares(current_square, this->white_pieces_mask, this->black_pieces_mask, this->en_passant_target_square)){
                             // pawn promotion
                             if(target_square.i == 0){
                                 for(int a=0; a<4; a++){
@@ -219,7 +275,9 @@ std::vector<Move> Position::LegalMoves(){
                             }
                             // normal pawn moves
                             else{
-                                Move move = Move(current_square, target_square, c, this->black_pieces_mask[target_square.i][target_square.j]);
+                                if(target_square.i == 2 && abs(target_square.j - current_square.j) == 1){ is_capture = true; } // if en passant this is a capture
+                                else{ is_capture = this->black_pieces_mask[target_square.i][target_square.j]; } // else this is a capture if there's a piece on the target square
+                                Move move = Move(current_square, target_square, c, is_capture);
                                 if(IsLegal(move)){ moves.push_back(move); }
                             }
                         }
@@ -281,6 +339,27 @@ std::vector<Move> Position::LegalMoves(){
             }
         }
     }
+    // castling
+    if(this->white_to_move){
+        if(this->can_white_castle_kingside && this->board[7][4]=='K' && this->board[7][5]==' ' && this->board[7][6] == ' ' && this->board[7][7] == 'R'){
+            Move move = Move('K');
+            if(IsLegal(move)){ moves.push_back(move); }
+        }
+        else if(this->can_white_castle_queenside && this->board[7][0]=='R' && this->board[7][1]==' ' && this->board[7][2]==' ' && this->board[7][3]==' ' && this->board[7][4]=='K'){
+            Move move = Move('Q');
+            if(IsLegal(move)){ moves.push_back(move); }
+        }
+    }
+    else{
+        if(this->can_black_castle_kingside && this->board[0][4]=='k' && this->board[0][5]==' ' && this->board[0][6] == ' ' && this->board[0][7] == 'r'){
+            Move move = Move('k');
+            if(IsLegal(move)){ moves.push_back(move); }
+        }
+        else if(this->can_black_castle_queenside && this->board[0][0]=='r' && this->board[0][1]==' ' && this->board[0][2]==' ' && this->board[0][3]==' ' && this->board[0][4]=='k'){
+            Move move = Move('q');
+            if(IsLegal(move)){ moves.push_back(move); }
+        }
+    }
     return moves;
 }
 
@@ -323,6 +402,21 @@ int PieceValue(char piece){
     return value;
 };
 
+// convert a Square object to a string like a1, b2, etc.
+std::string SquareToAlphabet(Square square){
+    char rank = (char)(56 - square.i);
+    char file = static_cast<char>('a' + square.j);
+    return (std::string() + file + rank);
+}
+
+// 
+Square AlphabetToSquare(std::basic_string<char> square_string){
+    char file = square_string.at(0);
+    char rank = square_string.at(1);
+    Square square = {7 - ((int)(rank) - 49), (int)file - 97};
+    return square; 
+}
+
 // ---------------------------------------------
 // --------    MANAGE KNIGTHS   ----------------
 // ---------------------------------------------
@@ -354,6 +448,7 @@ Mask KnightCoveredSquaresMask(Square current_square) {
 
 std::vector<Square> KnightTargetSquares(Square current_square, Mask your_pieces_mask){
     std::vector<Square> target_squares;
+    target_squares.reserve(8);
     Square target_square;
     for(int d = 0; d < 8; d++){
         target_square.i = current_square.i + knight_deltas[d][0];
@@ -427,7 +522,7 @@ Mask RookCoveredSquaresMask(Square current_square, Mask all_pieces_mask) {
 }
 
 std::vector<Square> RookTargetSquares(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask){
-    std::vector<Square> moves;
+    std::vector<Square> target_squares;
     Square target_square = current_square;
     // bottom sliding
     for(int x = current_square.i+1; x < 8; x++){
@@ -435,33 +530,33 @@ std::vector<Square> RookTargetSquares(Square current_square, Mask your_pieces_ma
         // if you encounter your own piece in the sliding, stop
         if(your_pieces_mask[x][current_square.j]) { break; }
         // if you encounter an opponent's piece in the sliding, consider the move and stop
-        if(opponent_pieces_mask[x][current_square.j]) { moves.push_back(target_square); break; }
+        if(opponent_pieces_mask[x][current_square.j]) { target_squares.push_back(target_square); break; }
         // else just consider the move
-        moves.push_back(target_square);
+        target_squares.push_back(target_square);
     }
     // top sliding
     for(int x = current_square.i-1; x >= 0; x--){
         target_square.i = x;
         if(your_pieces_mask[x][current_square.j]) { break; }
-        if(opponent_pieces_mask[x][current_square.j] ) { moves.push_back(target_square); break; }
-        moves.push_back(target_square);
+        if(opponent_pieces_mask[x][current_square.j] ) { target_squares.push_back(target_square); break; }
+        target_squares.push_back(target_square);
     }
     target_square.i = current_square.i;
     // right sliding
     for(int y = current_square.j+1; y < 8; y++){
         target_square.j = y;
         if(your_pieces_mask[current_square.i][y]) { break; }
-        if(opponent_pieces_mask[current_square.i][y] ) { moves.push_back(target_square); break; }
-        moves.push_back(target_square);
+        if(opponent_pieces_mask[current_square.i][y] ) { target_squares.push_back(target_square); break; }
+        target_squares.push_back(target_square);
     }
     // left sliding
     for(int y = current_square.j-1; y >= 0; y--){
         target_square.j = y;
         if(your_pieces_mask[current_square.i][y]) { break; }
-        if(opponent_pieces_mask[current_square.i][y] ) { moves.push_back(target_square); break; }
-        moves.push_back(target_square);
+        if(opponent_pieces_mask[current_square.i][y] ) { target_squares.push_back(target_square); break; }
+        target_squares.push_back(target_square);
     }
-    return moves;
+    return target_squares;
 }
 
 // ---------------------------------------------
@@ -550,15 +645,15 @@ Mask BishopCoveredSquaresMask(Square current_square, Mask all_pieces_mask) {
 }
 
 std::vector<Square> BishopTargetSquares(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask){
-    std::vector<Square> moves;
+    std::vector<Square> target_squares;
     Square target_square = current_square;
     // slide to bottom right
     for(int step=1; step<8; step++){
         target_square.i++;
         target_square.j++;
         if(target_square.i > 7 || target_square.j > 7 || your_pieces_mask[target_square.i][target_square.j]){ break; }
-        if(opponent_pieces_mask[target_square.i][target_square.j]){ moves.push_back(target_square); break; }
-        moves.push_back(target_square);
+        if(opponent_pieces_mask[target_square.i][target_square.j]){ target_squares.push_back(target_square); break; }
+        target_squares.push_back(target_square);
     }
     // slide to top left
     target_square = current_square;
@@ -566,8 +661,8 @@ std::vector<Square> BishopTargetSquares(Square current_square, Mask your_pieces_
         target_square.i--;
         target_square.j--;
         if(target_square.i < 0 || target_square.j < 0 || your_pieces_mask[target_square.i][target_square.j]){ break; }
-        if(opponent_pieces_mask[target_square.i][target_square.j]){ moves.push_back(target_square); break; }
-        moves.push_back(target_square);
+        if(opponent_pieces_mask[target_square.i][target_square.j]){ target_squares.push_back(target_square); break; }
+        target_squares.push_back(target_square);
     }
     // slide to bottom left
     target_square = current_square;
@@ -575,8 +670,8 @@ std::vector<Square> BishopTargetSquares(Square current_square, Mask your_pieces_
         target_square.i++;
         target_square.j--;
         if(target_square.i > 7 || target_square.j < 0 || your_pieces_mask[target_square.i][target_square.j]){ break; }
-        if(opponent_pieces_mask[target_square.i][target_square.j]){ moves.push_back(target_square); break; }
-        moves.push_back(target_square);
+        if(opponent_pieces_mask[target_square.i][target_square.j]){ target_squares.push_back(target_square); break; }
+        target_squares.push_back(target_square);
     }
     // slide to top right
     target_square = current_square;
@@ -584,10 +679,10 @@ std::vector<Square> BishopTargetSquares(Square current_square, Mask your_pieces_
         target_square.i--;
         target_square.j++;
         if(target_square.i < 0 || target_square.j > 7 || your_pieces_mask[target_square.i][target_square.j]){ break; }
-        if(opponent_pieces_mask[target_square.i][target_square.j]){ moves.push_back(target_square); break; }
-        moves.push_back(target_square);
+        if(opponent_pieces_mask[target_square.i][target_square.j]){ target_squares.push_back(target_square); break; }
+        target_squares.push_back(target_square);
     }
-    return moves;
+    return target_squares;
 }
 
 // ---------------------------------------------
@@ -639,6 +734,7 @@ Mask KingCoveredSquaresMask(Square current_square) {
 
 std::vector<Square> KingTargetSquares(Square current_square, Mask your_pieces_mask){
     std::vector<Square> target_squares;
+    target_squares.reserve(8);
     Square target_square;
     for(int d = 0; d < 8; d++){
         target_square.i = current_square.i + king_deltas[d][0];
@@ -653,7 +749,7 @@ std::vector<Square> KingTargetSquares(Square current_square, Mask your_pieces_ma
 // ---------------------------------------------
 // -----------    MANAGE PAWNS   ---------------
 // ---------------------------------------------
-Mask WhitePawnMovesMask(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask){
+Mask WhitePawnMovesMask(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask, Square en_passant_target_square){
     Mask mask = empty_mask;
     if(current_square.i != 0){
         // normal captures
@@ -666,6 +762,10 @@ Mask WhitePawnMovesMask(Square current_square, Mask your_pieces_mask, Mask oppon
             if(opponent_pieces_mask[current_square.i-1][current_square.j+1]){
                 mask[current_square.i-1][current_square.j+1] = 1;
             }
+        }
+        // en passant captures: if pawn is in 5th rank and faces diagonally an en passant target square  
+        if(current_square.i == 3 && en_passant_target_square.i == 2 && abs(current_square.j - en_passant_target_square.j) == 1){
+            mask[en_passant_target_square.i][en_passant_target_square.j] = 1;
         }
         // normal advance
         if(!your_pieces_mask[current_square.i-1][current_square.j] && !opponent_pieces_mask[current_square.i-1][current_square.j]){
@@ -692,7 +792,7 @@ Mask WhitePawnCoveredSquaresMask(Square current_square){
     return mask;
 }
 
-std::vector<Square> WhitePawnTargetSquares(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask){
+std::vector<Square> WhitePawnTargetSquares(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask, Square en_passant_target_square){
     std::vector<Square> target_squares;
     Square target_square;
     if(current_square.i != 0){
@@ -708,6 +808,10 @@ std::vector<Square> WhitePawnTargetSquares(Square current_square, Mask your_piec
                 target_square.i = current_square.i-1; target_square.j = current_square.j+1;
                 target_squares.push_back(target_square);
             }
+        }
+        // en passant captures: if pawn is in 5th rank and faces diagonally an en passant target square  
+        if(current_square.i == 3 && en_passant_target_square.i == 2 && abs(current_square.j - en_passant_target_square.j) == 1){
+            target_squares.push_back(en_passant_target_square);
         }
         // normal advance
         if(!your_pieces_mask[current_square.i-1][current_square.j] && !opponent_pieces_mask[current_square.i-1][current_square.j]){
@@ -878,4 +982,58 @@ Mask BlackCoveredSquaresMask(Board board){
         }
     }
     return black_covered_squares_mask;
+}
+
+// GET NEW POSITION APPLYING A GIVEN MOVE TO AN OLD POSITION
+// the input move is assumed to be a legal move given the old position
+// if an illegal move is provided, unexpected behavior occurs
+Position NewPosition(Position old_position, Move move){
+    Position new_position = old_position;
+    // normal move (not castling) 
+    if(!move.is_castling){
+        new_position.board[move.current_square.i][move.current_square.j] = ' ';
+        new_position.board[move.target_square.i][move.target_square.j] = move.piece;
+        // change castling rights if the king or the rook move from the starting square
+        if(move.piece == 'K'){new_position.can_white_castle_kingside = false; new_position.can_white_castle_queenside = false;}
+        else if(move.piece == 'k'){new_position.can_black_castle_kingside = false; new_position.can_black_castle_queenside = false;}
+        else if(move.piece == 'R' && move.current_square.i == 7 && move.current_square.j == 7){new_position.can_white_castle_kingside = false;}
+        else if(move.piece == 'R' && move.current_square.i == 7 && move.current_square.j == 0){new_position.can_white_castle_queenside = false;}
+        else if(move.piece == 'r' && move.current_square.i == 0 && move.current_square.j == 7){new_position.can_black_castle_kingside = false;}
+        else if(move.piece == 'r' && move.current_square.i == 0 && move.current_square.j == 0){new_position.can_black_castle_queenside = false;}
+        // pawn promotion
+        else if(move.piece == 'P' && move.target_square.i == 0){new_position.board[move.target_square.i][move.target_square.j] = move.new_piece;}
+        else if(move.piece == 'p' && move.target_square.i == 7){new_position.board[move.target_square.i][move.target_square.j] = move.new_piece;}
+        // en passant target square ...
+        // else if ...
+        // else if ...
+    }
+    // castling
+    else{
+        if(move.castling_side == 'K'){
+            new_position.board[7][7] = ' '; new_position.board[7][6] = 'K'; new_position.board[7][5] = 'R'; new_position.board[7][4] = ' ';
+            new_position.can_white_castle_kingside = false;
+            new_position.can_white_castle_queenside = false;
+        }
+        else if(move.castling_side == 'Q'){
+            new_position.board[7][0] = ' '; new_position.board[7][1] = ' '; new_position.board[7][2] = 'K'; new_position.board[7][3] = 'R'; new_position.board[7][4] = ' ';
+            new_position.can_white_castle_kingside = false;
+            new_position.can_white_castle_queenside = false;
+        }
+        else if(move.castling_side == 'k'){
+            new_position.board[0][7] = ' '; new_position.board[0][6] = 'K'; new_position.board[0][5] = 'R'; new_position.board[0][4] = ' ';
+            new_position.can_black_castle_kingside = false;
+            new_position.can_black_castle_queenside = false;
+        }
+        else if(move.castling_side == 'q'){
+            new_position.board[0][0] = ' '; new_position.board[0][1] = ' '; new_position.board[0][2] = 'K'; new_position.board[0][3] = 'R'; new_position.board[0][4] = ' ';
+            new_position.can_black_castle_kingside = false;
+            new_position.can_black_castle_queenside = false;
+        }
+    }
+    // update side to move and move counter
+    new_position.white_to_move = !old_position.white_to_move;    
+    new_position.half_move_counter += 1;
+    if(new_position.white_to_move){ new_position.move_counter += 1; }
+    if(move.is_capture || move.piece == 'P' || move.piece == 'p'){ new_position.half_move_counter = 0;}
+    return new_position;
 }
