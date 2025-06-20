@@ -18,15 +18,20 @@
 
 int main(int argc, char* argv[]){
     
-    std::string random_position_fen = "k7/8/2p5/pP6/8/8/8/Kb6 w KQkq a6 3 50";
+    std::string random_position_fen = "4k3/4Q3/8/8/8/8/8/4R2K w - - 3 50";
     Position pos = Position(random_position_fen);
     pos.PrintBoard();
-    std::cout << pos.half_move_counter << " " << pos.move_counter << "\n";
-    std::cout << "\n";
+    std::cout << pos.material_value << "\n";
 
     std::vector<Move> legal_moves = pos.LegalMoves();
+    std::vector<Position> new_positions;
+    new_positions.reserve(legal_moves.size());
+    Position new_pos = pos;
     for(Move& move: legal_moves){
         std::cout << move.AlgebraicNotation() << "\n";
+        new_pos = NewPosition(pos, move);
+        new_pos.PrintBoard();
+        std::cout << new_pos.material_value << "\n";
     }
 
     /*
@@ -40,9 +45,6 @@ int main(int argc, char* argv[]){
     //std::vector<Square> moves = KnightTargetSquares(current_square, empty_mask, empty_mask);
     //PrintMoves(moves);
     */
-
-    std::cout << (int)('a') << std::endl;
-    std::cout << ((int)('1') - 48) << std::endl;
     
     return 0;
 }

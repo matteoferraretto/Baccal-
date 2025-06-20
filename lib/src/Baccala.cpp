@@ -96,7 +96,7 @@ Position::Position(std::string fen)
 
     // set side to move
     if(words[1] == "w") { this->white_to_move = 1; }
-    else this->white_to_move = 1;
+    else this->white_to_move = 0;
 
     // set castling rights
     std::cout << words[2] << "\n";
@@ -183,6 +183,7 @@ void Position::PrintBoard(void){
 };
 
 bool Position::IsLegal(Move move){
+    Square king_square;
     Board new_board = this->board;
     Mask opponent_covered_squares_mask;
     bool is_legal;
@@ -194,23 +195,35 @@ bool Position::IsLegal(Move move){
         // generate the mask of covered squares by the opponent after the move
         // then check if your king is in a square attacked by the opponent after the move
         if(this->white_to_move){
+            if(move.piece == 'K'){ king_square = move.target_square; }
+            else{ king_square = this->white_king_square; }
             opponent_covered_squares_mask = BlackCoveredSquaresMask(new_board);
-            is_legal = !(opponent_covered_squares_mask[this->white_king_square.i][this->white_king_square.j]);
+            is_legal = !(opponent_covered_squares_mask[king_square.i][king_square.j]);
         }
         else{
+            if(move.piece == 'k'){ king_square = move.target_square; }
+            else{ king_square = this->black_king_square; }
             opponent_covered_squares_mask = WhiteCoveredSquaresMask(new_board);      
-            is_legal = !(opponent_covered_squares_mask[this->black_king_square.i][this->black_king_square.j]);
+            is_legal = !(opponent_covered_squares_mask[king_square.i][king_square.j]);
         }
     }
-    // manage castling: here we don't need to build the new board, we can manage every case independently
+    // manage castling: control if the king is in check and if it passes through a covered square while castling
     else{
         if(move.castling_side == 'K'){
-            opponent_covered_squares_mask = BlackCoveredSquaresMask(board);
+            opponent_covered_squares_mask = BlackCoveredSquaresMask(this->board);
             is_legal = !opponent_covered_squares_mask[7][4] && !opponent_covered_squares_mask[7][5] && !opponent_covered_squares_mask[7][6];
         }
         else if(move.castling_side == 'Q'){
-            opponent_covered_squares_mask = BlackCoveredSquaresMask(board);
+            opponent_covered_squares_mask = BlackCoveredSquaresMask(this->board);
             is_legal = !opponent_covered_squares_mask[7][4] && !opponent_covered_squares_mask[7][3] && !opponent_covered_squares_mask[7][2];
+        }
+        else if(move.castling_side == 'k'){
+            opponent_covered_squares_mask = WhiteCoveredSquaresMask(this->board);
+            is_legal = !opponent_covered_squares_mask[0][4] && !opponent_covered_squares_mask[0][5] && !opponent_covered_squares_mask[0][6];
+        }
+        else if(move.castling_side == 'q'){
+            opponent_covered_squares_mask = WhiteCoveredSquaresMask(this->board);
+            is_legal = !opponent_covered_squares_mask[0][4] && !opponent_covered_squares_mask[0][3] && !opponent_covered_squares_mask[0][2];
         }
     }
     return is_legal;
@@ -275,8 +288,7 @@ std::vector<Move> Position::LegalMoves(){
                             }
                             // normal pawn moves
                             else{
-                                if(target_square.i == 2 && abs(target_square.j - current_square.j) == 1){ is_capture = true; } // if en passant this is a capture
-                                else{ is_capture = this->black_pieces_mask[target_square.i][target_square.j]; } // else this is a capture if there's a piece on the target square
+                                is_capture = (abs(target_square.j - current_square.j) == 1); // if pawn moves diagonally this is a capture
                                 Move move = Move(current_square, target_square, c, is_capture);
                                 if(IsLegal(move)){ moves.push_back(move); }
                             }
@@ -330,7 +342,8 @@ std::vector<Move> Position::LegalMoves(){
                             }
                             // normal pawn moves
                             else{
-                                Move move = Move(current_square, target_square, c, this->white_pieces_mask[target_square.i][target_square.j]);
+                                is_capture = (abs(target_square.j - current_square.j) == 1); // if pawn moves diagonally this is a capture
+                                Move move = Move(current_square, target_square, c, is_capture);
                                 if(IsLegal(move)){ moves.push_back(move); }
                             }
                         }
@@ -398,6 +411,7 @@ int PieceValue(char piece){
     case 'k': value = -1000; break;
     case 'P': value = +1; break;
     case 'p': value = -1; break;
+    case ' ': value = 0; break;
     }
     return value;
 };
@@ -988,24 +1002,51 @@ Mask BlackCoveredSquaresMask(Board board){
 // the input move is assumed to be a legal move given the old position
 // if an illegal move is provided, unexpected behavior occurs
 Position NewPosition(Position old_position, Move move){
+    int iold = move.current_square.i;
+    int jold = move.current_square.j;
+    int inew = move.target_square.i;
+    int jnew = move.target_square.j;
     Position new_position = old_position;
+    // UPDATE THE BOARD
     // normal move (not castling) 
     if(!move.is_castling){
-        new_position.board[move.current_square.i][move.current_square.j] = ' ';
-        new_position.board[move.target_square.i][move.target_square.j] = move.piece;
+        new_position.board[iold][jold] = ' ';
+        new_position.board[inew][jnew] = move.piece;
+        new_position.material_value -= PieceValue(old_position.board[inew][jnew]);
         // change castling rights if the king or the rook move from the starting square
-        if(move.piece == 'K'){new_position.can_white_castle_kingside = false; new_position.can_white_castle_queenside = false;}
-        else if(move.piece == 'k'){new_position.can_black_castle_kingside = false; new_position.can_black_castle_queenside = false;}
-        else if(move.piece == 'R' && move.current_square.i == 7 && move.current_square.j == 7){new_position.can_white_castle_kingside = false;}
-        else if(move.piece == 'R' && move.current_square.i == 7 && move.current_square.j == 0){new_position.can_white_castle_queenside = false;}
-        else if(move.piece == 'r' && move.current_square.i == 0 && move.current_square.j == 7){new_position.can_black_castle_kingside = false;}
-        else if(move.piece == 'r' && move.current_square.i == 0 && move.current_square.j == 0){new_position.can_black_castle_queenside = false;}
+        if(move.piece == 'K'){
+            new_position.can_white_castle_kingside = false; 
+            new_position.can_white_castle_queenside = false;
+            new_position.white_king_square = move.target_square;
+        }
+        else if(move.piece == 'k'){
+            new_position.can_black_castle_kingside = false; 
+            new_position.can_black_castle_queenside = false;
+            new_position.black_king_square = move.target_square;
+        }
+        else if(move.piece == 'R' && iold == 7 && jold == 7){new_position.can_white_castle_kingside = false;}
+        else if(move.piece == 'R' && iold == 7 && jold == 0){new_position.can_white_castle_queenside = false;}
+        else if(move.piece == 'r' && iold == 0 && jold == 7){new_position.can_black_castle_kingside = false;}
+        else if(move.piece == 'r' && iold == 0 && jold == 0){new_position.can_black_castle_queenside = false;}
         // pawn promotion
-        else if(move.piece == 'P' && move.target_square.i == 0){new_position.board[move.target_square.i][move.target_square.j] = move.new_piece;}
-        else if(move.piece == 'p' && move.target_square.i == 7){new_position.board[move.target_square.i][move.target_square.j] = move.new_piece;}
-        // en passant target square ...
-        // else if ...
-        // else if ...
+        else if(move.piece == 'P' && inew == 0){
+            new_position.board[0][jnew] = move.new_piece; 
+            new_position.material_value += PieceValue(move.new_piece) - 1; 
+        }
+        else if(move.piece == 'p' && inew == 7){
+            new_position.board[7][jnew] = move.new_piece;
+            new_position.material_value += PieceValue(move.new_piece) - 1; 
+        }
+        // set en passant target square when a pawn moves two squares ahead
+        else if(move.piece == 'P' && iold == 6 && inew == 4){ new_position.en_passant_target_square = {5, jnew}; }
+        else if(move.piece == 'p' && iold == 1 && inew == 3){ new_position.en_passant_target_square = {2, jnew}; }
+        // if a pawn captures en-passant (i.e. pawn moves diagonally but target square is empty), make sure to delete the eaten pawn from the board
+        else if(move.piece == 'P' && abs(jnew - jold) == 1 && !old_position.black_pieces_mask[inew][jnew]){
+            new_position.board[inew+1][jnew] = ' ';
+        }
+        else if(move.piece == 'p' && abs(jnew - jold) == 1 && !old_position.white_pieces_mask[inew][jnew]){
+            new_position.board[inew-1][jnew] = ' ';
+        }
     }
     // castling
     else{
@@ -1013,27 +1054,32 @@ Position NewPosition(Position old_position, Move move){
             new_position.board[7][7] = ' '; new_position.board[7][6] = 'K'; new_position.board[7][5] = 'R'; new_position.board[7][4] = ' ';
             new_position.can_white_castle_kingside = false;
             new_position.can_white_castle_queenside = false;
+            new_position.white_king_square = {7, 6};
         }
         else if(move.castling_side == 'Q'){
             new_position.board[7][0] = ' '; new_position.board[7][1] = ' '; new_position.board[7][2] = 'K'; new_position.board[7][3] = 'R'; new_position.board[7][4] = ' ';
             new_position.can_white_castle_kingside = false;
             new_position.can_white_castle_queenside = false;
+            new_position.white_king_square = {7, 2};
         }
         else if(move.castling_side == 'k'){
-            new_position.board[0][7] = ' '; new_position.board[0][6] = 'K'; new_position.board[0][5] = 'R'; new_position.board[0][4] = ' ';
+            new_position.board[0][7] = ' '; new_position.board[0][6] = 'k'; new_position.board[0][5] = 'r'; new_position.board[0][4] = ' ';
             new_position.can_black_castle_kingside = false;
             new_position.can_black_castle_queenside = false;
+            new_position.black_king_square = {0, 6};
         }
         else if(move.castling_side == 'q'){
-            new_position.board[0][0] = ' '; new_position.board[0][1] = ' '; new_position.board[0][2] = 'K'; new_position.board[0][3] = 'R'; new_position.board[0][4] = ' ';
+            new_position.board[0][0] = ' '; new_position.board[0][1] = ' '; new_position.board[0][2] = 'k'; new_position.board[0][3] = 'r'; new_position.board[0][4] = ' ';
             new_position.can_black_castle_kingside = false;
             new_position.can_black_castle_queenside = false;
+            new_position.black_king_square = {0, 2};
         }
     }
     // update side to move and move counter
+    if(old_position.white_to_move){ new_position.move_counter += 1; }
+    if(move.is_capture || move.piece == 'P' || move.piece == 'p'){ new_position.half_move_counter = 0; }
+    else{ new_position.half_move_counter += 1; }
     new_position.white_to_move = !old_position.white_to_move;    
-    new_position.half_move_counter += 1;
-    if(new_position.white_to_move){ new_position.move_counter += 1; }
-    if(move.is_capture || move.piece == 'P' || move.piece == 'p'){ new_position.half_move_counter = 0;}
+    // return the new position, NOTICE THAT THE CORRESPONDING FEN STRING IS NOT UPDATED!!!
     return new_position;
 }
