@@ -976,10 +976,10 @@ Mask WhiteCoveredSquaresMask(Board board){
 Mask BlackCoveredSquaresMask(Board board){
     Mask black_covered_squares_mask = empty_mask;
     Mask all_pieces_mask = AllPiecesMask(board);
+    Square current_square; 
     for(int i=0; i<8; i++){
         for(int j=0; j<8; j++){
             char c = board[i][j];
-            Square current_square; 
             current_square.i = i; current_square.j = j;
             // Rooks
             if(c == 'r'){ black_covered_squares_mask += RookCoveredSquaresMask(current_square, all_pieces_mask); }
@@ -992,7 +992,7 @@ Mask BlackCoveredSquaresMask(Board board){
             // Knights
             else if(c == 'n'){ black_covered_squares_mask += KnightCoveredSquaresMask(current_square); }
             // Pawns
-            else if(c == 'p'){ black_covered_squares_mask += WhitePawnCoveredSquaresMask(current_square); }
+            else if(c == 'p'){ black_covered_squares_mask += BlackPawnCoveredSquaresMask(current_square); }
         }
     }
     return black_covered_squares_mask;
@@ -1080,6 +1080,46 @@ Position NewPosition(Position old_position, Move move){
     if(move.is_capture || move.piece == 'P' || move.piece == 'p'){ new_position.half_move_counter = 0; }
     else{ new_position.half_move_counter += 1; }
     new_position.white_to_move = !old_position.white_to_move;    
+    // UPDATE THE MASKS - not the most elegant way, we are copy-pasting blocks of code
+    // you can improve here: there's a smarter way than looping through the board twice...
+    if(old_position.white_to_move){
+        new_position.white_pieces_mask[iold][jold] = 0;
+        new_position.white_pieces_mask[inew][jnew] = 1;
+        new_position.black_pieces_mask[inew][jnew] = 0;
+    }
+    else{
+        new_position.black_pieces_mask[iold][jold] = 0;
+        new_position.black_pieces_mask[inew][jnew] = 1;
+        new_position.white_pieces_mask[inew][jnew] = 0;
+    }
+    new_position.all_pieces_mask[inew][jnew] = 1;
+    new_position.all_pieces_mask[iold][jold] = 0;
+    new_position.white_covered_squares_mask = empty_mask;
+    new_position.black_covered_squares_mask = empty_mask;
+    for(int i=0; i<8; i++){
+        for(int j=0; j<8; j++){
+            char c = new_position.board[i][j];
+            if(c == ' ') { continue; }
+            // Rooks
+            else if(c == 'R'){ new_position.white_covered_squares_mask += RookCoveredSquaresMask({i, j}, new_position.all_pieces_mask); }
+            else if(c == 'r'){ new_position.black_covered_squares_mask += RookCoveredSquaresMask({i, j}, new_position.all_pieces_mask); }
+            // Bishops
+            else if(c == 'B'){ new_position.white_covered_squares_mask += BishopCoveredSquaresMask({i, j}, new_position.all_pieces_mask); }
+            else if(c == 'b'){ new_position.black_covered_squares_mask += BishopCoveredSquaresMask({i, j}, new_position.all_pieces_mask); }
+            // Queens
+            else if(c == 'Q'){ new_position.white_covered_squares_mask += QueenCoveredSquaresMask({i, j}, new_position.all_pieces_mask); }
+            else if(c == 'q'){ new_position.black_covered_squares_mask += QueenCoveredSquaresMask({i, j}, new_position.all_pieces_mask); }
+            // Kings
+            else if(c == 'K'){ new_position.white_covered_squares_mask += KingCoveredSquaresMask({i, j}); }
+            else if(c == 'k'){ new_position.black_covered_squares_mask += KingCoveredSquaresMask({i, j}); }
+            // Knights
+            else if(c == 'N'){ new_position.white_covered_squares_mask += KnightCoveredSquaresMask({i, j}); }
+            else if(c == 'n'){ new_position.black_covered_squares_mask += KnightCoveredSquaresMask({i, j}); }
+            // Pawns
+            else if(c == 'P'){ new_position.white_covered_squares_mask += WhitePawnCoveredSquaresMask({i, j}); }
+            else if(c == 'p'){ new_position.black_covered_squares_mask += BlackPawnCoveredSquaresMask({i, j}); }
+        }
+    }
     // return the new position, NOTICE THAT THE CORRESPONDING FEN STRING IS NOT UPDATED!!!
     return new_position;
 }
