@@ -4,6 +4,9 @@
     <ClCompile Include="C:\Users\matte\Documents\Study_C++\ChessEngine\lib\src\Baccala.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\matte\Documents\Study_C++\ChessEngine\lib\src\Position.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="C:\Users\matte\Documents\Study_C++\ChessEngine\lib\CMakeLists.txt" />

@@ -270,6 +270,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="C:\Users\matte\Documents\Study_C++\ChessEngine\lib\src\Baccala.cpp" />
+    <ClCompile Include="C:\Users\matte\Documents\Study_C++\ChessEngine\lib\src\Position.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="C:\Users\matte\Documents\Study_C++\ChessEngine\build\ZERO_CHECK.vcxproj">

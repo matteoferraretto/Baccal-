@@ -26,7 +26,7 @@ events:
       Microsoft (R) Build Engine versione 15.9.21+g9802d43bc3 per .NET Framework
       Copyright (C) Microsoft Corporation. Tutti i diritti sono riservati.
       
-      Compilazione avviata 01/05/2025 17:30:12.
+      Compilazione avviata 05/07/2025 00:31:37.
       Progetto "C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\3.29.3\\CompilerIdC\\CompilerIdC.vcxproj" sul nodo 1 (destinazioni predefinite).
       PrepareForBuild:
         Creazione directory "Debug\\".
@@ -52,7 +52,7 @@ events:
           Avvisi: 0
           Errori: 0
       
-      Tempo trascorso 00:00:00.68
+      Tempo trascorso 00:00:00.69
       
       
       Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.exe"
@@ -80,7 +80,7 @@ events:
       Microsoft (R) Build Engine versione 15.9.21+g9802d43bc3 per .NET Framework
       Copyright (C) Microsoft Corporation. Tutti i diritti sono riservati.
       
-      Compilazione avviata 01/05/2025 17:30:12.
+      Compilazione avviata 05/07/2025 00:31:38.
       Progetto "C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\3.29.3\\CompilerIdCXX\\CompilerIdCXX.vcxproj" sul nodo 1 (destinazioni predefinite).
       PrepareForBuild:
         Creazione directory "Debug\\".
@@ -106,7 +106,7 @@ events:
           Avvisi: 0
           Errori: 0
       
-      Tempo trascorso 00:00:00.53
+      Tempo trascorso 00:00:00.55
       
       
       Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.exe"
@@ -125,8 +125,8 @@ events:
     checks:
       - "Detecting C compiler ABI info"
     directories:
-      source: "C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-wlcw46"
-      binary: "C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-wlcw46"
+      source: "C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-1mbd0z"
+      binary: "C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-1mbd0z"
     cmakeVariables:
       CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS /W3"
       CMAKE_C_FLAGS_DEBUG: "/MDd /Zi /Ob0 /Od /RTC1"
@@ -135,41 +135,41 @@ events:
       variable: "CMAKE_C_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: 'C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-wlcw46'
+        Change Dir: 'C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-1mbd0z'
         
-        Run Build Command(s): "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/MSBuild/15.0/Bin/MSBuild.exe" cmTC_73079.vcxproj /p:Configuration=Debug /p:Platform=Win32 /p:VisualStudioVersion=15.0 /v:n
+        Run Build Command(s): "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/MSBuild/15.0/Bin/MSBuild.exe" cmTC_377b1.vcxproj /p:Configuration=Debug /p:Platform=Win32 /p:VisualStudioVersion=15.0 /v:n
         Microsoft (R) Build Engine versione 15.9.21+g9802d43bc3 per .NET Framework
         Copyright (C) Microsoft Corporation. Tutti i diritti sono riservati.
         
-        Compilazione avviata 01/05/2025 17:30:13.
-        Progetto "C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-wlcw46\\cmTC_73079.vcxproj" sul nodo 1 (destinazioni predefinite).
+        Compilazione avviata 05/07/2025 00:31:39.
+        Progetto "C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-1mbd0z\\cmTC_377b1.vcxproj" sul nodo 1 (destinazioni predefinite).
         PrepareForBuild:
-          Creazione directory "cmTC_73079.dir\\Debug\\".
-          Creazione directory "C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-wlcw46\\Debug\\".
-          Creazione directory "cmTC_73079.dir\\Debug\\cmTC_73079.tlog\\".
+          Creazione directory "cmTC_377b1.dir\\Debug\\".
+          Creazione directory "C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-1mbd0z\\Debug\\".
+          Creazione directory "cmTC_377b1.dir\\Debug\\cmTC_377b1.tlog\\".
         InitializeBuildStatus:
-          Creazione di "cmTC_73079.dir\\Debug\\cmTC_73079.tlog\\unsuccessfulbuild". È stato specificato "AlwaysCreate".
+          Creazione di "cmTC_377b1.dir\\Debug\\cmTC_377b1.tlog\\unsuccessfulbuild". È stato specificato "AlwaysCreate".
         ClCompile:
-          C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Tools\\MSVC\\14.16.27023\\bin\\HostX86\\x86\\CL.exe /c /Zi /W3 /WX- /diagnostics:classic /Od /Ob0 /Oy- /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_73079.dir\\Debug\\\\" /Fd"cmTC_73079.dir\\Debug\\vc141.pdb" /Gd /TC /analyze- /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-3.29\\Modules\\CMakeCCompilerABI.c"
+          C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Tools\\MSVC\\14.16.27023\\bin\\HostX86\\x86\\CL.exe /c /Zi /W3 /WX- /diagnostics:classic /Od /Ob0 /Oy- /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_377b1.dir\\Debug\\\\" /Fd"cmTC_377b1.dir\\Debug\\vc141.pdb" /Gd /TC /analyze- /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-3.29\\Modules\\CMakeCCompilerABI.c"
           Microsoft (R) C/C++ Optimizing Compiler versione 19.16.27025.1 per x86
           Copyright (C) Microsoft Corporation. Tutti i diritti  sono riservati.
           
-          cl /c /Zi /W3 /WX- /diagnostics:classic /Od /Ob0 /Oy- /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_73079.dir\\Debug\\\\" /Fd"cmTC_73079.dir\\Debug\\vc141.pdb" /Gd /TC /analyze- /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-3.29\\Modules\\CMakeCCompilerABI.c"
+          cl /c /Zi /W3 /WX- /diagnostics:classic /Od /Ob0 /Oy- /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_377b1.dir\\Debug\\\\" /Fd"cmTC_377b1.dir\\Debug\\vc141.pdb" /Gd /TC /analyze- /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-3.29\\Modules\\CMakeCCompilerABI.c"
           CMakeCCompilerABI.c
           
         Link:
-          C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Tools\\MSVC\\14.16.27023\\bin\\HostX86\\x86\\link.exe /ERRORREPORT:QUEUE /OUT:"C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-wlcw46\\Debug\\cmTC_73079.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-wlcw46/Debug/cmTC_73079.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-wlcw46/Debug/cmTC_73079.lib" /MACHINE:X86 /SAFESEH  /machine:X86 cmTC_73079.dir\\Debug\\CMakeCCompilerABI.obj
-          cmTC_73079.vcxproj -> C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-wlcw46\\Debug\\cmTC_73079.exe
+          C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Tools\\MSVC\\14.16.27023\\bin\\HostX86\\x86\\link.exe /ERRORREPORT:QUEUE /OUT:"C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-1mbd0z\\Debug\\cmTC_377b1.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-1mbd0z/Debug/cmTC_377b1.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-1mbd0z/Debug/cmTC_377b1.lib" /MACHINE:X86 /SAFESEH  /machine:X86 cmTC_377b1.dir\\Debug\\CMakeCCompilerABI.obj
+          cmTC_377b1.vcxproj -> C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-1mbd0z\\Debug\\cmTC_377b1.exe
         FinalizeBuildStatus:
-          Eliminazione del file "cmTC_73079.dir\\Debug\\cmTC_73079.tlog\\unsuccessfulbuild" in corso.
-          Aggiornamento timestamp di "cmTC_73079.dir\\Debug\\cmTC_73079.tlog\\cmTC_73079.lastbuildstate".
-        Compilazione progetto "C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-wlcw46\\cmTC_73079.vcxproj" (destinazioni predefinite) completata.
+          Eliminazione del file "cmTC_377b1.dir\\Debug\\cmTC_377b1.tlog\\unsuccessfulbuild" in corso.
+          Aggiornamento timestamp di "cmTC_377b1.dir\\Debug\\cmTC_377b1.tlog\\cmTC_377b1.lastbuildstate".
+        Compilazione progetto "C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-1mbd0z\\cmTC_377b1.vcxproj" (destinazioni predefinite) completata.
         
         Compilazione completata.
             Avvisi: 0
             Errori: 0
         
-        Tempo trascorso 00:00:00.68
+        Tempo trascorso 00:00:00.70
         
       exitCode: 0
   -
@@ -209,8 +209,8 @@ events:
     checks:
       - "Detecting CXX compiler ABI info"
     directories:
-      source: "C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-s6orco"
-      binary: "C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-s6orco"
+      source: "C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-cn93d2"
+      binary: "C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-cn93d2"
     cmakeVariables:
       CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /W3 /GR /EHsc"
       CMAKE_CXX_FLAGS_DEBUG: "/MDd /Zi /Ob0 /Od /RTC1"
@@ -220,41 +220,41 @@ events:
       variable: "CMAKE_CXX_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: 'C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-s6orco'
+        Change Dir: 'C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-cn93d2'
         
-        Run Build Command(s): "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/MSBuild/15.0/Bin/MSBuild.exe" cmTC_727f1.vcxproj /p:Configuration=Debug /p:Platform=Win32 /p:VisualStudioVersion=15.0 /v:n
+        Run Build Command(s): "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/MSBuild/15.0/Bin/MSBuild.exe" cmTC_cb270.vcxproj /p:Configuration=Debug /p:Platform=Win32 /p:VisualStudioVersion=15.0 /v:n
         Microsoft (R) Build Engine versione 15.9.21+g9802d43bc3 per .NET Framework
         Copyright (C) Microsoft Corporation. Tutti i diritti sono riservati.
         
-        Compilazione avviata 01/05/2025 17:30:14.
-        Progetto "C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-s6orco\\cmTC_727f1.vcxproj" sul nodo 1 (destinazioni predefinite).
+        Compilazione avviata 05/07/2025 00:31:40.
+        Progetto "C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-cn93d2\\cmTC_cb270.vcxproj" sul nodo 1 (destinazioni predefinite).
         PrepareForBuild:
-          Creazione directory "cmTC_727f1.dir\\Debug\\".
-          Creazione directory "C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-s6orco\\Debug\\".
-          Creazione directory "cmTC_727f1.dir\\Debug\\cmTC_727f1.tlog\\".
+          Creazione directory "cmTC_cb270.dir\\Debug\\".
+          Creazione directory "C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-cn93d2\\Debug\\".
+          Creazione directory "cmTC_cb270.dir\\Debug\\cmTC_cb270.tlog\\".
         InitializeBuildStatus:
-          Creazione di "cmTC_727f1.dir\\Debug\\cmTC_727f1.tlog\\unsuccessfulbuild". È stato specificato "AlwaysCreate".
+          Creazione di "cmTC_cb270.dir\\Debug\\cmTC_cb270.tlog\\unsuccessfulbuild". È stato specificato "AlwaysCreate".
         ClCompile:
-          C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Tools\\MSVC\\14.16.27023\\bin\\HostX86\\x86\\CL.exe /c /Zi /W3 /WX- /diagnostics:classic /Od /Ob0 /Oy- /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTC_727f1.dir\\Debug\\\\" /Fd"cmTC_727f1.dir\\Debug\\vc141.pdb" /Gd /TP /analyze- /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-3.29\\Modules\\CMakeCXXCompilerABI.cpp"
+          C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Tools\\MSVC\\14.16.27023\\bin\\HostX86\\x86\\CL.exe /c /Zi /W3 /WX- /diagnostics:classic /Od /Ob0 /Oy- /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTC_cb270.dir\\Debug\\\\" /Fd"cmTC_cb270.dir\\Debug\\vc141.pdb" /Gd /TP /analyze- /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-3.29\\Modules\\CMakeCXXCompilerABI.cpp"
           Microsoft (R) C/C++ Optimizing Compiler versione 19.16.27025.1 per x86
           Copyright (C) Microsoft Corporation. Tutti i diritti  sono riservati.
           
-          cl /c /Zi /W3 /WX- /diagnostics:classic /Od /Ob0 /Oy- /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTC_727f1.dir\\Debug\\\\" /Fd"cmTC_727f1.dir\\Debug\\vc141.pdb" /Gd /TP /analyze- /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-3.29\\Modules\\CMakeCXXCompilerABI.cpp"
+          cl /c /Zi /W3 /WX- /diagnostics:classic /Od /Ob0 /Oy- /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTC_cb270.dir\\Debug\\\\" /Fd"cmTC_cb270.dir\\Debug\\vc141.pdb" /Gd /TP /analyze- /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-3.29\\Modules\\CMakeCXXCompilerABI.cpp"
           CMakeCXXCompilerABI.cpp
           
         Link:
-          C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Tools\\MSVC\\14.16.27023\\bin\\HostX86\\x86\\link.exe /ERRORREPORT:QUEUE /OUT:"C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-s6orco\\Debug\\cmTC_727f1.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-s6orco/Debug/cmTC_727f1.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-s6orco/Debug/cmTC_727f1.lib" /MACHINE:X86 /SAFESEH  /machine:X86 cmTC_727f1.dir\\Debug\\CMakeCXXCompilerABI.obj
-          cmTC_727f1.vcxproj -> C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-s6orco\\Debug\\cmTC_727f1.exe
+          C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Tools\\MSVC\\14.16.27023\\bin\\HostX86\\x86\\link.exe /ERRORREPORT:QUEUE /OUT:"C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-cn93d2\\Debug\\cmTC_cb270.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-cn93d2/Debug/cmTC_cb270.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/CMakeScratch/TryCompile-cn93d2/Debug/cmTC_cb270.lib" /MACHINE:X86 /SAFESEH  /machine:X86 cmTC_cb270.dir\\Debug\\CMakeCXXCompilerABI.obj
+          cmTC_cb270.vcxproj -> C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-cn93d2\\Debug\\cmTC_cb270.exe
         FinalizeBuildStatus:
-          Eliminazione del file "cmTC_727f1.dir\\Debug\\cmTC_727f1.tlog\\unsuccessfulbuild" in corso.
-          Aggiornamento timestamp di "cmTC_727f1.dir\\Debug\\cmTC_727f1.tlog\\cmTC_727f1.lastbuildstate".
-        Compilazione progetto "C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-s6orco\\cmTC_727f1.vcxproj" (destinazioni predefinite) completata.
+          Eliminazione del file "cmTC_cb270.dir\\Debug\\cmTC_cb270.tlog\\unsuccessfulbuild" in corso.
+          Aggiornamento timestamp di "cmTC_cb270.dir\\Debug\\cmTC_cb270.tlog\\cmTC_cb270.lastbuildstate".
+        Compilazione progetto "C:\\Users\\matte\\Documents\\Study_C++\\ChessEngine\\build\\CMakeFiles\\CMakeScratch\\TryCompile-cn93d2\\cmTC_cb270.vcxproj" (destinazioni predefinite) completata.
         
         Compilazione completata.
             Avvisi: 0
             Errori: 0
         
-        Tempo trascorso 00:00:00.66
+        Tempo trascorso 00:00:00.74
         
       exitCode: 0
   -
