@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <typeinfo>
+#include <cctype>
 
 // CONSTRUCTOR FOR POSITION
 // given a fen string, this computes all the info relevant to the position
@@ -35,7 +36,6 @@ Position::Position(std::string fen)
     else this->white_to_move = 0;
 
     // set castling rights
-    std::cout << words[2] << "\n";
     for(char& c: words[2]){
         if(c == '-') { break; }
         else if(c == 'K') { this->can_white_castle_kingside = true; continue; }
@@ -127,7 +127,13 @@ bool Position::IsLegal(Move move){
     if(!move.is_castling){
         // create a new board after the move
         new_board[move.current_square.i][move.current_square.j] = ' ';
-        new_board[move.target_square.i][move.target_square.j] = move.piece;
+        // if pawn promotion
+        if(move.new_piece != 'z'){ 
+            new_board[move.target_square.i][move.target_square.j] = move.new_piece;
+        }
+        else{
+            new_board[move.target_square.i][move.target_square.j] = move.piece;
+        }
         // generate the mask of covered squares by the opponent after the move
         // then check if your king is in a square attacked by the opponent after the move
         if(this->white_to_move){
@@ -185,32 +191,54 @@ std::vector<Move> Position::LegalMoves(){
                     // Rook moves: for every target square, build the corresponding move
                     if(c == 'R'){
                         for(Square& target_square: RookTargetSquares(current_square, this->white_pieces_mask, this->black_pieces_mask)){
-                            Move move = Move(current_square, target_square, c, this->black_pieces_mask[target_square.i][target_square.j]);
-                            if(IsLegal(move)){ moves.push_back(move); }
+                            is_capture = this->black_pieces_mask[target_square.i][target_square.j];
+                            Move move = Move(current_square, target_square, c, is_capture);
+                            if(IsLegal(move)){
+                                // rank the move
+                                move.rank = -PieceValue(this->board[target_square.i][target_square.j]);
+                                moves.push_back(move);
+                            }
                         }
                     }
                     else if(c == 'B'){
                         for(Square& target_square: BishopTargetSquares(current_square, this->white_pieces_mask, this->black_pieces_mask)){
-                            Move move = Move(current_square, target_square, c, this->black_pieces_mask[target_square.i][target_square.j]);
-                            if(IsLegal(move)){ moves.push_back(move); }
+                            is_capture = this->black_pieces_mask[target_square.i][target_square.j];
+                            Move move = Move(current_square, target_square, c, is_capture);
+                            if(IsLegal(move)){
+                                move.rank = -PieceValue(this->board[target_square.i][target_square.j]);
+                                moves.push_back(move); 
+                            }
                         }
                     }
                     else if(c == 'Q'){
                         for(Square& target_square: QueenTargetSquares(current_square, this->white_pieces_mask, this->black_pieces_mask)){
-                            Move move = Move(current_square, target_square, c, this->black_pieces_mask[target_square.i][target_square.j]);
-                            if(IsLegal(move)){ moves.push_back(move); }
+                            is_capture = this->black_pieces_mask[target_square.i][target_square.j];
+                            Move move = Move(current_square, target_square, c, is_capture);
+                            if(IsLegal(move)){
+                                move.rank = -PieceValue(this->board[target_square.i][target_square.j]);
+                                moves.push_back(move);
+                            }
                         }
                     }
                     else if(c == 'K'){
                         for(Square& target_square: KingTargetSquares(current_square, this->white_pieces_mask)){
-                            Move move = Move(current_square, target_square, c, this->black_pieces_mask[target_square.i][target_square.j]);
-                            if(IsLegal(move)){ moves.push_back(move); }
+                            is_capture = this->black_pieces_mask[target_square.i][target_square.j];
+                            Move move = Move(current_square, target_square, c, is_capture);
+                            if(IsLegal(move)){
+                                move.rank = -PieceValue(this->board[target_square.i][target_square.j]);
+                                moves.push_back(move);
+                            }
                         }
                     }
                     else if(c == 'N'){
                         for(Square& target_square: KnightTargetSquares(current_square, this->white_pieces_mask)){
-                            Move move = Move(current_square, target_square, c, this->black_pieces_mask[target_square.i][target_square.j]);
-                            if(IsLegal(move)){ moves.push_back(move); }
+                            is_capture = this->black_pieces_mask[target_square.i][target_square.j];
+                            Move move = Move(current_square, target_square, c, is_capture);
+                            if(IsLegal(move)){
+                                // rank the move and insert it at the beginning of the array if it is ranked best
+                                move.rank = -PieceValue(this->board[target_square.i][target_square.j]);
+                                moves.push_back(move);
+                            }
                         }
                     }
                     else if(c == 'P'){
@@ -219,14 +247,20 @@ std::vector<Move> Position::LegalMoves(){
                             if(target_square.i == 0){
                                 for(int a=0; a<4; a++){
                                     Move move = Move(target_square, pieces_white_pawn_becomes[a]);
-                                    if(IsLegal(move)){ moves.push_back(move); }
+                                    if(IsLegal(move)){
+                                        move.rank = PieceValue(pieces_white_pawn_becomes[a]) - 1;
+                                        moves.push_back(move);
+                                    }
                                 }
                             }
                             // normal pawn moves
                             else{
                                 is_capture = (abs(target_square.j - current_square.j) == 1); // if pawn moves diagonally this is a capture
                                 Move move = Move(current_square, target_square, c, is_capture);
-                                if(IsLegal(move)){ moves.push_back(move); }
+                                if(IsLegal(move)){
+                                    move.rank = -PieceValue(this->board[target_square.i][target_square.j]);
+                                    moves.push_back(move);
+                                }
                             }
                         }
                     }
@@ -239,32 +273,52 @@ std::vector<Move> Position::LegalMoves(){
                     current_square.i = i; current_square.j = j;
                     if(c == 'r'){
                         for(Square& target_square: RookTargetSquares(current_square, this->black_pieces_mask, this->white_pieces_mask)){
-                            Move move = Move(current_square, target_square, c, this->white_pieces_mask[target_square.i][target_square.j]);
-                            if(IsLegal(move)){ moves.push_back(move); }
+                            is_capture = this->white_pieces_mask[target_square.i][target_square.j];
+                            Move move = Move(current_square, target_square, c, is_capture);
+                            if(IsLegal(move)){
+                                move.rank = PieceValue(this->board[target_square.i][target_square.j]);
+                                moves.push_back(move);
+                            }
                         }
                     }
                     else if(c == 'b'){
                         for(Square& target_square: BishopTargetSquares(current_square, this->black_pieces_mask, this->white_pieces_mask)){
-                            Move move = Move(current_square, target_square, c, this->white_pieces_mask[target_square.i][target_square.j]);
-                            if(IsLegal(move)){ moves.push_back(move); }
+                            is_capture = this->white_pieces_mask[target_square.i][target_square.j];
+                            Move move = Move(current_square, target_square, c, is_capture);
+                            if(IsLegal(move)){
+                                move.rank = PieceValue(this->board[target_square.i][target_square.j]);
+                                moves.push_back(move);
+                            }
                         }
                     }
                     else if(c == 'q'){
                         for(Square& target_square: QueenTargetSquares(current_square, this->black_pieces_mask, this->white_pieces_mask)){
-                            Move move = Move(current_square, target_square, c, this->white_pieces_mask[target_square.i][target_square.j]);
-                            if(IsLegal(move)){ moves.push_back(move); }
+                            is_capture = this->white_pieces_mask[target_square.i][target_square.j];
+                            Move move = Move(current_square, target_square, c, is_capture);
+                            if(IsLegal(move)){
+                                move.rank = PieceValue(this->board[target_square.i][target_square.j]);
+                                moves.push_back(move);
+                            }
                         }
                     }
                     else if(c == 'k'){
                         for(Square& target_square: KingTargetSquares(current_square, this->black_pieces_mask)){
-                            Move move = Move(current_square, target_square, c, this->white_pieces_mask[target_square.i][target_square.j]);
-                            if(IsLegal(move)){ moves.push_back(move); }
+                            is_capture = this->white_pieces_mask[target_square.i][target_square.j];
+                            Move move = Move(current_square, target_square, c, is_capture);
+                            if(IsLegal(move)){
+                                move.rank = PieceValue(this->board[target_square.i][target_square.j]);
+                                moves.push_back(move);
+                            }
                         }
                     }
                     else if(c == 'n'){
                         for(Square& target_square: KnightTargetSquares(current_square, this->black_pieces_mask)){
-                            Move move = Move(current_square, target_square, c, this->white_pieces_mask[target_square.i][target_square.j]);
-                            if(IsLegal(move)){ moves.push_back(move); }
+                            is_capture = this->white_pieces_mask[target_square.i][target_square.j];
+                            Move move = Move(current_square, target_square, c, is_capture);
+                            if(IsLegal(move)){
+                                move.rank = PieceValue(this->board[target_square.i][target_square.j]);
+                                moves.push_back(move);
+                            }
                         }
                     }
                     else if(c == 'p'){
@@ -273,14 +327,20 @@ std::vector<Move> Position::LegalMoves(){
                             if(target_square.i == 7){
                                 for(int a=0; a<4; a++){
                                     Move move = Move(target_square, pieces_black_pawn_becomes[a]);
-                                    if(IsLegal(move)){ moves.push_back(move); }
+                                    if(IsLegal(move)){
+                                        move.rank = -PieceValue(pieces_white_pawn_becomes[a]) - 1;
+                                        moves.push_back(move);
+                                    }
                                 }
                             }
                             // normal pawn moves
                             else{
                                 is_capture = (abs(target_square.j - current_square.j) == 1); // if pawn moves diagonally this is a capture
                                 Move move = Move(current_square, target_square, c, is_capture);
-                                if(IsLegal(move)){ moves.push_back(move); }
+                                if(IsLegal(move)){
+                                    move.rank = PieceValue(this->board[target_square.i][target_square.j]);
+                                    moves.push_back(move);
+                                }
                             }
                         }
                     }
@@ -309,6 +369,7 @@ std::vector<Move> Position::LegalMoves(){
             if(IsLegal(move)){ moves.push_back(move); }
         }
     }
+    SortMoves(moves);
     return moves;
 }
 
@@ -476,3 +537,181 @@ Position NewPosition(Position old_position, Move move){
     // return the new position, NOTICE THAT THE CORRESPONDING FEN STRING IS NOT UPDATED!!!
     return new_position;
 }
+
+
+// ----------------------------------------------------
+EfficientPosition::EfficientPosition(std::string fen)
+{
+    // take the fen string and separate the "words" separated by spaces
+    std::stringstream ss(fen);
+    std::vector<std::string> words;
+    std::string word;
+    while (ss >> word) {
+        words.push_back(word);
+    }
+
+    // get board in the form of a 8x8 char matrix
+    int i = 0; 
+    int j = 0; 
+    int c_casted; 
+    for(char& c: words[0]){
+        c_casted = c - '0';
+        if(c_casted == 8) { continue; }
+        if(c_casted == -1) { i++; j = 0; continue; } // if c is '/', increment row index and reset column index to 0
+        if(c_casted > 0 && c_casted < 8) { j += c_casted; continue; }
+        this->pieces.push_back(c);
+        this->ranks.push_back(i);
+        this->files.push_back(j);
+        j++; 
+    }
+
+    // set side to move
+    if(words[1] == "w") { this->white_to_move = 1; }
+    else this->white_to_move = 0;
+
+    // set castling rights
+    for(char& c: words[2]){
+        if(c == '-') { break; }
+        else if(c == 'K') { this->can_white_castle_kingside = true; continue; }
+        else if(c == 'Q') { this->can_white_castle_queenside = true; continue; }
+        else if(c == 'k') { this->can_black_castle_kingside = true; continue; }
+        else if(c == 'q') { this->can_black_castle_queenside = true; continue; }
+    }
+
+    // set en-passant target square if different from '-'
+    if(words[3] != "-"){
+        this->en_passant_target_square = AlphabetToSquare(words[3]);
+    }
+
+    // set half move counter and move counter from fen
+    this->half_move_counter = std::stoi(words[4]);
+    this->move_counter = std::stoi(words[5]);
+
+    // evaluate masks of white, black and all pieces and material value
+    char piece;
+    for(unsigned int index = 0; index < pieces.size(); index++){
+        piece = this->pieces[index];
+        i = this->ranks[index];
+        j = this->files[index];
+        this->all_pieces_mask[i][j] = 1;
+        this->material_value += PieceValue(piece);
+    }
+    // loop again
+    Square current_square;
+    for(unsigned int index = 0; index < pieces.size(); index++){
+        piece = this->pieces[index];
+        i = this->ranks[index];
+        j = this->files[index];
+        current_square = {i, j};
+        // Rooks
+        if(piece == 'R'){ 
+            this->white_covered_squares_mask += RookCoveredSquaresMask(current_square, this->all_pieces_mask); 
+            this->white_pieces_mask[i][j] = 1;
+        }
+        else if(piece == 'r'){ 
+            this->black_covered_squares_mask += RookCoveredSquaresMask(current_square, this->all_pieces_mask); 
+            this->black_pieces_mask[i][j] = 1;
+        }
+        // Bishops
+        else if(piece == 'B'){ 
+            this->white_covered_squares_mask += BishopCoveredSquaresMask(current_square, this->all_pieces_mask); 
+            this->white_pieces_mask[i][j] = 1;
+        }
+        else if(piece == 'b'){ 
+            this->black_covered_squares_mask += BishopCoveredSquaresMask(current_square, this->all_pieces_mask); 
+            this->black_pieces_mask[i][j] = 1;
+        }
+        // Queens
+        else if(piece == 'Q'){ 
+            this->white_covered_squares_mask += QueenCoveredSquaresMask(current_square, this->all_pieces_mask); 
+            this->white_pieces_mask[i][j] = 1;
+        }
+        else if(piece == 'q'){ 
+            this->black_covered_squares_mask += QueenCoveredSquaresMask(current_square, this->all_pieces_mask); 
+            this->black_pieces_mask[i][j] = 1;
+        }
+        // Kings
+        else if(piece == 'K'){ 
+            this->white_covered_squares_mask += KingCoveredSquaresMask(current_square); 
+            this->white_pieces_mask[i][j] = 1;
+        }
+        else if(piece == 'k'){ 
+            this->black_covered_squares_mask += KingCoveredSquaresMask(current_square); 
+            this->black_pieces_mask[i][j] = 1;
+        }
+        // Knights
+        else if(piece == 'N'){ 
+            this->white_covered_squares_mask += KnightCoveredSquaresMask(current_square); 
+            this->white_pieces_mask[i][j] = 1;
+        }
+        else if(piece == 'n'){ 
+            this->black_covered_squares_mask += KnightCoveredSquaresMask(current_square); 
+            this->black_pieces_mask[i][j] = 1;
+        }
+        // Pawns
+        else if(piece == 'P'){ 
+            this->white_covered_squares_mask += WhitePawnCoveredSquaresMask(current_square); 
+            this->white_pieces_mask[i][j] = 1;
+        }
+        else if(piece == 'p'){ 
+            this->black_covered_squares_mask += BlackPawnCoveredSquaresMask(current_square); 
+            this->black_pieces_mask[i][j] = 1;
+        }
+    }
+}
+
+EfficientPosition::~EfficientPosition()
+{
+}
+
+void EfficientPosition::PrintBoard(void){
+    char board[64];
+    for(int i=0; i<64; i++){ board[i] = '0'; }
+    int i; 
+    int j;
+    char piece;
+    for(unsigned int index = 0; index < this->pieces.size(); index++){
+        piece = this->pieces[index]; i = this->ranks[index]; j = this->files[index];
+        board[8*i + j] = piece;
+    }
+    // print
+    for(int n = 0; n < 64; n++){
+        if(n % 8 == 0){ std::cout << "\n"; }
+        std::cout << board[n] << " ";
+    }
+    std::cout << "\n";
+};
+
+/*
+// generate the list of all the child positions obtained from the current one applying all the legal moves
+// sort the new positions based on the likelihood of being good for the current side to move
+// i.e. checks, captures and pawn promotions first.
+std::vector<EfficientPosition> New_Positions(EfficientPosition& pos){
+    // initialize stuff
+    std::vector<EfficientPosition> new_positions;
+    new_positions.reserve(80);
+    EfficientPosition new_pos = pos;
+    char piece;
+    int i;
+    int j;
+    // loop over all the pieces
+    for(unsigned int index = 0; index < pos.pieces.size(); index++){
+        piece = pos.pieces[index];
+        // if piece has wrong color, skip
+        if(pos.white_to_move && islower(piece)){ continue; }
+        if(!pos.white_to_move && isupper(piece)){ continue; }
+        // if you pick your own piece, elaborate moves
+        i = pos.ranks[index];
+        j = pos.files[index];
+        // MANAGE WHITE ROOKS
+        if(piece == 'R'){
+            // side to side sliding
+
+        }
+        // MANAGE WHITE BISHOPS
+        else if(piece == 'B'){
+
+        }
+    }
+}
+*/

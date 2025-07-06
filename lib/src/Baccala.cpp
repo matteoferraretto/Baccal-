@@ -73,6 +73,16 @@ std::string Move::AlgebraicNotation(){
 Move::~Move(){};
 
 
+void SortMoves(std::vector<Move>& moves){
+    struct greater_than{
+        inline bool operator() (const Move& move1, const Move& move2)
+        {
+            return (move1.rank > move2.rank);
+        }
+    };
+    std::sort(moves.begin(), moves.end(), greater_than());
+}
+
 
 // --------------------------------------------
 // ------------ USEFUL FUNCTIONS --------------
@@ -131,7 +141,7 @@ Square AlphabetToSquare(std::basic_string<char> square_string){
 // ---------------------------------------------
 // --------    MANAGE KNIGTHS   ----------------
 // ---------------------------------------------
-Mask KnightMovesMask(Square current_square, Mask your_pieces_mask) {
+Mask KnightMovesMask(Square current_square, Mask& your_pieces_mask) {
     Mask mask = empty_mask;
     Square target_square;
     for(int d = 0; d < 8; d++){
@@ -157,7 +167,7 @@ Mask KnightCoveredSquaresMask(Square current_square) {
     return mask;
 }
 
-std::vector<Square> KnightTargetSquares(Square current_square, Mask your_pieces_mask){
+std::vector<Square> KnightTargetSquares(Square current_square, Mask& your_pieces_mask){
     std::vector<Square> target_squares;
     target_squares.reserve(8);
     Square target_square;
@@ -175,7 +185,7 @@ std::vector<Square> KnightTargetSquares(Square current_square, Mask your_pieces_
 // ---------------------------------------------
 // ----------    MANAGE ROOKS   ----------------
 // ---------------------------------------------
-Mask RookMovesMask(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask) {
+Mask RookMovesMask(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask) {
     Mask mask = empty_mask;
     // bottom sliding
     for(int x = current_square.i+1; x < 8; x++){
@@ -207,7 +217,7 @@ Mask RookMovesMask(Square current_square, Mask your_pieces_mask, Mask opponent_p
     return mask;
 }
 
-Mask RookCoveredSquaresMask(Square current_square, Mask all_pieces_mask) {
+Mask RookCoveredSquaresMask(Square current_square, Mask& all_pieces_mask) {
     Mask mask = empty_mask;
     // bottom sliding
     for(int x = current_square.i+1; x < 8; x++){
@@ -232,7 +242,7 @@ Mask RookCoveredSquaresMask(Square current_square, Mask all_pieces_mask) {
     return mask;
 }
 
-std::vector<Square> RookTargetSquares(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask){
+std::vector<Square> RookTargetSquares(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask){
     std::vector<Square> target_squares;
     Square target_square = current_square;
     // bottom sliding
@@ -273,7 +283,7 @@ std::vector<Square> RookTargetSquares(Square current_square, Mask your_pieces_ma
 // ---------------------------------------------
 // ----------    MANAGE BiSHOPS   --------------
 // ---------------------------------------------
-Mask BishopMovesMask(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask) {
+Mask BishopMovesMask(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask) {
     Mask mask = empty_mask;
     Square target_square = current_square;
     // slide to bottom right
@@ -314,7 +324,7 @@ Mask BishopMovesMask(Square current_square, Mask your_pieces_mask, Mask opponent
     return mask;
 }
 
-Mask BishopCoveredSquaresMask(Square current_square, Mask all_pieces_mask) {
+Mask BishopCoveredSquaresMask(Square current_square, Mask& all_pieces_mask) {
     Mask mask = empty_mask;
     Square target_square = current_square;
     // slide to bottom right
@@ -355,7 +365,7 @@ Mask BishopCoveredSquaresMask(Square current_square, Mask all_pieces_mask) {
     return mask;
 }
 
-std::vector<Square> BishopTargetSquares(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask){
+std::vector<Square> BishopTargetSquares(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask){
     std::vector<Square> target_squares;
     Square target_square = current_square;
     // slide to bottom right
@@ -399,15 +409,15 @@ std::vector<Square> BishopTargetSquares(Square current_square, Mask your_pieces_
 // ---------------------------------------------
 // -----------    MANAGE QUEENS   --------------
 // ---------------------------------------------
-Mask QueenMovesMask(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask) {
+Mask QueenMovesMask(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask) {
     return (RookMovesMask(current_square, your_pieces_mask, opponent_pieces_mask) + BishopMovesMask(current_square, your_pieces_mask, opponent_pieces_mask));
 }
 
-Mask QueenCoveredSquaresMask(Square current_square, Mask all_pieces_mask) {
+Mask QueenCoveredSquaresMask(Square current_square, Mask& all_pieces_mask) {
     return (RookCoveredSquaresMask(current_square, all_pieces_mask) + BishopCoveredSquaresMask(current_square, all_pieces_mask));
 }
 
-std::vector<Square> QueenTargetSquares(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask){
+std::vector<Square> QueenTargetSquares(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask){
     std::vector<Square> moves = RookTargetSquares(current_square, your_pieces_mask, opponent_pieces_mask);
     std::vector<Square> bishop_moves = BishopTargetSquares(current_square, your_pieces_mask, opponent_pieces_mask);
     moves.insert(moves.end(), bishop_moves.begin(), bishop_moves.end());
@@ -417,7 +427,7 @@ std::vector<Square> QueenTargetSquares(Square current_square, Mask your_pieces_m
 // ---------------------------------------------
 // -----------    MANAGE KINGS   ---------------
 // ---------------------------------------------
-Mask KingMovesMask(Square current_square, Mask your_pieces_mask) {
+Mask KingMovesMask(Square current_square, Mask& your_pieces_mask) {
     Mask mask = empty_mask;
     Square target_square;
     for(int d = 0; d < 8; d++){
@@ -443,7 +453,7 @@ Mask KingCoveredSquaresMask(Square current_square) {
     return mask;
 }
 
-std::vector<Square> KingTargetSquares(Square current_square, Mask your_pieces_mask){
+std::vector<Square> KingTargetSquares(Square current_square, Mask& your_pieces_mask){
     std::vector<Square> target_squares;
     target_squares.reserve(8);
     Square target_square;
@@ -460,7 +470,7 @@ std::vector<Square> KingTargetSquares(Square current_square, Mask your_pieces_ma
 // ---------------------------------------------
 // -----------    MANAGE PAWNS   ---------------
 // ---------------------------------------------
-Mask WhitePawnMovesMask(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask, Square en_passant_target_square){
+Mask WhitePawnMovesMask(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask, Square en_passant_target_square){
     Mask mask = empty_mask;
     if(current_square.i != 0){
         // normal captures
@@ -503,7 +513,7 @@ Mask WhitePawnCoveredSquaresMask(Square current_square){
     return mask;
 }
 
-std::vector<Square> WhitePawnTargetSquares(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask, Square en_passant_target_square){
+std::vector<Square> WhitePawnTargetSquares(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask, Square en_passant_target_square){
     std::vector<Square> target_squares;
     Square target_square;
     if(current_square.i != 0){
@@ -537,7 +547,7 @@ std::vector<Square> WhitePawnTargetSquares(Square current_square, Mask your_piec
     return target_squares;
 }
 
-Mask BlackPawnMovesMask(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask){
+Mask BlackPawnMovesMask(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask){
     Mask mask = empty_mask;
     if(current_square.i != 7){
         // normal captures
@@ -576,7 +586,7 @@ Mask BlackPawnCoveredSquaresMask(Square current_square){
     return mask;
 }
 
-std::vector<Square> BlackPawnTargetSquares(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask){
+std::vector<Square> BlackPawnTargetSquares(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask){
     std::vector<Square> target_squares;
     Square target_square;
     if(current_square.i != 7){

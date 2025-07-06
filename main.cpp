@@ -99,13 +99,6 @@ const unsigned int max_capacity_transposition_table = 25000;
 
 
 int BestEvaluationAtDepth(Position& root_position, int depth, int alpha, int beta, std::unordered_map<uint64_t, Position>& TranspositionTable, int& n_explored_positions){
-    // count considered positions
-    n_explored_positions++;
-    // limit case: at depth = 0 just return the material value of the input position
-    if(depth == 0){
-        root_position.score = root_position.material_value;
-        return root_position.material_value;
-    }
     // compute hash for the current position
     uint64_t hash = Zobrist_Hashing(root_position, z);
     // add position to transposition table unless we have already used too much memory
@@ -116,14 +109,24 @@ int BestEvaluationAtDepth(Position& root_position, int depth, int alpha, int bet
         bool inserted = emplacing_info.second;
         // if insertion failed, position has already been evaluated and we can retrieve and return its value
         if(!inserted){
+            //std::cout << "hit duplicate position\n";
             return root_position.score;
         }
     }
     else{
         if(TranspositionTable.find(hash) != TranspositionTable.end()){
+            //std::cout << "hit duplicate position after maxing out storage of hash map\n";
             return root_position.score;
         }
     }
+
+    // limit case: at depth = 0 just return the material value of the input position
+    if(depth == 0){
+        n_explored_positions++; // count considered positions
+        root_position.score = root_position.material_value;
+        return root_position.material_value;
+    }
+    
     // else generate all the new positions applying all the legal moves 
     // then recursively call this function and update best_evaluation if needed
     int best_evaluation;
@@ -227,7 +230,8 @@ int main(int argc, char* argv[]){
     std::cout << "Insert desired calculation depth: ";
     std::cin >> depth;
     Position pos = Position(random_position_fen);
-    pos.PrintBoard();
+    EfficientPosition eff_pos = EfficientPosition(random_position_fen);
+    eff_pos.PrintBoard();
     for(Move& move: pos.LegalMoves()){
         std::cout << move.AlgebraicNotation() << "\n";
     }
@@ -256,7 +260,6 @@ int main(int argc, char* argv[]){
     //std::vector<Square> moves = KnightTargetSquares(current_square, empty_mask, empty_mask);
     //PrintMoves(moves);
     */
-    std::cout << "hash: " << Zobrist_Hashing(pos, z) << "\n";
     std::cout << "Working at depth: " << depth << "\n";
     std::cout << "Best move is: " << BestMove(pos, depth).AlgebraicNotation() << "\n";
     return 0;

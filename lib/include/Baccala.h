@@ -70,12 +70,12 @@ public:
     Square current_square;
     Square target_square;
     char piece;
-    char side_to_move;
-    bool is_capture;
-    bool is_check;
+    bool is_capture = false;
+    bool is_check = false;
     bool is_castling = false;
     char new_piece; // used for pawn promotion
     char castling_side; // 'K': white castles kingside, 'Q' white castles queenside, 'k' and 'q' are analogues for black
+    int rank = 0; // move rank for smart move sorting
     //bool is_check_mate;
 
     // constructor for a normal move
@@ -95,36 +95,38 @@ public:
 
 
 // declare functions for pieces movement
-Mask KnightMovesMask(Square current_square, Mask your_pieces_mask);
+Mask KnightMovesMask(Square current_square, Mask& your_pieces_mask);
 Mask KnightCoveredSquaresMask(Square current_square);
-std::vector<Square> KnightTargetSquares(Square current_square, Mask your_pieces_mask);
+std::vector<Square> KnightTargetSquares(Square current_square, Mask& your_pieces_mask);
 
-Mask RookMovesMask(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask);
-Mask RookCoveredSquaresMask(Square current_square, Mask all_pieces_mask);
-std::vector<Square> RookTargetSquares(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask);
+Mask RookMovesMask(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask);
+Mask RookCoveredSquaresMask(Square current_square, Mask& all_pieces_mask);
+std::vector<Square> RookTargetSquares(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask);
 
-Mask BishopMovesMask(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask);
-Mask BishopCoveredSquaresMask(Square current_square, Mask all_pieces_mask);
-std::vector<Square> BishopTargetSquares(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask);
+Mask BishopMovesMask(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask);
+Mask BishopCoveredSquaresMask(Square current_square, Mask& all_pieces_mask);
+std::vector<Square> BishopTargetSquares(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask);
 
-Mask QueenMovesMask(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask);
-Mask QueenCoveredSquaresMask(Square current_square, Mask all_pieces_mask);
-std::vector<Square> QueenTargetSquares(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask);
+Mask QueenMovesMask(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask);
+Mask QueenCoveredSquaresMask(Square current_square, Mask& all_pieces_mask);
+std::vector<Square> QueenTargetSquares(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask);
 
-Mask KingMovesMask(Square current_square, Mask your_pieces_mask);
+Mask KingMovesMask(Square current_square, Mask& your_pieces_mask);
 Mask KingCoveredSquaresMask(Square current_square);
-std::vector<Square> KingTargetSquares(Square current_square, Mask your_pieces_mask);
+std::vector<Square> KingTargetSquares(Square current_square, Mask& your_pieces_mask);
 
-Mask WhitePawnMovesMask(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask, Square en_passant_target_square);
+Mask WhitePawnMovesMask(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask, Square en_passant_target_square);
 Mask WhitePawnCoveredSquaresMask(Square current_square);
-std::vector<Square> WhitePawnTargetSquares(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask, Square en_passant_target_square);
+std::vector<Square> WhitePawnTargetSquares(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask, Square en_passant_target_square);
 
-Mask BlackPawnMovesMask(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask);
+Mask BlackPawnMovesMask(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask);
 Mask BlackPawnCoveredSquaresMask(Square current_square);
-std::vector<Square> BlackPawnTargetSquares(Square current_square, Mask your_pieces_mask, Mask opponent_pieces_mask);
+std::vector<Square> BlackPawnTargetSquares(Square current_square, Mask& your_pieces_mask, Mask& opponent_pieces_mask);
 
 Mask WhitePiecesMask(Board board);
 Mask BlackPiecesMask(Board board);
 Mask AllPiecesMask(Board board);
 Mask WhiteCoveredSquaresMask(Board board);
 Mask BlackCoveredSquaresMask(Board board);
+
+void SortMoves(std::vector<Move>& moves);

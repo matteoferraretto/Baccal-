@@ -45,3 +45,37 @@ public:
 
 // function that generates the new position from a given position
 Position NewPosition(Position old_position, Move move);
+
+
+class EfficientPosition
+{
+private:
+public:
+    std::vector<char> pieces;
+    std::vector<int> ranks;
+    std::vector<int> files;
+    bool white_to_move;
+    bool can_white_castle_kingside = false;
+    bool can_white_castle_queenside = false;
+    bool can_black_castle_kingside = false;
+    bool can_black_castle_queenside = false;
+    int half_move_counter = 0;
+    int move_counter = 0;
+    Square en_passant_target_square; // <--- can improve by storing just the file 
+    int material_value = 0;
+    int score = 0;
+    Mask white_pieces_mask = empty_mask;
+    Mask black_pieces_mask = empty_mask;
+    Mask all_pieces_mask = empty_mask;
+    Mask white_covered_squares_mask = empty_mask;
+    Mask black_covered_squares_mask = empty_mask;
+
+    // constructor
+    EfficientPosition(std::string fen);
+
+    // methods
+    void PrintBoard(void);
+
+    // destructor
+    ~EfficientPosition();
+};
