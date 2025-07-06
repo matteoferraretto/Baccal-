@@ -362,6 +362,20 @@ Position NewPosition(Position old_position, Move move){
         else if(move.piece == 'p' && abs(jnew - jold) == 1 && !old_position.white_pieces_mask[inew][jnew]){
             new_position.board[inew-1][jnew] = ' ';
         }
+        // UPDATE THE MASKS - not the most elegant way, we are copy-pasting blocks of code
+        // you can improve here: there's a smarter way than looping through the board twice...
+        if(old_position.white_to_move){
+            new_position.white_pieces_mask[iold][jold] = 0;
+            new_position.white_pieces_mask[inew][jnew] = 1;
+            new_position.black_pieces_mask[inew][jnew] = 0;
+        }
+        else{
+            new_position.black_pieces_mask[iold][jold] = 0;
+            new_position.black_pieces_mask[inew][jnew] = 1;
+            new_position.white_pieces_mask[inew][jnew] = 0;
+        }
+        new_position.all_pieces_mask[inew][jnew] = 1;
+        new_position.all_pieces_mask[iold][jold] = 0;
     }
     // castling
     else{
@@ -370,24 +384,61 @@ Position NewPosition(Position old_position, Move move){
             new_position.can_white_castle_kingside = false;
             new_position.can_white_castle_queenside = false;
             new_position.white_king_square = {7, 6};
+            new_position.white_pieces_mask[7][7] = 0;
+            new_position.white_pieces_mask[7][6] = 1;
+            new_position.white_pieces_mask[7][5] = 1;
+            new_position.white_pieces_mask[7][4] = 0;
+            new_position.all_pieces_mask[7][7] = 0;
+            new_position.all_pieces_mask[7][6] = 1;
+            new_position.all_pieces_mask[7][5] = 1;
+            new_position.all_pieces_mask[7][4] = 0;
         }
         else if(move.castling_side == 'Q'){
             new_position.board[7][0] = ' '; new_position.board[7][1] = ' '; new_position.board[7][2] = 'K'; new_position.board[7][3] = 'R'; new_position.board[7][4] = ' ';
             new_position.can_white_castle_kingside = false;
             new_position.can_white_castle_queenside = false;
             new_position.white_king_square = {7, 2};
+            new_position.white_pieces_mask[7][0] = 0;
+            new_position.white_pieces_mask[7][1] = 0;
+            new_position.white_pieces_mask[7][2] = 1;
+            new_position.white_pieces_mask[7][3] = 1;
+            new_position.white_pieces_mask[7][4] = 0;
+            new_position.all_pieces_mask[7][0] = 0;
+            new_position.all_pieces_mask[7][1] = 0;
+            new_position.all_pieces_mask[7][2] = 1;
+            new_position.all_pieces_mask[7][3] = 1;
+            new_position.all_pieces_mask[7][4] = 0;
+            
         }
         else if(move.castling_side == 'k'){
             new_position.board[0][7] = ' '; new_position.board[0][6] = 'k'; new_position.board[0][5] = 'r'; new_position.board[0][4] = ' ';
             new_position.can_black_castle_kingside = false;
             new_position.can_black_castle_queenside = false;
             new_position.black_king_square = {0, 6};
+            new_position.black_pieces_mask[0][7] = 0;
+            new_position.black_pieces_mask[0][6] = 1;
+            new_position.black_pieces_mask[0][5] = 1;
+            new_position.black_pieces_mask[0][4] = 0;
+            new_position.all_pieces_mask[0][7] = 0;
+            new_position.all_pieces_mask[0][6] = 1;
+            new_position.all_pieces_mask[0][5] = 1;
+            new_position.all_pieces_mask[0][4] = 0;
         }
         else if(move.castling_side == 'q'){
             new_position.board[0][0] = ' '; new_position.board[0][1] = ' '; new_position.board[0][2] = 'k'; new_position.board[0][3] = 'r'; new_position.board[0][4] = ' ';
             new_position.can_black_castle_kingside = false;
             new_position.can_black_castle_queenside = false;
             new_position.black_king_square = {0, 2};
+            new_position.black_pieces_mask[0][0] = 0;
+            new_position.black_pieces_mask[0][1] = 0;
+            new_position.black_pieces_mask[0][2] = 1;
+            new_position.black_pieces_mask[0][3] = 1;
+            new_position.black_pieces_mask[0][4] = 0;
+            new_position.all_pieces_mask[0][0] = 0;
+            new_position.all_pieces_mask[0][1] = 0;
+            new_position.all_pieces_mask[0][2] = 1;
+            new_position.all_pieces_mask[0][3] = 1;
+            new_position.all_pieces_mask[0][4] = 0;
         }
     }
     // update side to move and move counter
@@ -395,20 +446,7 @@ Position NewPosition(Position old_position, Move move){
     if(move.is_capture || move.piece == 'P' || move.piece == 'p'){ new_position.half_move_counter = 0; }
     else{ new_position.half_move_counter += 1; }
     new_position.white_to_move = !old_position.white_to_move;    
-    // UPDATE THE MASKS - not the most elegant way, we are copy-pasting blocks of code
-    // you can improve here: there's a smarter way than looping through the board twice...
-    if(old_position.white_to_move){
-        new_position.white_pieces_mask[iold][jold] = 0;
-        new_position.white_pieces_mask[inew][jnew] = 1;
-        new_position.black_pieces_mask[inew][jnew] = 0;
-    }
-    else{
-        new_position.black_pieces_mask[iold][jold] = 0;
-        new_position.black_pieces_mask[inew][jnew] = 1;
-        new_position.white_pieces_mask[inew][jnew] = 0;
-    }
-    new_position.all_pieces_mask[inew][jnew] = 1;
-    new_position.all_pieces_mask[iold][jold] = 0;
+    // update covered squares mask
     new_position.white_covered_squares_mask = empty_mask;
     new_position.black_covered_squares_mask = empty_mask;
     for(int i=0; i<8; i++){

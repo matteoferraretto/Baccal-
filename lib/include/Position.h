@@ -12,7 +12,7 @@ public:
     std::string fen;
     bool white_to_move; // 1 = white; 0 = black
     Board board = empty_board;
-    char castling_rights;
+    char castling_rights; // <---- we can deprecate this
     bool can_white_castle_kingside = false;
     bool can_white_castle_queenside = false;
     bool can_black_castle_kingside = false;
@@ -29,6 +29,7 @@ public:
     int material_value = 0;
     int move_counter = 0;
     int half_move_counter = 0;
+    int score = 0; // this is the score evaluated by the minmax algorithm 
 
     // constructors
     Position(std::string fen);

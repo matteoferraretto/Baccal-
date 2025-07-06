@@ -29,23 +29,26 @@ uint64_t rand64() {
 // Let N_positions be the total number of chess positions.
 // the idea is that we want to store N positions that we encounter during the min-max search.
 // where necessarily N << N_positions. 
-
+// -----
 // Hashing means that we need to map all these N positions into distinct numbers.
 // The Zobrist hashing maps a position into an unsigned 64-bit integer, which can take 2^64 distinct values,
 // thus allowing to hash up to 2^64 positions that we encounter (we actually need N way less than that).
-
+//
 // Construct random Zobrist table of uint64_t type 
 struct ZobristTable {
-    uint64_t pieces_and_squares[12][64];
+    uint64_t pieces_and_squares[12][8][8];
     uint64_t white_to_move;
     uint64_t castling_rights[4];
     uint64_t en_passant_file[8];
 };
 
-void InitializeZobrist(ZobristTable& z){
-    for(int i=0; i<12; i++){
-        for(int j=0; j<64; j++){
-            z.pieces_and_squares[i][j] = rand64();
+ZobristTable InitializeZobrist(){
+    ZobristTable z;
+    for(int piece=0; piece<12; piece++){
+        for(int i=0; i<8; i++){
+            for(int j=0; j<8; j++){
+                z.pieces_and_squares[piece][i][j] = rand64();
+            }
         }
     }
     z.white_to_move = rand64();
@@ -55,24 +58,71 @@ void InitializeZobrist(ZobristTable& z){
     for(int i=0; i<8; i++){
         z.en_passant_file[i] = rand64();
     }
+    return z;
 }
 
-uint64_t Zobrist_Hashing(Position pos) {
+ZobristTable z = InitializeZobrist();
+
+uint64_t Zobrist_Hashing(Position pos, ZobristTable z) {
     // initialize value of 0
     uint64_t hash = 0;
-    ZobristTable z;
-    InitializeZobrist(z);
-
     // Zobrist hashing ...
-
+    for(int i=0; i<8; i++){
+        for(int j=0; j<8; j++){
+            if(pos.board[i][j] == ' '){ continue; }
+            else if(pos.board[i][j] == 'P'){ hash ^= z.pieces_and_squares[0][i][j]; }
+            else if(pos.board[i][j] == 'N'){ hash ^= z.pieces_and_squares[1][i][j]; }
+            else if(pos.board[i][j] == 'B'){ hash ^= z.pieces_and_squares[2][i][j]; }
+            else if(pos.board[i][j] == 'R'){ hash ^= z.pieces_and_squares[3][i][j]; }
+            else if(pos.board[i][j] == 'Q'){ hash ^= z.pieces_and_squares[4][i][j]; }
+            else if(pos.board[i][j] == 'K'){ hash ^= z.pieces_and_squares[5][i][j]; }
+            else if(pos.board[i][j] == 'p'){ hash ^= z.pieces_and_squares[6][i][j]; }
+            else if(pos.board[i][j] == 'n'){ hash ^= z.pieces_and_squares[7][i][j]; }
+            else if(pos.board[i][j] == 'b'){ hash ^= z.pieces_and_squares[8][i][j]; }
+            else if(pos.board[i][j] == 'r'){ hash ^= z.pieces_and_squares[9][i][j]; }
+            else if(pos.board[i][j] == 'q'){ hash ^= z.pieces_and_squares[10][i][j]; }
+            else if(pos.board[i][j] == 'k'){ hash ^= z.pieces_and_squares[11][i][j]; }
+        } 
+    }
+    if(pos.white_to_move){ hash ^= z.white_to_move; }
+    if(pos.can_white_castle_kingside){ hash ^= z.castling_rights[0]; }
+    else if(pos.can_white_castle_queenside){ hash ^= z.castling_rights[1]; }
+    else if(pos.can_black_castle_kingside){ hash ^= z.castling_rights[2]; }
+    else if(pos.can_black_castle_queenside){ hash ^= z.castling_rights[3]; }
+    for(int j=0; j<8; j++){
+        if(pos.en_passant_target_square.j == j){ hash ^= z.en_passant_file[j]; }
+    }
     return hash;
 }
 
-int BestEvaluationAtDepth(Position root_position, int depth, int alpha, int beta, int& n_explored_positions){
+const unsigned int max_capacity_transposition_table = 25000;
+
+
+int BestEvaluationAtDepth(Position& root_position, int depth, int alpha, int beta, std::unordered_map<uint64_t, Position>& TranspositionTable, int& n_explored_positions){
+    // count considered positions
     n_explored_positions++;
     // limit case: at depth = 0 just return the material value of the input position
     if(depth == 0){
+        root_position.score = root_position.material_value;
         return root_position.material_value;
+    }
+    // compute hash for the current position
+    uint64_t hash = Zobrist_Hashing(root_position, z);
+    // add position to transposition table unless we have already used too much memory
+    if(TranspositionTable.size() < max_capacity_transposition_table){
+        // if not present, add position to the transposition table
+        std::pair<std::unordered_map<uint64_t, Position>::iterator, bool> emplacing_info;
+        emplacing_info = TranspositionTable.emplace(hash, root_position);
+        bool inserted = emplacing_info.second;
+        // if insertion failed, position has already been evaluated and we can retrieve and return its value
+        if(!inserted){
+            return root_position.score;
+        }
+    }
+    else{
+        if(TranspositionTable.find(hash) != TranspositionTable.end()){
+            return root_position.score;
+        }
     }
     // else generate all the new positions applying all the legal moves 
     // then recursively call this function and update best_evaluation if needed
@@ -86,36 +136,41 @@ int BestEvaluationAtDepth(Position root_position, int depth, int alpha, int beta
     if(moves.size() == 0){
         // WHITE STALEMATED: black to move and the black king is NOT in white's covered squares 
         if(!root_position.white_to_move && !root_position.white_covered_squares_mask[root_position.black_king_square.i][root_position.black_king_square.j]){
+            root_position.score = 0;
             return 0;
         }        
         // BLACK STALEMATED: white to move and the white king is NOT in black's covered squares
         else if(root_position.white_to_move && !root_position.black_covered_squares_mask[root_position.white_king_square.i][root_position.white_king_square.j]){
+            root_position.score = 0;
             return 0;
         }
         // WHITE CHECKMATED: black to move and the black king IS in white's covered squares
         else if(!root_position.white_to_move && root_position.white_covered_squares_mask[root_position.black_king_square.i][root_position.black_king_square.j]){
+            root_position.score = 1000 + depth;
             return 1000 + depth;  // adding the depth is used to consider a mate in 1 better than a mate in 2 or in 3 etc
         }    
         // BLACK CHECKMATED: white to move and the white king IS in black's covered squares
         else if(root_position.white_to_move && root_position.black_covered_squares_mask[root_position.white_king_square.i][root_position.white_king_square.j]){
+            root_position.score = -1000 - depth;
             return -1000 - depth;
         }   
     }
     // loop over all legal moves 
     for(Move& move: moves){
         if(root_position.white_to_move){
-            eval = BestEvaluationAtDepth(NewPosition(root_position, move), depth-1, alpha, beta, n_explored_positions);
+            eval = BestEvaluationAtDepth(NewPosition(root_position, move), depth-1, alpha, beta, TranspositionTable, n_explored_positions);
             best_evaluation = std::max(best_evaluation, eval);
             alpha = std::max(alpha, eval); // best evaluation for white encountered so far down the tree
             if(beta <= alpha){ break; } 
         }
         else{
-            eval = BestEvaluationAtDepth(NewPosition(root_position, move), depth-1, alpha, beta, n_explored_positions);
+            eval = BestEvaluationAtDepth(NewPosition(root_position, move), depth-1, alpha, beta, TranspositionTable, n_explored_positions);
             best_evaluation = std::min(best_evaluation, eval);
             beta = std::min(beta, eval);
             if(beta <= alpha){ break; }
         }
     }
+    root_position.score = best_evaluation;
     return best_evaluation;
 }
 
@@ -129,12 +184,15 @@ Move BestMove(Position root_position, int depth){
     Position child_position = root_position;
     std::vector<Move> moves = root_position.LegalMoves();
     Move best_move = moves[0];
+    // initialize the hash-map for the Transposition table
+    std::unordered_map<uint64_t, Position> TranspositionTable;
+    TranspositionTable.reserve(max_capacity_transposition_table);
     // loop over all the legal moves from the current position
     for(Move& move: moves){
         std::cout << "depth: " << depth << " ; move: " << move.AlgebraicNotation();
         // generate child position and find its best evaluation down the tree 
         child_position = NewPosition(root_position, move);
-        eval = BestEvaluationAtDepth(child_position, depth-1, negative_infinity, positive_infinity, n_explored_positions); // depth-1 because we are rooting from the child position
+        eval = BestEvaluationAtDepth(child_position, depth-1, negative_infinity, positive_infinity, TranspositionTable, n_explored_positions); // depth-1 because we are rooting from the child position
         std::cout << " ; eval: " << eval << "\n";
         // if white to move and the evaluation at given depth of this move is higher than all the previous ones, overwrite best move
         if(root_position.white_to_move){
@@ -198,6 +256,7 @@ int main(int argc, char* argv[]){
     //std::vector<Square> moves = KnightTargetSquares(current_square, empty_mask, empty_mask);
     //PrintMoves(moves);
     */
+    std::cout << "hash: " << Zobrist_Hashing(pos, z) << "\n";
     std::cout << "Working at depth: " << depth << "\n";
     std::cout << "Best move is: " << BestMove(pos, depth).AlgebraicNotation() << "\n";
     return 0;
