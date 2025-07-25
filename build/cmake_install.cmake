@@ -1,8 +1,8 @@
-# Install script for directory: C:/Users/matte/Documents/Study_C++/ChessEngine
+# Install script for directory: C:/Users/matte/Documents/Study_C++/ChessEngine2.0
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "C:/Program Files (x86)/ChessEngine")
+  set(CMAKE_INSTALL_PREFIX "C:/Program Files/ChessEngine2")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -34,7 +34,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("C:/Users/matte/Documents/Study_C++/ChessEngine/build/lib/cmake_install.cmake")
+  include("C:/Users/matte/Documents/Study_C++/ChessEngine2.0/build/lib/cmake_install.cmake")
 
 endif()
 
@@ -46,5 +46,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "C:/Users/matte/Documents/Study_C++/ChessEngine/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "C:/Users/matte/Documents/Study_C++/ChessEngine2.0/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

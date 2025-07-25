@@ -1,547 +1,16 @@
-#include <Baccala.h>
 #include <Position.h>
+#include <Utilities.h>
+#include <Bitboards.h>
 #include <iostream>
 #include <sstream>
-#include <string>
+#include <cstdint>
+#include <intrin.h>
 #include <vector>
-#include <typeinfo>
-#include <cctype>
 
-// CONSTRUCTOR FOR POSITION
-// given a fen string, this computes all the info relevant to the position
-Position::Position(std::string fen)
+Position PositionFromFen(std::string fen)
 {
-    this->fen = fen;
+    Position pos;
 
-    // take the fen string and separate the "words" separated by spaces
-    std::stringstream ss(fen);
-    std::vector<std::string> words;
-    std::string word;
-    while (ss >> word) {
-        words.push_back(word);
-    }
-
-    // get board in the form of a 8x8 char matrix
-    int i = 0; int j = 0; int c_casted;
-    for(char& c: words[0]){
-        c_casted = c - '0';
-        if(c_casted == 8) { continue; }
-        if(c_casted == -1) { i++; j = 0; continue; } // if c is '/', increment row index and reset column index to 0
-        if(c_casted > 0 && c_casted < 8) { j += c_casted; continue; }
-        this->board[i][j] = c; j++;
-    }
-
-    // set side to move
-    if(words[1] == "w") { this->white_to_move = 1; }
-    else this->white_to_move = 0;
-
-    // set castling rights
-    for(char& c: words[2]){
-        if(c == '-') { break; }
-        else if(c == 'K') { this->can_white_castle_kingside = true; continue; }
-        else if(c == 'Q') { this->can_white_castle_queenside = true; continue; }
-        else if(c == 'k') { this->can_black_castle_kingside = true; continue; }
-        else if(c == 'q') { this->can_black_castle_queenside = true; continue; }
-    }
-
-    // set en-passant target square if different from '-'
-    if(words[3] != "-"){
-        this->en_passant_target_square = AlphabetToSquare(words[3]);
-    }
-
-    // set half move counter and move counter from fen
-    this->half_move_counter = std::stoi(words[4]);
-    this->move_counter = std::stoi(words[5]);
-
-    // evaluate masks of white, black and all pieces, position of the kings and material value
-    for(int i=0; i<8; i++){
-        for(int j=0; j<8; j++){
-            char c = this->board[i][j];
-            if(c==' ') { continue; }
-            else if(c=='K' || c=='Q' || c=='B' || c=='R' || c=='N' || c=='P'){
-                this->white_pieces_mask[i][j] = 1; 
-                this->all_pieces_mask[i][j] = 1;
-                if(c=='K'){ this->white_king_square.i = i; this->white_king_square.j = j; }
-                this->material_value += PieceValue(c);
-            }
-            else if(c=='k' || c=='q' || c=='b' || c=='r' || c=='n' || c=='p'){
-                this->black_pieces_mask[i][j] = 1;
-                this->all_pieces_mask[i][j] = 1;
-                if(c=='k'){ this->black_king_square.i = i; this->black_king_square.j = j; }
-                this->material_value += PieceValue(c);
-            }
-        }
-    }
-
-    // evaluate masks of covered squares by black and white
-    for(int i=0; i<8; i++){
-        for(int j=0; j<8; j++){
-            char c = this->board[i][j];
-            Square current_square; 
-            current_square.i = i; current_square.j = j;
-            if(c == ' ') { continue; }
-            // Rooks
-            else if(c == 'R'){ this->white_covered_squares_mask += RookCoveredSquaresMask(current_square, this->all_pieces_mask); }
-            else if(c == 'r'){ this->black_covered_squares_mask += RookCoveredSquaresMask(current_square, this->all_pieces_mask); }
-            // Bishops
-            else if(c == 'B'){ this->white_covered_squares_mask += BishopCoveredSquaresMask(current_square, this->all_pieces_mask); }
-            else if(c == 'b'){ this->black_covered_squares_mask += BishopCoveredSquaresMask(current_square, this->all_pieces_mask); }
-            // Queens
-            else if(c == 'Q'){ this->white_covered_squares_mask += QueenCoveredSquaresMask(current_square, this->all_pieces_mask); }
-            else if(c == 'q'){ this->black_covered_squares_mask += QueenCoveredSquaresMask(current_square, this->all_pieces_mask); }
-            // Kings
-            else if(c == 'K'){ this->white_covered_squares_mask += KingCoveredSquaresMask(current_square); }
-            else if(c == 'k'){ this->black_covered_squares_mask += KingCoveredSquaresMask(current_square); }
-            // Knights
-            else if(c == 'N'){ this->white_covered_squares_mask += KnightCoveredSquaresMask(current_square); }
-            else if(c == 'n'){ this->black_covered_squares_mask += KnightCoveredSquaresMask(current_square); }
-            // Pawns
-            else if(c == 'P'){ this->white_covered_squares_mask += WhitePawnCoveredSquaresMask(current_square); }
-            else if(c == 'p'){ this->black_covered_squares_mask += BlackPawnCoveredSquaresMask(current_square); }
-        }
-    }
-}
-
-Position::~Position()
-{
-}
-
-void Position::PrintBoard(void){
-    char c;
-    for(int i=0; i<8; i++){
-        for(int j=0; j<8; j++){
-            c = this->board[i][j];
-            if (c == ' ') { c = '0'; }
-            std::cout << c << " ";
-        }
-        std::cout << "\n";
-    }
-};
-
-bool Position::IsLegal(Move move){
-    Square king_square;
-    Board new_board = this->board;
-    Mask opponent_covered_squares_mask;
-    bool is_legal;
-    // for a normal move which is not castling
-    if(!move.is_castling){
-        // create a new board after the move
-        new_board[move.current_square.i][move.current_square.j] = ' ';
-        // if pawn promotion
-        if(move.new_piece != 'z'){ 
-            new_board[move.target_square.i][move.target_square.j] = move.new_piece;
-        }
-        else{
-            new_board[move.target_square.i][move.target_square.j] = move.piece;
-        }
-        // generate the mask of covered squares by the opponent after the move
-        // then check if your king is in a square attacked by the opponent after the move
-        if(this->white_to_move){
-            if(move.piece == 'K'){ king_square = move.target_square; }
-            else{ king_square = this->white_king_square; }
-            opponent_covered_squares_mask = BlackCoveredSquaresMask(new_board);
-            is_legal = !(opponent_covered_squares_mask[king_square.i][king_square.j]);
-        }
-        else{
-            if(move.piece == 'k'){ king_square = move.target_square; }
-            else{ king_square = this->black_king_square; }
-            opponent_covered_squares_mask = WhiteCoveredSquaresMask(new_board);      
-            is_legal = !(opponent_covered_squares_mask[king_square.i][king_square.j]);
-        }
-    }
-    // manage castling: control if the king is in check and if it passes through a covered square while castling
-    else{
-        if(move.castling_side == 'K'){
-            opponent_covered_squares_mask = BlackCoveredSquaresMask(this->board);
-            is_legal = !opponent_covered_squares_mask[7][4] && !opponent_covered_squares_mask[7][5] && !opponent_covered_squares_mask[7][6];
-        }
-        else if(move.castling_side == 'Q'){
-            opponent_covered_squares_mask = BlackCoveredSquaresMask(this->board);
-            is_legal = !opponent_covered_squares_mask[7][4] && !opponent_covered_squares_mask[7][3] && !opponent_covered_squares_mask[7][2];
-        }
-        else if(move.castling_side == 'k'){
-            opponent_covered_squares_mask = WhiteCoveredSquaresMask(this->board);
-            is_legal = !opponent_covered_squares_mask[0][4] && !opponent_covered_squares_mask[0][5] && !opponent_covered_squares_mask[0][6];
-        }
-        else if(move.castling_side == 'q'){
-            opponent_covered_squares_mask = WhiteCoveredSquaresMask(this->board);
-            is_legal = !opponent_covered_squares_mask[0][4] && !opponent_covered_squares_mask[0][3] && !opponent_covered_squares_mask[0][2];
-        }
-    }
-    return is_legal;
-}
-
-std::vector<Move> Position::LegalMoves(){
-    // initialize stuff
-    std::vector<Move> moves;
-    moves.reserve(80);
-    Square current_square; 
-    std::vector<Square> target_squares;
-    bool is_capture;
-    // scan the board to find the pieces
-    for(int i=0; i<8; i++){
-        for(int j=0; j<8; j++){
-            char c = this->board[i][j];
-            if(this->white_to_move){
-                // if it's white to move, ignore empty squares or squares with black pieces
-                if(c==' ' || c=='p' || c=='k' || c=='q' || c=='r' || c=='b' || c=='n'){ continue; }
-                // instead, depending on the piece, create the vector of target squares where the piece can go
-                else{
-                    current_square.i = i; current_square.j = j;
-                    // Rook moves: for every target square, build the corresponding move
-                    if(c == 'R'){
-                        for(Square& target_square: RookTargetSquares(current_square, this->white_pieces_mask, this->black_pieces_mask)){
-                            is_capture = this->black_pieces_mask[target_square.i][target_square.j];
-                            Move move = Move(current_square, target_square, c, is_capture);
-                            if(IsLegal(move)){
-                                // rank the move
-                                move.rank = -PieceValue(this->board[target_square.i][target_square.j]);
-                                moves.push_back(move);
-                            }
-                        }
-                    }
-                    else if(c == 'B'){
-                        for(Square& target_square: BishopTargetSquares(current_square, this->white_pieces_mask, this->black_pieces_mask)){
-                            is_capture = this->black_pieces_mask[target_square.i][target_square.j];
-                            Move move = Move(current_square, target_square, c, is_capture);
-                            if(IsLegal(move)){
-                                move.rank = -PieceValue(this->board[target_square.i][target_square.j]);
-                                moves.push_back(move); 
-                            }
-                        }
-                    }
-                    else if(c == 'Q'){
-                        for(Square& target_square: QueenTargetSquares(current_square, this->white_pieces_mask, this->black_pieces_mask)){
-                            is_capture = this->black_pieces_mask[target_square.i][target_square.j];
-                            Move move = Move(current_square, target_square, c, is_capture);
-                            if(IsLegal(move)){
-                                move.rank = -PieceValue(this->board[target_square.i][target_square.j]);
-                                moves.push_back(move);
-                            }
-                        }
-                    }
-                    else if(c == 'K'){
-                        for(Square& target_square: KingTargetSquares(current_square, this->white_pieces_mask)){
-                            is_capture = this->black_pieces_mask[target_square.i][target_square.j];
-                            Move move = Move(current_square, target_square, c, is_capture);
-                            if(IsLegal(move)){
-                                move.rank = -PieceValue(this->board[target_square.i][target_square.j]);
-                                moves.push_back(move);
-                            }
-                        }
-                    }
-                    else if(c == 'N'){
-                        for(Square& target_square: KnightTargetSquares(current_square, this->white_pieces_mask)){
-                            is_capture = this->black_pieces_mask[target_square.i][target_square.j];
-                            Move move = Move(current_square, target_square, c, is_capture);
-                            if(IsLegal(move)){
-                                // rank the move and insert it at the beginning of the array if it is ranked best
-                                move.rank = -PieceValue(this->board[target_square.i][target_square.j]);
-                                moves.push_back(move);
-                            }
-                        }
-                    }
-                    else if(c == 'P'){
-                        for(Square& target_square: WhitePawnTargetSquares(current_square, this->white_pieces_mask, this->black_pieces_mask, this->en_passant_target_square)){
-                            // pawn promotion
-                            if(target_square.i == 0){
-                                for(int a=0; a<4; a++){
-                                    Move move = Move(target_square, pieces_white_pawn_becomes[a]);
-                                    if(IsLegal(move)){
-                                        move.rank = PieceValue(pieces_white_pawn_becomes[a]) - 1;
-                                        moves.push_back(move);
-                                    }
-                                }
-                            }
-                            // normal pawn moves
-                            else{
-                                is_capture = (abs(target_square.j - current_square.j) == 1); // if pawn moves diagonally this is a capture
-                                Move move = Move(current_square, target_square, c, is_capture);
-                                if(IsLegal(move)){
-                                    move.rank = -PieceValue(this->board[target_square.i][target_square.j]);
-                                    moves.push_back(move);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            // if it is black to move do the specular operations
-            else{
-                if(c==' ' || c=='P' || c=='K' || c=='Q' || c=='R' || c=='B' || c=='N'){ continue; }
-                else{
-                    current_square.i = i; current_square.j = j;
-                    if(c == 'r'){
-                        for(Square& target_square: RookTargetSquares(current_square, this->black_pieces_mask, this->white_pieces_mask)){
-                            is_capture = this->white_pieces_mask[target_square.i][target_square.j];
-                            Move move = Move(current_square, target_square, c, is_capture);
-                            if(IsLegal(move)){
-                                move.rank = PieceValue(this->board[target_square.i][target_square.j]);
-                                moves.push_back(move);
-                            }
-                        }
-                    }
-                    else if(c == 'b'){
-                        for(Square& target_square: BishopTargetSquares(current_square, this->black_pieces_mask, this->white_pieces_mask)){
-                            is_capture = this->white_pieces_mask[target_square.i][target_square.j];
-                            Move move = Move(current_square, target_square, c, is_capture);
-                            if(IsLegal(move)){
-                                move.rank = PieceValue(this->board[target_square.i][target_square.j]);
-                                moves.push_back(move);
-                            }
-                        }
-                    }
-                    else if(c == 'q'){
-                        for(Square& target_square: QueenTargetSquares(current_square, this->black_pieces_mask, this->white_pieces_mask)){
-                            is_capture = this->white_pieces_mask[target_square.i][target_square.j];
-                            Move move = Move(current_square, target_square, c, is_capture);
-                            if(IsLegal(move)){
-                                move.rank = PieceValue(this->board[target_square.i][target_square.j]);
-                                moves.push_back(move);
-                            }
-                        }
-                    }
-                    else if(c == 'k'){
-                        for(Square& target_square: KingTargetSquares(current_square, this->black_pieces_mask)){
-                            is_capture = this->white_pieces_mask[target_square.i][target_square.j];
-                            Move move = Move(current_square, target_square, c, is_capture);
-                            if(IsLegal(move)){
-                                move.rank = PieceValue(this->board[target_square.i][target_square.j]);
-                                moves.push_back(move);
-                            }
-                        }
-                    }
-                    else if(c == 'n'){
-                        for(Square& target_square: KnightTargetSquares(current_square, this->black_pieces_mask)){
-                            is_capture = this->white_pieces_mask[target_square.i][target_square.j];
-                            Move move = Move(current_square, target_square, c, is_capture);
-                            if(IsLegal(move)){
-                                move.rank = PieceValue(this->board[target_square.i][target_square.j]);
-                                moves.push_back(move);
-                            }
-                        }
-                    }
-                    else if(c == 'p'){
-                        for(Square& target_square: BlackPawnTargetSquares(current_square, this->black_pieces_mask, this->white_pieces_mask)){
-                            // pawn promotion
-                            if(target_square.i == 7){
-                                for(int a=0; a<4; a++){
-                                    Move move = Move(target_square, pieces_black_pawn_becomes[a]);
-                                    if(IsLegal(move)){
-                                        move.rank = -PieceValue(pieces_white_pawn_becomes[a]) - 1;
-                                        moves.push_back(move);
-                                    }
-                                }
-                            }
-                            // normal pawn moves
-                            else{
-                                is_capture = (abs(target_square.j - current_square.j) == 1); // if pawn moves diagonally this is a capture
-                                Move move = Move(current_square, target_square, c, is_capture);
-                                if(IsLegal(move)){
-                                    move.rank = PieceValue(this->board[target_square.i][target_square.j]);
-                                    moves.push_back(move);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    // castling
-    if(this->white_to_move){
-        if(this->can_white_castle_kingside && this->board[7][4]=='K' && this->board[7][5]==' ' && this->board[7][6] == ' ' && this->board[7][7] == 'R'){
-            Move move = Move('K');
-            if(IsLegal(move)){ moves.push_back(move); }
-        }
-        else if(this->can_white_castle_queenside && this->board[7][0]=='R' && this->board[7][1]==' ' && this->board[7][2]==' ' && this->board[7][3]==' ' && this->board[7][4]=='K'){
-            Move move = Move('Q');
-            if(IsLegal(move)){ moves.push_back(move); }
-        }
-    }
-    else{
-        if(this->can_black_castle_kingside && this->board[0][4]=='k' && this->board[0][5]==' ' && this->board[0][6] == ' ' && this->board[0][7] == 'r'){
-            Move move = Move('k');
-            if(IsLegal(move)){ moves.push_back(move); }
-        }
-        else if(this->can_black_castle_queenside && this->board[0][0]=='r' && this->board[0][1]==' ' && this->board[0][2]==' ' && this->board[0][3]==' ' && this->board[0][4]=='k'){
-            Move move = Move('q');
-            if(IsLegal(move)){ moves.push_back(move); }
-        }
-    }
-    SortMoves(moves);
-    return moves;
-}
-
-
-// GET NEW POSITION APPLYING A GIVEN MOVE TO AN OLD POSITION
-// the input move is assumed to be a legal move given the old position
-// if an illegal move is provided, unexpected behavior occurs
-Position NewPosition(Position old_position, Move move){
-    int iold = move.current_square.i;
-    int jold = move.current_square.j;
-    int inew = move.target_square.i;
-    int jnew = move.target_square.j;
-    Position new_position = old_position;
-    // UPDATE THE BOARD
-    // normal move (not castling) 
-    if(!move.is_castling){
-        new_position.board[iold][jold] = ' ';
-        new_position.board[inew][jnew] = move.piece;
-        new_position.material_value -= PieceValue(old_position.board[inew][jnew]);
-        // change castling rights if the king or the rook move from the starting square
-        if(move.piece == 'K'){
-            new_position.can_white_castle_kingside = false; 
-            new_position.can_white_castle_queenside = false;
-            new_position.white_king_square = move.target_square;
-        }
-        else if(move.piece == 'k'){
-            new_position.can_black_castle_kingside = false; 
-            new_position.can_black_castle_queenside = false;
-            new_position.black_king_square = move.target_square;
-        }
-        else if(move.piece == 'R' && iold == 7 && jold == 7){new_position.can_white_castle_kingside = false;}
-        else if(move.piece == 'R' && iold == 7 && jold == 0){new_position.can_white_castle_queenside = false;}
-        else if(move.piece == 'r' && iold == 0 && jold == 7){new_position.can_black_castle_kingside = false;}
-        else if(move.piece == 'r' && iold == 0 && jold == 0){new_position.can_black_castle_queenside = false;}
-        // pawn promotion
-        else if(move.piece == 'P' && inew == 0){
-            new_position.board[0][jnew] = move.new_piece; 
-            new_position.material_value += PieceValue(move.new_piece) - 1; 
-        }
-        else if(move.piece == 'p' && inew == 7){
-            new_position.board[7][jnew] = move.new_piece;
-            new_position.material_value += PieceValue(move.new_piece) - 1; 
-        }
-        // set en passant target square when a pawn moves two squares ahead
-        else if(move.piece == 'P' && iold == 6 && inew == 4){ new_position.en_passant_target_square = {5, jnew}; }
-        else if(move.piece == 'p' && iold == 1 && inew == 3){ new_position.en_passant_target_square = {2, jnew}; }
-        // if a pawn captures en-passant (i.e. pawn moves diagonally but target square is empty), make sure to delete the eaten pawn from the board
-        else if(move.piece == 'P' && abs(jnew - jold) == 1 && !old_position.black_pieces_mask[inew][jnew]){
-            new_position.board[inew+1][jnew] = ' ';
-        }
-        else if(move.piece == 'p' && abs(jnew - jold) == 1 && !old_position.white_pieces_mask[inew][jnew]){
-            new_position.board[inew-1][jnew] = ' ';
-        }
-        // UPDATE THE MASKS - not the most elegant way, we are copy-pasting blocks of code
-        // you can improve here: there's a smarter way than looping through the board twice...
-        if(old_position.white_to_move){
-            new_position.white_pieces_mask[iold][jold] = 0;
-            new_position.white_pieces_mask[inew][jnew] = 1;
-            new_position.black_pieces_mask[inew][jnew] = 0;
-        }
-        else{
-            new_position.black_pieces_mask[iold][jold] = 0;
-            new_position.black_pieces_mask[inew][jnew] = 1;
-            new_position.white_pieces_mask[inew][jnew] = 0;
-        }
-        new_position.all_pieces_mask[inew][jnew] = 1;
-        new_position.all_pieces_mask[iold][jold] = 0;
-    }
-    // castling
-    else{
-        if(move.castling_side == 'K'){
-            new_position.board[7][7] = ' '; new_position.board[7][6] = 'K'; new_position.board[7][5] = 'R'; new_position.board[7][4] = ' ';
-            new_position.can_white_castle_kingside = false;
-            new_position.can_white_castle_queenside = false;
-            new_position.white_king_square = {7, 6};
-            new_position.white_pieces_mask[7][7] = 0;
-            new_position.white_pieces_mask[7][6] = 1;
-            new_position.white_pieces_mask[7][5] = 1;
-            new_position.white_pieces_mask[7][4] = 0;
-            new_position.all_pieces_mask[7][7] = 0;
-            new_position.all_pieces_mask[7][6] = 1;
-            new_position.all_pieces_mask[7][5] = 1;
-            new_position.all_pieces_mask[7][4] = 0;
-        }
-        else if(move.castling_side == 'Q'){
-            new_position.board[7][0] = ' '; new_position.board[7][1] = ' '; new_position.board[7][2] = 'K'; new_position.board[7][3] = 'R'; new_position.board[7][4] = ' ';
-            new_position.can_white_castle_kingside = false;
-            new_position.can_white_castle_queenside = false;
-            new_position.white_king_square = {7, 2};
-            new_position.white_pieces_mask[7][0] = 0;
-            new_position.white_pieces_mask[7][1] = 0;
-            new_position.white_pieces_mask[7][2] = 1;
-            new_position.white_pieces_mask[7][3] = 1;
-            new_position.white_pieces_mask[7][4] = 0;
-            new_position.all_pieces_mask[7][0] = 0;
-            new_position.all_pieces_mask[7][1] = 0;
-            new_position.all_pieces_mask[7][2] = 1;
-            new_position.all_pieces_mask[7][3] = 1;
-            new_position.all_pieces_mask[7][4] = 0;
-            
-        }
-        else if(move.castling_side == 'k'){
-            new_position.board[0][7] = ' '; new_position.board[0][6] = 'k'; new_position.board[0][5] = 'r'; new_position.board[0][4] = ' ';
-            new_position.can_black_castle_kingside = false;
-            new_position.can_black_castle_queenside = false;
-            new_position.black_king_square = {0, 6};
-            new_position.black_pieces_mask[0][7] = 0;
-            new_position.black_pieces_mask[0][6] = 1;
-            new_position.black_pieces_mask[0][5] = 1;
-            new_position.black_pieces_mask[0][4] = 0;
-            new_position.all_pieces_mask[0][7] = 0;
-            new_position.all_pieces_mask[0][6] = 1;
-            new_position.all_pieces_mask[0][5] = 1;
-            new_position.all_pieces_mask[0][4] = 0;
-        }
-        else if(move.castling_side == 'q'){
-            new_position.board[0][0] = ' '; new_position.board[0][1] = ' '; new_position.board[0][2] = 'k'; new_position.board[0][3] = 'r'; new_position.board[0][4] = ' ';
-            new_position.can_black_castle_kingside = false;
-            new_position.can_black_castle_queenside = false;
-            new_position.black_king_square = {0, 2};
-            new_position.black_pieces_mask[0][0] = 0;
-            new_position.black_pieces_mask[0][1] = 0;
-            new_position.black_pieces_mask[0][2] = 1;
-            new_position.black_pieces_mask[0][3] = 1;
-            new_position.black_pieces_mask[0][4] = 0;
-            new_position.all_pieces_mask[0][0] = 0;
-            new_position.all_pieces_mask[0][1] = 0;
-            new_position.all_pieces_mask[0][2] = 1;
-            new_position.all_pieces_mask[0][3] = 1;
-            new_position.all_pieces_mask[0][4] = 0;
-        }
-    }
-    // update side to move and move counter
-    if(old_position.white_to_move){ new_position.move_counter += 1; }
-    if(move.is_capture || move.piece == 'P' || move.piece == 'p'){ new_position.half_move_counter = 0; }
-    else{ new_position.half_move_counter += 1; }
-    new_position.white_to_move = !old_position.white_to_move;    
-    // update covered squares mask
-    new_position.white_covered_squares_mask = empty_mask;
-    new_position.black_covered_squares_mask = empty_mask;
-    for(int i=0; i<8; i++){
-        for(int j=0; j<8; j++){
-            char c = new_position.board[i][j];
-            if(c == ' ') { continue; }
-            // Rooks
-            else if(c == 'R'){ new_position.white_covered_squares_mask += RookCoveredSquaresMask({i, j}, new_position.all_pieces_mask); }
-            else if(c == 'r'){ new_position.black_covered_squares_mask += RookCoveredSquaresMask({i, j}, new_position.all_pieces_mask); }
-            // Bishops
-            else if(c == 'B'){ new_position.white_covered_squares_mask += BishopCoveredSquaresMask({i, j}, new_position.all_pieces_mask); }
-            else if(c == 'b'){ new_position.black_covered_squares_mask += BishopCoveredSquaresMask({i, j}, new_position.all_pieces_mask); }
-            // Queens
-            else if(c == 'Q'){ new_position.white_covered_squares_mask += QueenCoveredSquaresMask({i, j}, new_position.all_pieces_mask); }
-            else if(c == 'q'){ new_position.black_covered_squares_mask += QueenCoveredSquaresMask({i, j}, new_position.all_pieces_mask); }
-            // Kings
-            else if(c == 'K'){ new_position.white_covered_squares_mask += KingCoveredSquaresMask({i, j}); }
-            else if(c == 'k'){ new_position.black_covered_squares_mask += KingCoveredSquaresMask({i, j}); }
-            // Knights
-            else if(c == 'N'){ new_position.white_covered_squares_mask += KnightCoveredSquaresMask({i, j}); }
-            else if(c == 'n'){ new_position.black_covered_squares_mask += KnightCoveredSquaresMask({i, j}); }
-            // Pawns
-            else if(c == 'P'){ new_position.white_covered_squares_mask += WhitePawnCoveredSquaresMask({i, j}); }
-            else if(c == 'p'){ new_position.black_covered_squares_mask += BlackPawnCoveredSquaresMask({i, j}); }
-        }
-    }
-    // return the new position, NOTICE THAT THE CORRESPONDING FEN STRING IS NOT UPDATED!!!
-    return new_position;
-}
-
-
-// ----------------------------------------------------
-EfficientPosition::EfficientPosition(std::string fen)
-{
     // take the fen string and separate the "words" separated by spaces
     std::stringstream ss(fen);
     std::vector<std::string> words;
@@ -553,165 +22,653 @@ EfficientPosition::EfficientPosition(std::string fen)
     // get board in the form of a 8x8 char matrix
     int i = 0; 
     int j = 0; 
+    int square = 0;
     int c_casted; 
+    // loop over characters of the FEN string
     for(char& c: words[0]){
         c_casted = c - '0';
-        if(c_casted == 8) { continue; }
+        if(c_casted == 8) { continue; } // if c is 8, ignore
         if(c_casted == -1) { i++; j = 0; continue; } // if c is '/', increment row index and reset column index to 0
-        if(c_casted > 0 && c_casted < 8) { j += c_casted; continue; }
-        this->pieces.push_back(c);
-        this->ranks.push_back(i);
-        this->files.push_back(j);
+        if(c_casted > 0 && c_casted < 8) { j += (unsigned int) c_casted; continue; }
+        square = 8*i + j;
+        // depending on the piece, determine the masks
+        if(c == 'K'){ 
+            pos.white_material_value += WHITE_KING_VALUE;
+            bit_set(pos.pieces[0], i, j);
+            bit_set(pos.white_pieces, i, j);
+            pos.white_covered_squares |= king_covered_squares_bitboards[square];
+        }
+        else if(c == 'Q'){ 
+            pos.white_material_value += WHITE_QUEEN_VALUE;
+            bit_set(pos.pieces[1], i, j);
+            bit_set(pos.white_pieces, i, j);
+            // calculation of covered squares is delayed for sliding pieces --> see below
+        }
+        else if(c == 'R'){ 
+            pos.white_material_value += WHITE_ROOK_VALUE;
+            bit_set(pos.pieces[2], i, j);
+            bit_set(pos.white_pieces, i, j);
+            // calculation of covered squares is delayed for sliding pieces --> see below
+        }
+        else if(c == 'B'){ 
+            pos.white_material_value += WHITE_BISHOP_VALUE;
+            bit_set(pos.pieces[3], i, j);
+            bit_set(pos.white_pieces, i, j);
+            // calculation of covered squares is delayed for sliding pieces --> see below
+        }
+        else if(c == 'N'){ 
+            pos.white_material_value += WHITE_KNIGHT_VALUE;
+            bit_set(pos.pieces[4], i, j);
+            bit_set(pos.white_pieces, i, j);
+            pos.white_covered_squares |= knight_covered_squares_bitboards[square];
+        }
+        else if(c == 'P'){ 
+            pos.white_material_value += WHITE_PAWN_VALUE;
+            bit_set(pos.pieces[5], i, j);
+            bit_set(pos.white_pieces, i, j);
+            pos.white_covered_squares |= white_pawn_covered_squares_bitboards[square];
+        }
+        else if(c == 'k'){ 
+            pos.black_material_value += BLACK_KING_VALUE;
+            bit_set(pos.pieces[6], i, j);
+            bit_set(pos.black_pieces, i, j);
+            pos.black_covered_squares |= king_covered_squares_bitboards[square];
+        }
+        else if(c == 'q'){ 
+            pos.black_material_value += BLACK_QUEEN_VALUE;
+            bit_set(pos.pieces[7], i, j);
+            bit_set(pos.black_pieces, i, j);
+            // calculation of covered squares is delayed for sliding pieces --> see below
+        }
+        else if(c == 'r'){ 
+            pos.black_material_value += BLACK_ROOK_VALUE;
+            bit_set(pos.pieces[8], i, j);
+            bit_set(pos.black_pieces, i, j);
+            // calculation of covered squares is delayed for sliding pieces --> see below
+        }
+        else if(c == 'b'){ 
+            pos.black_material_value += BLACK_BISHOP_VALUE;
+            bit_set(pos.pieces[9], i, j);
+            bit_set(pos.black_pieces, i, j);
+            // calculation of covered squares is delayed for sliding pieces --> see below
+        }
+        else if(c == 'n'){ 
+            pos.black_material_value += BLACK_KNIGHT_VALUE;
+            bit_set(pos.pieces[10], i, j);
+            bit_set(pos.black_pieces, i, j);
+            pos.black_covered_squares |= knight_covered_squares_bitboards[square];
+        }
+        else if(c == 'p'){ 
+            pos.black_material_value += BLACK_PAWN_VALUE;
+            bit_set(pos.pieces[11], i, j);
+            bit_set(pos.black_pieces, i, j);
+            pos.black_covered_squares |= black_pawn_covered_squares_bitboards[square];
+        }
         j++; 
     }
 
     // set side to move
-    if(words[1] == "w") { this->white_to_move = 1; }
-    else this->white_to_move = 0;
+    if(words[1] == "w") { pos.white_to_move = true; }
+    else pos.white_to_move = false;
 
     // set castling rights
     for(char& c: words[2]){
         if(c == '-') { break; }
-        else if(c == 'K') { this->can_white_castle_kingside = true; continue; }
-        else if(c == 'Q') { this->can_white_castle_queenside = true; continue; }
-        else if(c == 'k') { this->can_black_castle_kingside = true; continue; }
-        else if(c == 'q') { this->can_black_castle_queenside = true; continue; }
+        else if(c == 'K') { pos.can_white_castle_kingside = true; continue; }
+        else if(c == 'Q') { pos.can_white_castle_queenside = true; continue; }
+        else if(c == 'k') { pos.can_black_castle_kingside = true; continue; }
+        else if(c == 'q') { pos.can_black_castle_queenside = true; continue; }
     }
 
     // set en-passant target square if different from '-'
     if(words[3] != "-"){
-        this->en_passant_target_square = AlphabetToSquare(words[3]);
+        pos.en_passant_target_file = (unsigned int)(words[3].at(0)) - 97;
     }
 
     // set half move counter and move counter from fen
-    this->half_move_counter = std::stoi(words[4]);
-    this->move_counter = std::stoi(words[5]);
+    pos.half_move_counter = std::stoi(words[4]);
+    pos.move_counter = std::stoi(words[5]);
 
-    // evaluate masks of white, black and all pieces and material value
-    char piece;
-    for(unsigned int index = 0; index < pieces.size(); index++){
-        piece = this->pieces[index];
-        i = this->ranks[index];
-        j = this->files[index];
-        this->all_pieces_mask[i][j] = 1;
-        this->material_value += PieceValue(piece);
+    // complete pieces bitboards for sliding pieces
+    uint64_t hash_index, piece;
+    unsigned long sq;
+    int n_attacks_rook = IntPow(2, n_bits_rook);
+    int n_attacks_bishop = IntPow(2, n_bits_bishop);
+    pos.all_pieces = pos.white_pieces | pos.black_pieces;
+    // white rook covered squares
+    piece = pos.pieces[2]; 
+    while(piece){ // loop through all the occurences of the rook
+        _BitScanForward64(&sq, piece); // find square
+        hash_index = rook_hash_index(pos.all_pieces, sq, n_attacks_rook); // find hash index for that square
+        pos.white_covered_squares |= rook_covered_squares_bitboards[hash_index]; // generate covered squares
+        clear_last_active_bit(piece); // remove the piece and consider the next one
     }
-    // loop again
-    Square current_square;
-    for(unsigned int index = 0; index < pieces.size(); index++){
-        piece = this->pieces[index];
-        i = this->ranks[index];
-        j = this->files[index];
-        current_square = {i, j};
-        // Rooks
-        if(piece == 'R'){ 
-            this->white_covered_squares_mask += RookCoveredSquaresMask(current_square, this->all_pieces_mask); 
-            this->white_pieces_mask[i][j] = 1;
-        }
-        else if(piece == 'r'){ 
-            this->black_covered_squares_mask += RookCoveredSquaresMask(current_square, this->all_pieces_mask); 
-            this->black_pieces_mask[i][j] = 1;
-        }
-        // Bishops
-        else if(piece == 'B'){ 
-            this->white_covered_squares_mask += BishopCoveredSquaresMask(current_square, this->all_pieces_mask); 
-            this->white_pieces_mask[i][j] = 1;
-        }
-        else if(piece == 'b'){ 
-            this->black_covered_squares_mask += BishopCoveredSquaresMask(current_square, this->all_pieces_mask); 
-            this->black_pieces_mask[i][j] = 1;
-        }
-        // Queens
-        else if(piece == 'Q'){ 
-            this->white_covered_squares_mask += QueenCoveredSquaresMask(current_square, this->all_pieces_mask); 
-            this->white_pieces_mask[i][j] = 1;
-        }
-        else if(piece == 'q'){ 
-            this->black_covered_squares_mask += QueenCoveredSquaresMask(current_square, this->all_pieces_mask); 
-            this->black_pieces_mask[i][j] = 1;
-        }
-        // Kings
-        else if(piece == 'K'){ 
-            this->white_covered_squares_mask += KingCoveredSquaresMask(current_square); 
-            this->white_pieces_mask[i][j] = 1;
-        }
-        else if(piece == 'k'){ 
-            this->black_covered_squares_mask += KingCoveredSquaresMask(current_square); 
-            this->black_pieces_mask[i][j] = 1;
-        }
-        // Knights
-        else if(piece == 'N'){ 
-            this->white_covered_squares_mask += KnightCoveredSquaresMask(current_square); 
-            this->white_pieces_mask[i][j] = 1;
-        }
-        else if(piece == 'n'){ 
-            this->black_covered_squares_mask += KnightCoveredSquaresMask(current_square); 
-            this->black_pieces_mask[i][j] = 1;
-        }
-        // Pawns
-        else if(piece == 'P'){ 
-            this->white_covered_squares_mask += WhitePawnCoveredSquaresMask(current_square); 
-            this->white_pieces_mask[i][j] = 1;
-        }
-        else if(piece == 'p'){ 
-            this->black_covered_squares_mask += BlackPawnCoveredSquaresMask(current_square); 
-            this->black_pieces_mask[i][j] = 1;
-        }
+    // black rook covered squares
+    piece = pos.pieces[8]; 
+    while(piece){ // loop through all the occurences of the rook
+        _BitScanForward64(&sq, piece); // find square
+        hash_index = rook_hash_index(pos.all_pieces, sq, n_attacks_rook); // find hash index for that square
+        pos.black_covered_squares |= rook_covered_squares_bitboards[hash_index]; // generate covered squares
+        clear_last_active_bit(piece); // remove the piece and consider the next one
     }
+    // white bishop 
+    piece = pos.pieces[3];
+    while(piece){ // loop through all the occurences of the rook
+        _BitScanForward64(&sq, piece); // find square
+        hash_index = bishop_hash_index(pos.all_pieces, sq, n_attacks_bishop); // find hash index for that square
+        pos.white_covered_squares |= bishop_covered_squares_bitboards[hash_index]; // generate covered squares
+        clear_last_active_bit(piece); // remove the piece and consider the next one
+    }
+    // black bishop 
+    piece = pos.pieces[9];
+    while(piece){ // loop through all the occurences of the rook
+        _BitScanForward64(&sq, piece); // find square
+        hash_index = bishop_hash_index(pos.all_pieces, sq, n_attacks_bishop); // find hash index for that square
+        pos.black_covered_squares |= bishop_covered_squares_bitboards[hash_index]; // generate covered squares
+        clear_last_active_bit(piece); // remove the piece and consider the next one
+    }
+    // white queen 
+    piece = pos.pieces[1];
+    while(piece){ // loop through all the occurences of the rook
+        _BitScanForward64(&sq, piece); // find square
+        hash_index = bishop_hash_index(pos.all_pieces, sq, n_attacks_bishop); // find hash index for that square
+        pos.white_covered_squares |= bishop_covered_squares_bitboards[hash_index]; // generate covered squares
+        hash_index = rook_hash_index(pos.all_pieces, sq, n_attacks_rook); // find hash index for that square
+        pos.white_covered_squares |= rook_covered_squares_bitboards[hash_index]; // generate covered squares
+        clear_last_active_bit(piece); // remove the piece and consider the next one
+    }
+    // black queen 
+    piece = pos.pieces[7];
+    while(piece){ // loop through all the occurences of the rook
+        _BitScanForward64(&sq, piece); // find square
+        hash_index = bishop_hash_index(pos.all_pieces, sq, n_attacks_bishop); // find hash index for that square
+        pos.black_covered_squares |= bishop_covered_squares_bitboards[hash_index]; // generate covered squares
+        hash_index = rook_hash_index(pos.all_pieces, sq, n_attacks_rook); // find hash index for that square
+        pos.black_covered_squares |= rook_covered_squares_bitboards[hash_index]; // generate covered squares
+        clear_last_active_bit(piece); // remove the piece and consider the next one
+    }
+    
+    return pos;
 }
 
-EfficientPosition::~EfficientPosition()
-{
-}
 
-void EfficientPosition::PrintBoard(void){
+void PrintBoard(Position pos){
     char board[64];
-    for(int i=0; i<64; i++){ board[i] = '0'; }
-    int i; 
-    int j;
-    char piece;
-    for(unsigned int index = 0; index < this->pieces.size(); index++){
-        piece = this->pieces[index]; i = this->ranks[index]; j = this->files[index];
-        board[8*i + j] = piece;
+    char pieces_list[12] = {'K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p'};
+    for(int square = 0; square < 64; square++){ board[square] = '0'; } // initialize board
+    unsigned long square;
+    uint64_t piece;
+    // loop through pieces bitboards
+    for(int index = 0; index < 12; index++){
+        piece = pos.pieces[index];
+        if(piece != 0ULL){
+            // loop over all pieces of the same type (e.g. find all the rooks, all the pawns etc...)
+            while(piece){
+                _BitScanForward64(&square, piece); // this changes square to the square where the piece is positioned
+                clear_last_active_bit(piece);     
+                board[square] = pieces_list[index]; // store it on the right square of the board with the right letter
+            }
+        }
     }
     // print
-    for(int n = 0; n < 64; n++){
-        if(n % 8 == 0){ std::cout << "\n"; }
-        std::cout << board[n] << " ";
+    for(int square = 0; square < 64; square++){
+        if(square % 8 == 0){ std::cout << "\n"; }
+        std::cout << board[square] << " ";
     }
     std::cout << "\n";
 };
 
-/*
-// generate the list of all the child positions obtained from the current one applying all the legal moves
-// sort the new positions based on the likelihood of being good for the current side to move
-// i.e. checks, captures and pawn promotions first.
-std::vector<EfficientPosition> New_Positions(EfficientPosition& pos){
-    // initialize stuff
-    std::vector<EfficientPosition> new_positions;
-    new_positions.reserve(80);
-    EfficientPosition new_pos = pos;
-    char piece;
-    int i;
-    int j;
-    // loop over all the pieces
-    for(unsigned int index = 0; index < pos.pieces.size(); index++){
-        piece = pos.pieces[index];
-        // if piece has wrong color, skip
-        if(pos.white_to_move && islower(piece)){ continue; }
-        if(!pos.white_to_move && isupper(piece)){ continue; }
-        // if you pick your own piece, elaborate moves
-        i = pos.ranks[index];
-        j = pos.files[index];
-        // MANAGE WHITE ROOKS
-        if(piece == 'R'){
-            // side to side sliding
-
+// assign a score to a given position
+int Score(Position pos){
+    // we assume that material value is pre-calculated! It should be done when a position is generated
+    int score = pos.white_material_value + pos.black_material_value;
+    // loop over the pieces to add extra value based on the position of the piece
+    unsigned long square;
+    uint64_t piece;
+    // white king
+    piece = pos.pieces[0];
+    if(piece){
+        _BitScanForward64(&square, piece);
+        if(pos.black_material_value < -2000){ // very rough logic to distinguish middlegame fron endgame
+            score += kingPST_Middlegame[square];
         }
-        // MANAGE WHITE BISHOPS
-        else if(piece == 'B'){
-
+        else{
+            score += kingPST_Endgame[square];
         }
     }
+    // white queen
+    piece = pos.pieces[1];
+    while(piece){ // loop until all the white queens are considered
+        _BitScanForward64(&square, piece);
+        score += queenPST[square];
+        clear_last_active_bit(piece);   
+    }
+    // white rook
+    piece = pos.pieces[2];
+    while(piece){ // loop until all the white queens are considered
+        _BitScanForward64(&square, piece);
+        score += rookPST[square];
+        clear_last_active_bit(piece);   
+    }
+    // white bishop
+    piece = pos.pieces[3];
+    while(piece){ // loop until all the white queens are considered
+        _BitScanForward64(&square, piece);
+        score += bishopPST[square];
+        clear_last_active_bit(piece);   
+    }
+    // white knight
+    piece = pos.pieces[4];
+    while(piece){ // loop until all the white queens are considered
+        _BitScanForward64(&square, piece);
+        score += knightPST[square];
+        clear_last_active_bit(piece);   
+        // bonus for outpost squares ...
+    }
+    // white pawns
+    piece = pos.pieces[5];
+    while(piece){ // loop until all the white queens are considered
+        _BitScanForward64(&square, piece);
+        score += pawnPST[square];
+        clear_last_active_bit(piece);   
+        // add malus for doubled or isolated pawns ...
+        // bonus for passed pawns ...
+    }
+    // black king
+    piece = pos.pieces[6];
+    if(piece){
+        _BitScanForward64(&square, piece);
+        if(pos.white_material_value > 2000){ // very rough logic to distinguish middlegame fron endgame
+            score -= kingPST_Middlegame[56 - square + 2*(square%8)];
+        }
+        else{
+            score -= kingPST_Endgame[56 - square + 2*(square%8)];
+        }
+    }
+    // black queen
+    piece = pos.pieces[7];
+    while(piece){ // loop until all the white queens are considered
+        _BitScanForward64(&square, piece);
+        score -= queenPST[56 - square + 2*(square%8)];
+        clear_last_active_bit(piece);   
+    }
+    // black rook
+    piece = pos.pieces[8];
+    while(piece){ // loop until all the white queens are considered
+        _BitScanForward64(&square, piece);
+        score -= rookPST[56 - square + 2*(square%8)];
+        clear_last_active_bit(piece);   
+    }
+    // black bishop
+    piece = pos.pieces[9];
+    while(piece){ // loop until all the white queens are considered
+        _BitScanForward64(&square, piece);
+        score -= bishopPST[56 - square + 2*(square%8)];
+        clear_last_active_bit(piece);   
+    }
+    // black knight
+    piece = pos.pieces[10];
+    while(piece){ // loop until all the white queens are considered
+        _BitScanForward64(&square, piece);
+        score -= knightPST[56 - square + 2*(square%8)];
+        clear_last_active_bit(piece);   
+        // bonus for outpost ...
+    }
+    // black pawns
+    piece = pos.pieces[11];
+    while(piece){ // loop until all the white queens are considered
+        _BitScanForward64(&square, piece);
+        score -= pawnPST[56 - square + 2*(square%8)];
+        clear_last_active_bit(piece);
+        // malus for doubled or isolated pawns...
+        // bonus for passed pawns
+    }
+    
+    return score;
 }
-*/
+
+// FIND LIST OF ALL MOVES (regardless if the move leaves the king in check)
+std::vector<Move> AllMoves(const Position& pos){
+    std::vector<Move> all_moves;
+    all_moves.reserve(216); // max estimated moves
+    Move move = 0;
+    bool is_capture;
+    uint64_t piece;
+    uint64_t hash_index_rook, hash_index_bishop;
+    uint64_t attacks = 0ULL;
+    unsigned long square, target_square;
+    uint8_t flags = 0;
+    uint8_t piece_index, captured_piece_index;
+
+    // WHITE TO MOVE
+    if(pos.white_to_move){
+
+        // King
+        piece_index = 0;
+        piece = pos.pieces[piece_index]; // retrieve bitboard of king
+        while(piece){ 
+            _BitScanForward64(&square, piece); // find position of piece and assign it to square
+            attacks = king_covered_squares_bitboards[square]; // retrieve attack bitboard
+            attacks &= ~pos.white_pieces; // exclude self-capture
+            while(attacks){
+                _BitScanForward64(&target_square, attacks); // find the target square
+                is_capture = bit_get(pos.black_pieces, target_square);
+                captured_piece_index = 15; // no capture 
+                if(is_capture){
+                    flags = 8; // capture flag
+                    // check what black piece has been captured
+                    for(uint8_t index = 6; index < 11; index++){
+                        if(bit_get(pos.pieces[index], target_square)){
+                            captured_piece_index = index;
+                            break;
+                        }
+                    }
+                }
+                // encode move 
+                move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
+                all_moves.push_back(move);
+                clear_last_active_bit(attacks); // remove considered attack
+            }
+            // remove considered piece
+            clear_last_active_bit(piece);
+        }
+
+        // Queen move
+        piece_index = 1;
+        piece = pos.pieces[piece_index]; // retrieve bitboard of queens
+        while(piece){ // consider all the queens
+            _BitScanForward64(&square, piece); // find position of queen and assign it to square
+            // retrieve bitboard of queen moves
+            hash_index_rook = rook_hash_index(pos.all_pieces, square, n_attacks_rook);
+            hash_index_bishop = bishop_hash_index(pos.all_pieces, square, n_attacks_bishop);
+            attacks = rook_covered_squares_bitboards[hash_index_rook] | bishop_covered_squares_bitboards[hash_index_bishop];
+            attacks &= ~pos.white_pieces; // excluse self-capture
+            // loop over all the attacks
+            while(attacks){
+                _BitScanForward64(&target_square, attacks); // find the target square
+                is_capture = bit_get(pos.black_pieces, target_square);
+                captured_piece_index = 15; // no capture 
+                if(is_capture){
+                    flags = 8; // capture flag
+                    // check what black piece has been captured
+                    for(uint8_t index = 6; index < 11; index++){
+                        if(bit_get(pos.pieces[index], target_square)){
+                            captured_piece_index = index;
+                            break;
+                        }
+                    }
+                }
+                // encode move 
+                move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
+                all_moves.push_back(move);
+                clear_last_active_bit(attacks); // remove considered attack
+            }
+            // remove considered piece
+            clear_last_active_bit(piece);
+        }
+
+        // Rook
+        piece_index = 2;
+        piece = pos.pieces[piece_index];
+        while(piece){ // consider all the queens
+            _BitScanForward64(&square, piece); // find position of rook and assign it to square
+            // retrieve bitboard of rook moves
+            hash_index_rook = rook_hash_index(pos.all_pieces, square, n_attacks_rook);
+            attacks = rook_covered_squares_bitboards[hash_index_rook];
+            attacks &= ~pos.white_pieces; // excluse self-capture
+            // loop over all the attacks
+            while(attacks){
+                _BitScanForward64(&target_square, attacks); // find the target square
+                is_capture = bit_get(pos.black_pieces, target_square);
+                captured_piece_index = 15; // no capture 
+                if(is_capture){
+                    flags = 8; // capture flag
+                    // check what black piece has been captured
+                    for(uint8_t index = 6; index < 11; index++){
+                        if(bit_get(pos.pieces[index], target_square)){
+                            captured_piece_index = index;
+                            break;
+                        }
+                    }
+                }
+                // encode move 
+                move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
+                all_moves.push_back(move);
+                clear_last_active_bit(attacks); // remove considered attack
+            }
+            // remove considered piece
+            clear_last_active_bit(piece);
+        }
+
+        // Bishop
+        piece_index = 3;
+        piece = pos.pieces[piece_index]; // retrieve bitboard of bishops
+        while(piece){ // consider all the bishops
+            _BitScanForward64(&square, piece); // find position of queen and assign it to square
+            // retrieve bitboard of bishop moves
+            hash_index_bishop = bishop_hash_index(pos.all_pieces, square, n_attacks_bishop);
+            attacks = bishop_covered_squares_bitboards[hash_index_bishop];
+            attacks &= ~pos.white_pieces; // excluse self-capture
+            // loop over all the attacks
+            while(attacks){
+                _BitScanForward64(&target_square, attacks); // find the target square
+                is_capture = bit_get(pos.black_pieces, target_square);
+                captured_piece_index = 15; // no capture 
+                if(is_capture){
+                    flags = 8; // capture flag
+                    // check what black piece has been captured
+                    for(uint8_t index = 6; index < 11; index++){
+                        if(bit_get(pos.pieces[index], target_square)){
+                            captured_piece_index = index;
+                            break;
+                        }
+                    }
+                }
+                // encode move 
+                move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
+                all_moves.push_back(move);
+                clear_last_active_bit(attacks); // remove considered attack
+            }
+            // remove considered piece
+            clear_last_active_bit(piece);
+        }
+
+        // Knight
+        piece_index = 4;
+        piece = pos.pieces[piece_index]; // retrieve bitboard of knights
+        while(piece){ // consider all the knights
+            _BitScanForward64(&square, piece); // find position of piece and assign it to square
+            attacks = knight_covered_squares_bitboards[square]; // retrieve attack bitboard
+            attacks &= ~pos.white_pieces; // exclude self-capture
+            while(attacks){
+                _BitScanForward64(&target_square, attacks); // find the target square
+                is_capture = bit_get(pos.black_pieces, target_square);
+                captured_piece_index = 15; // no capture 
+                if(is_capture){
+                    flags = 8; // capture flag
+                    // check what black piece has been captured
+                    for(uint8_t index = 6; index < 11; index++){
+                        if(bit_get(pos.pieces[index], target_square)){
+                            captured_piece_index = index;
+                            break;
+                        }
+                    }
+                }
+                // encode move 
+                move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
+                all_moves.push_back(move);
+                clear_last_active_bit(attacks); // remove considered attack
+            }
+            // remove considered piece
+            clear_last_active_bit(piece);
+        }
+
+    }
+    
+    // BLACK TO MOVE
+    else{
+
+        // King
+        piece_index = 6;
+        piece = pos.pieces[piece_index]; // retrieve bitboard of king
+        while(piece){ 
+            _BitScanForward64(&square, piece); // find position of piece and assign it to square
+            attacks = king_covered_squares_bitboards[square]; // retrieve attack bitboard
+            attacks &= ~pos.black_pieces; // exclude self-capture
+            while(attacks){
+                _BitScanForward64(&target_square, attacks); // find the target square
+                is_capture = bit_get(pos.white_pieces, target_square);
+                captured_piece_index = 15; // no capture 
+                if(is_capture){
+                    flags = 8; // capture flag
+                    // check what black piece has been captured
+                    for(uint8_t index = 6; index < 11; index++){
+                        if(bit_get(pos.pieces[index], target_square)){
+                            captured_piece_index = index;
+                            break;
+                        }
+                    }
+                }
+                // encode move 
+                move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
+                all_moves.push_back(move);
+                clear_last_active_bit(attacks); // remove considered attack
+            }
+            // remove considered piece
+            clear_last_active_bit(piece);
+        }
+
+        // Queen move
+        piece_index = 7;
+        piece = pos.pieces[piece_index]; // retrieve bitboard of queens
+        while(piece){ // consider all the queens
+            _BitScanForward64(&square, piece); // find position of queen and assign it to square
+            // retrieve bitboard of queen moves
+            hash_index_rook = rook_hash_index(pos.all_pieces, square, n_attacks_rook);
+            hash_index_bishop = bishop_hash_index(pos.all_pieces, square, n_attacks_bishop);
+            attacks = rook_covered_squares_bitboards[hash_index_rook] | bishop_covered_squares_bitboards[hash_index_bishop];
+            attacks &= ~pos.black_pieces; // excluse self-capture
+            // loop over all the attacks
+            while(attacks){
+                _BitScanForward64(&target_square, attacks); // find the target square
+                is_capture = bit_get(pos.white_pieces, target_square);
+                captured_piece_index = 15; // no capture 
+                if(is_capture){
+                    flags = 8; // capture flag
+                    // check what black piece has been captured
+                    for(uint8_t index = 0; index < 6; index++){
+                        if(bit_get(pos.pieces[index], target_square)){
+                            captured_piece_index = index;
+                            break;
+                        }
+                    }
+                }
+                // encode move 
+                move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
+                all_moves.push_back(move);
+                clear_last_active_bit(attacks); // remove considered attack
+            }
+            // remove considered piece
+            clear_last_active_bit(piece);
+        }
+
+        // Rook
+        piece_index = 8;
+        piece = pos.pieces[piece_index];
+        while(piece){ // consider all the queens
+            _BitScanForward64(&square, piece); // find position of queen and assign it to square
+            // retrieve bitboard of queen moves
+            hash_index_rook = rook_hash_index(pos.all_pieces, square, n_attacks_rook);
+            attacks = rook_covered_squares_bitboards[hash_index_rook];
+            attacks &= ~pos.black_pieces; // excluse self-capture
+            // loop over all the attacks
+            while(attacks){
+                _BitScanForward64(&target_square, attacks); // find the target square
+                is_capture = bit_get(pos.white_pieces, target_square);
+                captured_piece_index = 15; // no capture 
+                if(is_capture){
+                    flags = 8; // capture flag
+                    // check what black piece has been captured
+                    for(uint8_t index = 0; index < 6; index++){
+                        if(bit_get(pos.pieces[index], target_square)){
+                            captured_piece_index = index;
+                            break;
+                        }
+                    }
+                }
+                // encode move 
+                move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
+                all_moves.push_back(move);
+                clear_last_active_bit(attacks); // remove considered attack
+            }
+            // remove considered piece
+            clear_last_active_bit(piece);
+        }
+
+        // Bishop
+        piece_index = 9;
+        piece = pos.pieces[piece_index]; // retrieve bitboard of bishops
+        while(piece){ // consider all the bishops
+            _BitScanForward64(&square, piece); // find position of queen and assign it to square
+            // retrieve bitboard of bishop moves
+            hash_index_bishop = bishop_hash_index(pos.all_pieces, square, n_attacks_bishop);
+            attacks = bishop_covered_squares_bitboards[hash_index_bishop];
+            attacks &= ~pos.black_pieces; // excluse self-capture
+            // loop over all the attacks
+            while(attacks){
+                _BitScanForward64(&target_square, attacks); // find the target square
+                is_capture = bit_get(pos.white_pieces, target_square);
+                captured_piece_index = 15; // no capture 
+                if(is_capture){
+                    flags = 8; // capture flag
+                    // check what black piece has been captured
+                    for(uint8_t index = 0; index < 6; index++){
+                        if(bit_get(pos.pieces[index], target_square)){
+                            captured_piece_index = index;
+                            break;
+                        }
+                    }
+                }
+                // encode move 
+                move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
+                all_moves.push_back(move);
+                clear_last_active_bit(attacks); // remove considered attack
+            }
+            // remove considered piece
+            clear_last_active_bit(piece);
+        }
+
+        // Knight
+        piece_index = 10;
+        piece = pos.pieces[piece_index]; // retrieve bitboard of knights
+        while(piece){ // consider all the knights
+            _BitScanForward64(&square, piece); // find position of piece and assign it to square
+            attacks = knight_covered_squares_bitboards[square]; // retrieve attack bitboard
+            attacks &= ~pos.black_pieces; // exclude self-capture
+            while(attacks){
+                _BitScanForward64(&target_square, attacks); // find the target square
+                is_capture = bit_get(pos.white_pieces, target_square);
+                captured_piece_index = 15; // no capture 
+                if(is_capture){
+                    flags = 8; // capture flag
+                    // check what black piece has been captured
+                    for(uint8_t index = 0; index < 6; index++){
+                        if(bit_get(pos.pieces[index], target_square)){
+                            captured_piece_index = index;
+                            break;
+                        }
+                    }
+                }
+                // encode move 
+                move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
+                all_moves.push_back(move);
+                clear_last_active_bit(attacks); // remove considered attack
+            }
+            // remove considered piece
+            clear_last_active_bit(piece);
+        }
+
+    }
+
+    return all_moves;
+}

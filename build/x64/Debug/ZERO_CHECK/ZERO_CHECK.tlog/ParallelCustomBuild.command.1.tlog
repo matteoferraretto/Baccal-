@@ -1,0 +1,10 @@
+^C:\USERS\MATTE\DOCUMENTS\STUDY_C++\CHESSENGINE2.0\BUILD\CMAKEFILES\06952375C19067FD2AEC81D60474BBA1\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/matte/Documents/Study_C++/ChessEngine2.0 -BC:/Users/matte/Documents/Study_C++/ChessEngine2.0/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/matte/Documents/Study_C++/ChessEngine2.0/build/ChessEngine2.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

@@ -1,8 +1,8 @@
-# Install script for directory: C:/Users/matte/Documents/Study_C++/ChessEngine/lib
+# Install script for directory: C:/Users/matte/Documents/Study_C++/ChessEngine2.0/lib
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "C:/Program Files (x86)/ChessEngine")
+  set(CMAKE_INSTALL_PREFIX "C:/Program Files/ChessEngine2")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 

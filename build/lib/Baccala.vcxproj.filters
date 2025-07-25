@@ -1,19 +1,25 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="C:\Users\matte\Documents\Study_C++\ChessEngine\lib\src\Baccala.cpp">
+    <ClCompile Include="C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\src\Baccala.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\matte\Documents\Study_C++\ChessEngine\lib\src\Position.cpp">
+    <ClCompile Include="C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\src\Position.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\src\Utilities.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\src\Bitboards.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="C:\Users\matte\Documents\Study_C++\ChessEngine\lib\CMakeLists.txt" />
+    <CustomBuild Include="C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source Files">
-      <UniqueIdentifier>{9E91BAD4-BE5D-3B86-A98C-E6BF20854640}</UniqueIdentifier>
+      <UniqueIdentifier>{E6C578CC-2A3D-3B31-87D9-9E5947D870D0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

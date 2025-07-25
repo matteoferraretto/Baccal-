@@ -1,5 +1,5 @@
-C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/ChessEngine.dir
-C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/ALL_BUILD.dir
-C:/Users/matte/Documents/Study_C++/ChessEngine/build/CMakeFiles/ZERO_CHECK.dir
-C:/Users/matte/Documents/Study_C++/ChessEngine/build/lib/CMakeFiles/Baccala.dir
-C:/Users/matte/Documents/Study_C++/ChessEngine/build/lib/CMakeFiles/ALL_BUILD.dir
+C:/Users/matte/Documents/Study_C++/ChessEngine2.0/build/CMakeFiles/ChessEngine2.dir
+C:/Users/matte/Documents/Study_C++/ChessEngine2.0/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/matte/Documents/Study_C++/ChessEngine2.0/build/CMakeFiles/ZERO_CHECK.dir
+C:/Users/matte/Documents/Study_C++/ChessEngine2.0/build/lib/CMakeFiles/Baccala.dir
+C:/Users/matte/Documents/Study_C++/ChessEngine2.0/build/lib/CMakeFiles/ALL_BUILD.dir
