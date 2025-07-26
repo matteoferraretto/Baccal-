@@ -10,7 +10,7 @@ int main(){
 
     PreComputeBitboards();
 
-    Position pos = PositionFromFen("rnbqkbnr/8/8/8/8/8/8/RNBQKBNR b KQkq - 0 0");
+    Position pos = PositionFromFen("k7/r7/8/8/8/1p6/PPP5/K7 w - - 0 0");
     PrintBoard(pos);
     std::cout << "white material: " << pos.white_material_value << "\n";
     std::cout << "black material: " << pos.black_material_value << "\n";

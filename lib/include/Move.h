@@ -14,9 +14,9 @@
 //          - flags =   0 -> quiet
 //                      1 -> pawn move
 //                      2 -> double pawn-push
-//                      4 -> en-passant
+//                      4 -> castling
 //                      8 -> capture
-//                      16 -> castling
+//                      16 -> is check
 //                      ... <-- we have 2 more bits to use if needed
 // NB: the flags are powers of two because they are not mutually exclusive! A move can be at the same time an en-passang move and a capture, so both flags are active
 // we can change this convention later ...

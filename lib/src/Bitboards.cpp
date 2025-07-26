@@ -419,3 +419,130 @@ void CleanBitboards(){
     delete [] rook_covered_squares_bitboards;
     delete [] bishop_covered_squares_bitboards;
 }
+
+// generate the bitboard of covered squares by a given side (white or black)
+uint64_t GetCoveredSquares(uint64_t pieces[12], uint64_t& all_pieces, bool by_white){
+    uint64_t piece;
+    uint64_t attacks = 0;
+    unsigned long square;
+    uint64_t hash_index_rook, hash_index_bishop;
+
+    // white to move:
+    if(by_white){
+
+        // KING
+        piece = pieces[0];
+        // loop over all the pieces of the same type
+        while(piece){
+            _BitScanForward64(&square, piece); // find position of piece and assign it to square
+            attacks |= king_covered_squares_bitboards[square]; // retrieve attack bitboard
+            clear_last_active_bit(piece); // remove the evaluated piece
+        }
+
+        // QUEEN
+        piece = pieces[1];
+        while(piece){
+            _BitScanForward64(&square, piece); 
+            hash_index_rook = rook_hash_index(all_pieces, square, n_attacks_rook);
+            hash_index_bishop = bishop_hash_index(all_pieces, square, n_attacks_bishop);
+            attacks |= rook_covered_squares_bitboards[hash_index_rook]; 
+            attacks |= bishop_covered_squares_bitboards[hash_index_bishop];
+            clear_last_active_bit(piece);
+        }
+
+        // ROOK
+        piece = pieces[2];
+        while(piece){
+            _BitScanForward64(&square, piece); 
+            hash_index_rook = rook_hash_index(all_pieces, square, n_attacks_rook);
+            attacks |= rook_covered_squares_bitboards[hash_index_rook]; 
+            clear_last_active_bit(piece);
+        }
+
+        // BISHOP
+        piece = pieces[3];
+        while(piece){
+            _BitScanForward64(&square, piece); 
+            hash_index_bishop = bishop_hash_index(all_pieces, square, n_attacks_bishop);
+            attacks |= bishop_covered_squares_bitboards[hash_index_bishop];
+            clear_last_active_bit(piece);
+        }
+
+        // KNIGHT
+        piece = pieces[4];
+        while(piece){
+            _BitScanForward64(&square, piece); 
+            attacks |= knight_covered_squares_bitboards[square]; 
+            clear_last_active_bit(piece);
+        }
+
+        // PAWNS
+        piece = pieces[5];
+        while(piece){
+            _BitScanForward64(&square, piece); 
+            attacks |= white_pawn_covered_squares_bitboards[square];
+            clear_last_active_bit(piece);
+        }
+        
+    }
+    // black to move:
+    else{
+
+        // KING
+        piece = pieces[6];
+        // loop over all the pieces of the same type
+        while(piece){
+            _BitScanForward64(&square, piece); // find position of piece and assign it to square
+            attacks |= king_covered_squares_bitboards[square]; // retrieve attack bitboard
+            clear_last_active_bit(piece); // remove the evaluated piece
+        }
+
+        // QUEEN
+        piece = pieces[7];
+        while(piece){
+            _BitScanForward64(&square, piece); 
+            hash_index_rook = rook_hash_index(all_pieces, square, n_attacks_rook);
+            hash_index_bishop = bishop_hash_index(all_pieces, square, n_attacks_bishop);
+            attacks |= rook_covered_squares_bitboards[hash_index_rook]; 
+            attacks |= bishop_covered_squares_bitboards[hash_index_bishop];
+            clear_last_active_bit(piece);
+        }
+
+        // ROOK
+        piece = pieces[8];
+        while(piece){
+            _BitScanForward64(&square, piece); 
+            hash_index_rook = rook_hash_index(all_pieces, square, n_attacks_rook);
+            attacks |= rook_covered_squares_bitboards[hash_index_rook]; 
+            clear_last_active_bit(piece);
+        }
+
+        // BISHOP
+        piece = pieces[9];
+        while(piece){
+            _BitScanForward64(&square, piece); 
+            hash_index_bishop = bishop_hash_index(all_pieces, square, n_attacks_bishop);
+            attacks |= bishop_covered_squares_bitboards[hash_index_bishop];
+            clear_last_active_bit(piece);
+        }
+
+        // KNIGHT
+        piece = pieces[10];
+        while(piece){
+            _BitScanForward64(&square, piece); 
+            attacks |= knight_covered_squares_bitboards[square]; 
+            clear_last_active_bit(piece);
+        }
+
+        // PAWNS
+        piece = pieces[11];
+        while(piece){
+            _BitScanForward64(&square, piece); 
+            attacks |= black_pawn_covered_squares_bitboards[square];
+            clear_last_active_bit(piece);
+        }
+
+    }
+
+    return attacks;
+}

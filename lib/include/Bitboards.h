@@ -111,3 +111,6 @@ void PreComputeBitboards();
 
 // clean-up
 void CleanBitboards();
+
+// generate the bitboard of covered squares from the pieces
+uint64_t GetCoveredSquares(uint64_t pieces[12], uint64_t& all_pieces, bool by_white);

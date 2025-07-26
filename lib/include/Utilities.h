@@ -25,6 +25,9 @@ const int WHITE_KING_VALUE = 100000;
 const int BLACK_KING_VALUE = -100000;
 const int WHITE_PAWN_VALUE = +100;
 const int BLACK_PAWN_VALUE = -100;
+const int PIECES_VALUES[12] = {
+    10000, 900, 500, 300, 300, 100, -10000, -900, -500, -300, -300, -100
+};
 
 // for each square we store the number of squares where one can put a blocker for bishop
 const int n_squares_for_bishop_blockers[64] = {
@@ -40,10 +43,16 @@ const int n_squares_for_bishop_blockers[64] = {
 
 // bit-wise operations for bitboards
 void bit_set(uint64_t& bitboard, int i, int j);
+void bit_set(uint64_t& bitboard, unsigned long& square);
+
 void bit_clear(uint64_t& bitboard, int i, int j);
+void bit_clear(uint64_t& bitboard, unsigned long& square);
+
 bool bit_get(uint64_t bitboard, int i, int j);
 bool bit_get(const uint64_t& bitboard, const unsigned long& square);
+
 void clear_last_active_bit(uint64_t& bitboard); // set to 0 the last bit which is 1
+
 void PrintBitboard(uint64_t bitboard);
 
 // pawn promotions
@@ -66,6 +75,7 @@ const int black_pawn_deltas[2][2] = {
 // Transform a square index to alphabetic notation
 std::string SquareToAlphabet(uint8_t& square);
 std::string PieceToAlphabet(uint8_t& piece);
+uint64_t AlphabetToBitboard(std::basic_string<char>& square_string);
 
 // relevant constants
 const int negative_infinity = std::numeric_limits<int>::min();

@@ -19,8 +19,16 @@ void bit_set(uint64_t& bitboard, int i, int j){
     bitboard |= (1ULL << (8*i+j));
     return;
 }
+void bit_set(uint64_t& bitboard, unsigned long& square){
+    bitboard |= (1ULL << square);
+    return;
+}
 void bit_clear(uint64_t bitboard, int i, int j){
     bitboard &= ~(1ULL << (8*i+j));
+    return;
+}
+void bit_clear(uint64_t& bitboard, unsigned long& square){
+    bitboard &= ~(1ULL << square);
     return;
 }
 bool bit_get(uint64_t bitboard, int i, int j){
@@ -63,4 +71,15 @@ std::string PieceToAlphabet(uint8_t& piece){
     std::string piece_str;
     piece_str = "KQRBNPkqrbnp"[piece];
     return piece_str;
+}
+
+uint64_t AlphabetToBitboard(std::basic_string<char>& square_string){
+    char file = square_string.at(0);
+    char rank = square_string.at(1);
+    int i, j; 
+    uint64_t bitboard = 0;
+    i = 7 - ((int)(rank) - 49);
+    j = (int)file - 97;
+    bit_set(bitboard, i, j);
+    return bitboard; 
 }
