@@ -23,6 +23,7 @@ void bit_set(uint64_t& bitboard, unsigned long& square){
     bitboard |= (1ULL << square);
     return;
 }
+
 void bit_clear(uint64_t bitboard, int i, int j){
     bitboard &= ~(1ULL << (8*i+j));
     return;
@@ -31,6 +32,7 @@ void bit_clear(uint64_t& bitboard, unsigned long& square){
     bitboard &= ~(1ULL << square);
     return;
 }
+
 bool bit_get(uint64_t bitboard, int i, int j){
     return (bitboard >> (8*i+j)) & 1;
 }

@@ -36,13 +36,14 @@ int Score(Position pos);
 struct MoveAndPosition
 {
     Move move;
-    Position pos;
+    Position position;
+    int score;
 };
 
 // Generate all the possible moves following the rules, 
 // but without checking if the king is left in danger by that move.
 // This is done later! So these moves are technically NOT the legal moves 
-std::vector<Move> AllMoves(const Position& pos);
+std::vector<MoveAndPosition> LegalMoves(const Position& pos);
 
 // Consider all the moves, filter out illegal moves that leave the king in check and generate the new position
 // This function is optimized for the engine purposes:

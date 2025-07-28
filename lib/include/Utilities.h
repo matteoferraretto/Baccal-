@@ -152,3 +152,8 @@ const int kingPST_Endgame[64] = {
     -30, -30,   0,   0,   0,   0, -30, -30,
     -50, -30, -30, -30, -30, -30, -30, -50
 };
+
+const int BONUS_FOR_CHECKS = 1000;
+const int BONUS_FOR_PROMOTION = 2000;
+const int BONUS_FOR_QUEEN_PROMOTION = 18000;
+const int BONUS_FOR_CAPTURE = 20000;
