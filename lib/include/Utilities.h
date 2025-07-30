@@ -11,6 +11,7 @@ int IntPow(int x, unsigned int p);
 
 // relevant positions
 const std::string starting_position_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0";
+const std::string benchmark_position_fen = "1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - - 0 0"; // 15 seconds for iterative search to max depth 6; 313 seconds to max depth 8
 
 // pieces values
 const int WHITE_ROOK_VALUE = 500;
@@ -153,7 +154,11 @@ const int kingPST_Endgame[64] = {
     -50, -30, -30, -30, -30, -30, -30, -50
 };
 
+// constants relevant for move heuristic scoring
 const int BONUS_FOR_CHECKS = 1000;
 const int BONUS_FOR_PROMOTION = 2000;
 const int BONUS_FOR_QUEEN_PROMOTION = 18000;
 const int BONUS_FOR_CAPTURE = 20000;
+
+// constants relevant to Zobrist hasing
+const unsigned int MAX_CAPACITY_TT = 25000;

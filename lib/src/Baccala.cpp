@@ -2,7 +2,11 @@
 #include <Baccala.h>
 #include <Move.h>
 #include <Position.h>
+#include <Utilities.h>
 #include <algorithm>
+#include <unordered_map>
+#include <iostream>
+
 
 void ScoreAllMoves(std::vector<MoveAndPosition>& moves){
     for(MoveAndPosition& m : moves){
@@ -23,20 +27,20 @@ void PickBestMove(std::vector<MoveAndPosition>& moves, std::size_t n_moves, int 
     iter_swap(moves.begin() + i, moves.begin() + best_index);
 }
 
-int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, /*std::unordered_map<uint64_t, Position>& TranspositionTable,*/ int& n_explored_positions){
+int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, /*std::unordered_map<uint64_t, int>& TranspositionTable,*/ int& n_explored_positions){
 /*
     // compute hash for the current position
-    uint64_t hash = Zobrist_Hashing(root_position, z);
+    uint64_t hash = Zobrist_Hashing(pos, zobrist_table);
     // add position to transposition table unless we have already used too much memory
-    if(TranspositionTable.size() < max_capacity_transposition_table){
+    if(TranspositionTable.size() < MAX_CAPACITY_TT){
         // if not present, add position to the transposition table
-        std::pair<std::unordered_map<uint64_t, Position>::iterator, bool> emplacing_info;
+        std::pair<std::unordered_map<uint64_t, int>::iterator, bool> emplacing_info;
         emplacing_info = TranspositionTable.emplace(hash, root_position);
         bool inserted = emplacing_info.second;
         // if insertion failed, position has already been evaluated and we can retrieve and return its value
         if(!inserted){
             //std::cout << "hit duplicate position\n";
-            return root_position.score;
+            return pos.white_material_value + pos.black_material_value;
         }
     }
     else{
@@ -50,7 +54,7 @@ int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, /*std::un
     n_explored_positions++; 
     // limit case: at anti_depth = 0 just return the material value of the input position
     if(anti_depth == 0){
-        return pos.white_material_value - pos.black_material_value;
+        return pos.white_material_value + pos.black_material_value;
     }
     // manage 50-moves rule
     if(pos.half_move_counter >= 50){
@@ -106,6 +110,7 @@ int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, /*std::un
         if(pos.white_to_move){
             eval = BestEvaluation(move_and_pos.position, anti_depth-1, alpha, beta, /*TranspositionTable,*/ n_explored_positions);
             best_evaluation = std::max(best_evaluation, eval);
+            if(best_evaluation >= 100000){ break; }
             alpha = std::max(alpha, eval); // best evaluation for white encountered so far down the tree
             if(beta <= alpha){ break; } 
         }
@@ -113,6 +118,7 @@ int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, /*std::un
         else{
             eval = BestEvaluation(move_and_pos.position, anti_depth-1, alpha, beta, /*TranspositionTable,*/ n_explored_positions);
             best_evaluation = std::min(best_evaluation, eval);
+            if(best_evaluation <= -100000){ break; }
             beta = std::min(beta, eval);
             if(beta <= alpha){ break; }
         }
@@ -135,6 +141,7 @@ MoveAndPosition BestMove(Position pos, int depth){
     }
     std::vector<MoveAndPosition> legal_moves = LegalMoves(pos);
     std::size_t n_moves = legal_moves.size();
+    best_move = legal_moves[0];
     // Loop through the legal moves to assign a heuristic score
     ScoreAllMoves(legal_moves);
     // initialize the hash-map for the Transposition table
@@ -148,7 +155,7 @@ MoveAndPosition BestMove(Position pos, int depth){
         std::cout << "depth: " << depth << " ; move: "; PrintMove(m.move);
         // generate child position and find its best evaluation down the tree 
         eval = BestEvaluation(m.position, depth-1, negative_infinity, positive_infinity, /*TranspositionTable,*/ n_explored_positions); // depth-1 because we are rooting from the child position
-        std::cout << " ; eval: " << eval << "\n";
+        std::cout << "eval: " << eval << "\n";
         // if white to move and the evaluation at given depth of this move is higher than all the previous ones, overwrite best move
         if(pos.white_to_move){
             if(eval > best_evaluation){ 
@@ -156,7 +163,7 @@ MoveAndPosition BestMove(Position pos, int depth){
                 best_move = legal_moves[move_index];
             }
             // if this is mate in 1, this MUST be the best move and no further search is required
-            if(best_evaluation == 100000 + depth - 1){ break; }
+            if(best_evaluation == 100000 + depth - 1 ){ break; }
         }
         // if black to move and the evaluation at given depth of this move is lower than all the previous ones, overwrite best move
         else{
@@ -171,4 +178,113 @@ MoveAndPosition BestMove(Position pos, int depth){
     std::cout << "I have considered " << n_explored_positions << " positions. \n";
     std::cout << "The best move is "; PrintMove(best_move.move);
     return best_move;
+}
+
+MoveAndPosition IterativeDeepening(Position& pos, int min_depth, int max_depth, int depth_step){
+    int eval;
+    int best_evaluation;
+    int n_explored_positions;
+    bool win_detected = false, loss_detected = false;
+    MoveAndPosition m, best_move;
+    std::vector<MoveAndPosition> legal_moves = LegalMoves(pos);
+    std::size_t n_moves = legal_moves.size();
+    best_move = legal_moves[0];
+    // Loop through the legal moves to assign a heuristic score
+    ScoreAllMoves(legal_moves);
+    // initialize the hash-map for the Transposition table
+/*    std::unordered_map<uint64_t, Position> TranspositionTable;
+    TranspositionTable.reserve(max_capacity_transposition_table);*/
+    // Start Iterative deepening
+    for(int depth = min_depth; depth <= max_depth; depth += depth_step){
+        n_explored_positions = 0;
+        std::cout << "Iterative deepening at depth " << depth << "\n";
+        if(pos.white_to_move){
+            best_evaluation = negative_infinity; 
+        }
+        else{
+            best_evaluation = positive_infinity;
+        }
+        // loop over all the legal moves from the current position
+        for(int move_index = 0; move_index < n_moves; move_index++){
+            // pick move with highest score
+            PickBestMove(legal_moves, n_moves, move_index);
+            m = legal_moves[move_index];
+            std::cout << "move: "; PrintMove(m.move);
+            // generate child position and find its best evaluation down the tree 
+            eval = BestEvaluation(m.position, depth-1, negative_infinity, positive_infinity, /*TranspositionTable,*/ n_explored_positions); // depth-1 because we are rooting from the child position
+            std::cout << "eval: " << eval << "\t" << best_evaluation << "\n";
+            // if white to move and the evaluation at given depth of this move is higher than all the previous ones, overwrite best move
+            if(pos.white_to_move){
+                legal_moves[move_index].score = eval; // update score with the evaluation at current depth
+                if(eval > best_evaluation){ 
+                    best_evaluation = eval; 
+                    best_move = legal_moves[move_index];
+                }
+                if(best_evaluation >= 100000){ 
+                    win_detected = true; 
+                    // if this is mate in 1, this MUST be the best move and no further search is required
+                    if(best_evaluation == 100000 + depth - 1 ){ break; }
+                }
+            }
+            // if black to move and the evaluation at given depth of this move is lower than all the previous ones, overwrite best move
+            else{
+                legal_moves[move_index].score = -eval; // update score with the evaluation at current depth
+                if(eval < best_evaluation){ 
+                    best_evaluation = eval; 
+                    best_move = legal_moves[move_index];
+                }
+                if(best_evaluation <= -100000){
+                    win_detected = true;
+                    // if this is mate in 1, this MUST be the best move and no further search is required
+                    if(best_evaluation == -100000 - depth + 1){ break; }
+                }
+            }
+        }
+        std::cout << "I have considered " << n_explored_positions << " positions. \n";
+        std::cout << "The best move is "; PrintMove(best_move.move);
+        if(win_detected){ break; }
+        // if a forced mate is found, there's no need to search deeper 
+    }
+    return best_move;
+}
+
+ZobristTable InitializeZobrist(){
+    ZobristTable z;
+    for(int piece = 0; piece < 12; piece++){
+        for(int square = 0; square < 64; square++){
+            z.pieces_and_squares[piece][square] = rand64();
+        }
+    }
+    z.white_to_move = rand64();
+    for(int i=0; i<4; i++){
+        z.castling_rights[i] = rand64();
+    }
+    for(int i=0; i<8; i++){
+        z.en_passant_file[i] = rand64();
+    }
+    return z;
+}
+
+
+uint64_t Zobrist_Hashing(Position& pos, ZobristTable& z) {
+    // initialize value of 0
+    uint64_t hash = 0;
+    // Zobrist hashing ...
+    for(int square = 0; square < 64; square++){
+        for(int piece_index = 0; piece_index < 12; piece_index++){
+            if(bit_get(pos.pieces[piece_index], square)){
+                hash ^= z.pieces_and_squares[piece_index][square];
+                continue;
+            }
+        }
+    }
+    if(pos.white_to_move){ hash ^= z.white_to_move; }
+    if(pos.can_white_castle_kingside){ hash ^= z.castling_rights[0]; }
+    else if(pos.can_white_castle_queenside){ hash ^= z.castling_rights[1]; }
+    else if(pos.can_black_castle_kingside){ hash ^= z.castling_rights[2]; }
+    else if(pos.can_black_castle_queenside){ hash ^= z.castling_rights[3]; }
+    for(int j=0; j<8; j++){
+        if(pos.en_passant_target_square % 8 == j){ hash ^= z.en_passant_file[j]; }
+    }
+    return hash;
 }

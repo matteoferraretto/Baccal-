@@ -15,3 +15,18 @@ void PickBestMove(std::vector<MoveAndPosition>& moves, std::size_t n_moves, int 
 // MIN - MAX SEARCH with ALPHA - BETA PRUNING
 int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, /*std::unordered_map<uint64_t, Position>& TranspositionTable,*/ int& n_explored_positions);
 MoveAndPosition BestMove(Position pos, int depth);
+
+// ITERATIVE DEEPENING
+MoveAndPosition IterativeDeepening(Position& pos, int min_depth, int max_depth, int depth_step);
+
+// Zobrist table
+struct ZobristTable {
+    uint64_t pieces_and_squares[12][64];
+    uint64_t white_to_move;
+    uint64_t castling_rights[4];
+    uint64_t en_passant_file[8];
+};
+
+ZobristTable InitializeZobrist();
+
+uint64_t ZobristHashing(Position& pos, ZobristTable& z);
