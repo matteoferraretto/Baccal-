@@ -224,7 +224,7 @@ MoveAndPosition IterativeDeepening(Position& pos, int min_depth, int max_depth, 
             std::cout << "move: "; PrintMove(m.move);
             // generate child position and find its best evaluation down the tree 
             eval = BestEvaluation(m.position, depth-1, negative_infinity, positive_infinity, /*TranspositionTable,*/ n_explored_positions); // depth-1 because we are rooting from the child position
-            std::cout << "eval: " << eval << "\t" << best_evaluation << "\n";
+            std::cout << "eval: " << eval << "\n";
             // if white to move and the evaluation at given depth of this move is higher than all the previous ones, overwrite best move
             if(pos.white_to_move){
                 legal_moves[move_index].score = eval; // update score with the evaluation at current depth

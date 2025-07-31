@@ -16,7 +16,7 @@ int main(){
     TTInit();
     PreComputeBitboards();
 
-    Position pos = PositionFromFen("7k/P7/8/8/8/8/K7/8 w - - 0 0");
+    Position pos = PositionFromFen("7k/P6p/8/8/8/8/K7/8 w - - 0 0");
     PrintBoard(pos);
     
 /*
@@ -34,7 +34,7 @@ int main(){
     // start clock 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
-    IterativeDeepening(pos, 2, 10, 2);
+    IterativeDeepening(pos, 2, 20, 2);
 
     // stop clock 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();

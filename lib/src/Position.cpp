@@ -666,12 +666,9 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                         // Generate new position applying the move
                         m.position = pos;
                         // move the piece in white pieces bitboards
-                        bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
+                        bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[promoted_piece_index], target_square);
                         bit_clear(m.position.white_pieces, square); bit_set(m.position.white_pieces, target_square);
-                        // spawn the new piece 
-                        bit_set(m.position.pieces[promoted_piece_index], target_square);
-                        m.position.white_material_value += PIECES_VALUES[captured_piece_index];
-                        // also change bitboards of black pieces and recompute values (this is always a capture)
+                        m.position.white_material_value += PIECES_VALUES[promoted_piece_index] - WHITE_PAWN_VALUE;
                         m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
                         m.position.half_move_counter = 0;
                         bit_clear(m.position.pieces[captured_piece_index], target_square);
@@ -752,17 +749,19 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                 attacks = 0ULL;
             }
             while(attacks){
-                flags = 1;
                 _BitScanForward64(&target_square, attacks); // find the target square
                 is_capture = false; // this is necessarily NOT a capture!
                 // in case of promotion, loop over all possible promoted pieces
                 if(target_square / 8 == 0){
                     for(uint8_t promoted_piece_index = 1; promoted_piece_index < 5; promoted_piece_index++){
+                        flags = 1;
                         // Generate new position applying the move
                         m.position = pos;
                         // move the piece in white pieces bitboards
                         bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[promoted_piece_index], target_square);
                         bit_clear(m.position.white_pieces, square); bit_set(m.position.white_pieces, target_square);
+                        // spawn the new piece 
+                        m.position.white_material_value += PIECES_VALUES[promoted_piece_index] - WHITE_PAWN_VALUE;
                         // compute all pieces bitboard and the covered squares
                         m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
                         m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
@@ -784,6 +783,7 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                 }
                 // if this is a double push, flag it to manage en-passant target squares later
                 else if(target_square / 8 == 4 && square / 8 == 6){
+                    flags = 1;
                     // Generate new position applying the move
                     m.position = pos;
                     // move the piece in white pieces bitboards
@@ -811,6 +811,7 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                     all_moves.push_back(m);
                 }
                 else{
+                    flags = 1;
                     // Generate new position applying the move
                     m.position = pos;
                     // move the piece in white pieces bitboards
@@ -1228,7 +1229,6 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
             attacks = black_pawn_covered_squares_bitboards[square]; // retrieve attack bitboard
             attacks &= pos.white_pieces | pos.en_passant_target_square; // only attacked squares occupied by enemy pieces are valid for movement
             while(attacks){
-                flags = 1;
                 _BitScanForward64(&target_square, attacks); // find the target square
                 is_capture = true; // this is necessarily a capture!
                 flags += 8; // capture flag
@@ -1242,11 +1242,15 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                 // in case of promotion, loop over all possible promoted pieces
                 if(target_square / 8 == 7){
                     for(uint8_t promoted_piece_index = 7; promoted_piece_index < 11; promoted_piece_index++){
+                        flags = 1;
                         // Generate new position applying the move
                         m.position = pos;
                         // move the piece in white pieces bitboards
                         bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[promoted_piece_index], target_square);
                         bit_clear(m.position.black_pieces, square); bit_set(m.position.black_pieces, target_square);
+                        // update material value
+                        m.position.black_material_value += PIECES_VALUES[promoted_piece_index] - BLACK_PAWN_VALUE;
+                        m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
                         // compute all pieces bitboard and the covered squares
                         m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
                         m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
@@ -1266,6 +1270,7 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                     }
                 }
                 else{
+                    flags = 1;
                     // Generate new position applying the move
                     m.position = pos;
                     // move the piece in white pieces bitboards
@@ -1302,17 +1307,18 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                 attacks = 0ULL;
             }
             while(attacks){
-                flags = 1;
                 _BitScanForward64(&target_square, attacks); // find the target square
                 is_capture = false; // this is necessarily NOT a capture!
                 // in case of promotion, loop over all possible promoted pieces
                 if(target_square / 8 == 7){
                     for(uint8_t promoted_piece_index = 7; promoted_piece_index < 11; promoted_piece_index++){
+                        flags = 1;
                         // Generate new position applying the move
                         m.position = pos;
                         // move the piece in white pieces bitboards
                         bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[promoted_piece_index], target_square);
                         bit_clear(m.position.black_pieces, square); bit_set(m.position.black_pieces, target_square);
+                        m.position.black_material_value += PIECES_VALUES[promoted_piece_index] - BLACK_PAWN_VALUE;
                         // compute all pieces bitboard and the covered squares
                         m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
                         m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
@@ -1334,6 +1340,7 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                 }
                 // if this is a double push, flag it to manage en-passant target squares
                 else if(target_square / 8 == 3 && square / 8 == 1){
+                    flags = 1;
                     // Generate new position applying the move
                     m.position = pos;
                     // move the piece in white pieces bitboards
@@ -1359,6 +1366,7 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                     all_moves.push_back(m);
                 }
                 else{
+                    flags = 1;
                     // Generate new position applying the move
                     m.position = pos;
                     // move the piece in white pieces bitboards

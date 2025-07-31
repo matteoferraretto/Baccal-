@@ -63,6 +63,7 @@ inline void PrintMove(const Move& m){
     move_str += SquareToAlphabet(from);
     if(captured != 15){ move_str += "x"; } // manage capture
     move_str += SquareToAlphabet(to);
+    if(promotion != 15){ move_str += PieceToAlphabet(promotion); }
     if(is_check){ move_str += "+"; }
     std::cout << move_str << "\n";
 }
