@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <bitset>
 #include <chrono>
@@ -7,12 +8,15 @@
 #include <Move.h>
 #include <Baccala.h>
 #include <chrono>
+#include <TranspositionTable.h>
 
 int main(){
 
+    InitializeZobrist();
+    TTInit();
     PreComputeBitboards();
 
-    Position pos = PositionFromFen("1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - - 0 0");
+    Position pos = PositionFromFen("7k/P7/8/8/8/8/K7/8 w - - 0 0");
     PrintBoard(pos);
     
 /*
@@ -30,7 +34,7 @@ int main(){
     // start clock 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
-    IterativeDeepening(pos, 4, 8, 2);
+    IterativeDeepening(pos, 2, 10, 2);
 
     // stop clock 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();

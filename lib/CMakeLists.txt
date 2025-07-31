@@ -6,7 +6,7 @@ set(SDL2_LIB_DIR "C:/Users/matte/C++_libraries/SDL2-devel-2.30.11-VC/SDL2-2.30.1
 set(SDL2_TTF_INCLUDE_DIR "C:/Users/matte/C++_libraries/SDL2_ttf-devel-2.24.0-VC/SDL2_ttf-2.24.0/include")
 set(SDL2_TTF_LIB_DIR "C:/Users/matte/C++_libraries/SDL2_ttf-devel-2.24.0-VC/SDL2_ttf-2.24.0/lib/x86")
 
-add_library(Baccala STATIC src/Baccala.cpp src/Position.cpp src/Utilities.cpp src/Bitboards.cpp)
+add_library(Baccala STATIC src/Baccala.cpp src/Position.cpp src/Utilities.cpp src/Bitboards.cpp src/TranspositionTable.cpp)
 
 target_include_directories(Baccala 
 	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include 

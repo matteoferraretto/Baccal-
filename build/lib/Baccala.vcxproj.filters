@@ -13,6 +13,9 @@
     <ClCompile Include="C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\src\Bitboards.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\src\TranspositionTable.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\CMakeLists.txt" />

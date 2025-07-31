@@ -3,6 +3,7 @@
 #include <Move.h>
 #include <Position.h>
 #include <Utilities.h>
+#include <TranspositionTable.h>
 #include <algorithm>
 #include <unordered_map>
 #include <iostream>
@@ -27,29 +28,29 @@ void PickBestMove(std::vector<MoveAndPosition>& moves, std::size_t n_moves, int 
     iter_swap(moves.begin() + i, moves.begin() + best_index);
 }
 
-int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, /*std::unordered_map<uint64_t, int>& TranspositionTable,*/ int& n_explored_positions){
-/*
-    // compute hash for the current position
-    uint64_t hash = Zobrist_Hashing(pos, zobrist_table);
-    // add position to transposition table unless we have already used too much memory
-    if(TranspositionTable.size() < MAX_CAPACITY_TT){
-        // if not present, add position to the transposition table
-        std::pair<std::unordered_map<uint64_t, int>::iterator, bool> emplacing_info;
-        emplacing_info = TranspositionTable.emplace(hash, root_position);
-        bool inserted = emplacing_info.second;
-        // if insertion failed, position has already been evaluated and we can retrieve and return its value
-        if(!inserted){
-            //std::cout << "hit duplicate position\n";
-            return pos.white_material_value + pos.black_material_value;
-        }
+int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, int& n_explored_positions){
+    // ------------------------------------------------------
+    // ----- RETRIEVE SCORE FROM TRANSPOSITION TABLE --------
+    // ------------------------------------------------------
+    // compute Zobrist key for the current position
+    uint64_t zobrist_key = ZobristHashing(pos);
+    // check if the move is already present in the transposition table:
+    // if yes return a pointer to its memory address; if no return nullptr
+    TTEntry* entry = TTProbe(zobrist_key);
+    // if the position is store and it has been analyzed better than what we are about to do here
+    // then just return the already found score
+    if(entry && entry->depth >= anti_depth){
+        if (entry->flag == EXACT)
+            return entry->score;
+        else if (entry->flag == LOWERBOUND && entry->score >= beta)
+            return entry->score;
+        else if (entry->flag == UPPERBOUND && entry->score <= alpha)
+            return entry->score;
     }
-    else{
-        if(TranspositionTable.find(hash) != TranspositionTable.end()){
-            //std::cout << "hit duplicate position after maxing out storage of hash map\n";
-            return root_position.score;
-        }
-    }
-*/
+
+    // -----------------------------------------------------------------------
+    // -- MANAGE EARLY EXIT CASES: DEPTH=0; DRAWS; STALEMATE; CHECKMATE ETC --
+    // -----------------------------------------------------------------------
     // count considered positions (total number of nodes)
     n_explored_positions++; 
     // limit case: at anti_depth = 0 just return the material value of the input position
@@ -75,29 +76,28 @@ int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, /*std::un
     std::size_t n_moves = legal_moves.size();
     // manage stalemate and checkmate: no legal moves in the current position
     if(n_moves == 0){
-        // WHITE TO MOVE
         if(pos.white_to_move){
             // BLACK STALEMATED: white to move and the white king is NOT in black's covered squares 
             if((pos.black_covered_squares & pos.pieces[0]) == 0){
                 return 0; // it's a draw
             }
             // BLACK CHECKMATED
-            else{
-                return -100000 - anti_depth;
-            }
+            else{ return -100000 - anti_depth; }
         }
-        // BLACK TO MOVE
         else{
             // WHITE STALEMATED: black to move and the black king is NOT in white's covered squares 
             if((pos.white_covered_squares & pos.pieces[6]) == 0){
                 return 0; // it's a draw
             }
             // WHITE CHECKMATED: black to move and the black king is in check
-            else{
-                return 100000 + anti_depth;  // adding the depth is used to consider a mate in 1 better than a mate in 2 or in 3 etc
-            }  
+            else{ return 100000 + anti_depth; } // adding the depth is used to consider a mate in 1 better than a mate in 2 or in 3 etc
         }
     }
+
+    // ---------------------------------------------------------
+    // ------ MIN - MAX SEARCH WITH ALPHA - BETA PRUNING -------
+    // ---------------------------------------------------------
+    int original_alpha = alpha, original_beta = beta;
     // Loop through the legal moves to assign a heuristic score
     ScoreAllMoves(legal_moves);
     // Loop again to recursively iterate the function 
@@ -105,10 +105,9 @@ int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, /*std::un
         // pick the best move in the range [move_index + 1, n_moves] and bring it to the current index
         PickBestMove(legal_moves, n_moves, move_index);
         move_and_pos = legal_moves[move_index];
-        // MIN - MAX PROCEDURE WITH ALPHA - BETA PRUNING
         // white to move
         if(pos.white_to_move){
-            eval = BestEvaluation(move_and_pos.position, anti_depth-1, alpha, beta, /*TranspositionTable,*/ n_explored_positions);
+            eval = BestEvaluation(move_and_pos.position, anti_depth-1, alpha, beta, n_explored_positions);
             best_evaluation = std::max(best_evaluation, eval);
             if(best_evaluation >= 100000){ break; }
             alpha = std::max(alpha, eval); // best evaluation for white encountered so far down the tree
@@ -116,13 +115,26 @@ int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, /*std::un
         }
         // black to move
         else{
-            eval = BestEvaluation(move_and_pos.position, anti_depth-1, alpha, beta, /*TranspositionTable,*/ n_explored_positions);
+            eval = BestEvaluation(move_and_pos.position, anti_depth-1, alpha, beta, n_explored_positions);
             best_evaluation = std::min(best_evaluation, eval);
             if(best_evaluation <= -100000){ break; }
             beta = std::min(beta, eval);
             if(beta <= alpha){ break; }
         }
     }
+
+    // --------------------------------------------------------
+    // ------ STORE POSITION IN THE TRANSPOSITION TABLE -------
+    // --------------------------------------------------------
+    NodeFlag flag;
+    if (best_evaluation <= original_alpha)
+        flag = UPPERBOUND;
+    else if (best_evaluation >= original_beta)
+        flag = LOWERBOUND;
+    else
+        flag = EXACT;
+    TTStore(anti_depth, zobrist_key, best_evaluation, flag);
+
     return best_evaluation;
 }
 
@@ -242,49 +254,8 @@ MoveAndPosition IterativeDeepening(Position& pos, int min_depth, int max_depth, 
         }
         std::cout << "I have considered " << n_explored_positions << " positions. \n";
         std::cout << "The best move is "; PrintMove(best_move.move);
-        if(win_detected){ break; }
+        // if(win_detected){ break; }
         // if a forced mate is found, there's no need to search deeper 
     }
     return best_move;
-}
-
-ZobristTable InitializeZobrist(){
-    ZobristTable z;
-    for(int piece = 0; piece < 12; piece++){
-        for(int square = 0; square < 64; square++){
-            z.pieces_and_squares[piece][square] = rand64();
-        }
-    }
-    z.white_to_move = rand64();
-    for(int i=0; i<4; i++){
-        z.castling_rights[i] = rand64();
-    }
-    for(int i=0; i<8; i++){
-        z.en_passant_file[i] = rand64();
-    }
-    return z;
-}
-
-
-uint64_t Zobrist_Hashing(Position& pos, ZobristTable& z) {
-    // initialize value of 0
-    uint64_t hash = 0;
-    // Zobrist hashing ...
-    for(int square = 0; square < 64; square++){
-        for(int piece_index = 0; piece_index < 12; piece_index++){
-            if(bit_get(pos.pieces[piece_index], square)){
-                hash ^= z.pieces_and_squares[piece_index][square];
-                continue;
-            }
-        }
-    }
-    if(pos.white_to_move){ hash ^= z.white_to_move; }
-    if(pos.can_white_castle_kingside){ hash ^= z.castling_rights[0]; }
-    else if(pos.can_white_castle_queenside){ hash ^= z.castling_rights[1]; }
-    else if(pos.can_black_castle_kingside){ hash ^= z.castling_rights[2]; }
-    else if(pos.can_black_castle_queenside){ hash ^= z.castling_rights[3]; }
-    for(int j=0; j<8; j++){
-        if(pos.en_passant_target_square % 8 == j){ hash ^= z.en_passant_file[j]; }
-    }
-    return hash;
 }
