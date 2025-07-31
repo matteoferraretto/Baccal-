@@ -55,7 +55,7 @@ int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, int& n_ex
     n_explored_positions++; 
     // limit case: at anti_depth = 0 just return the material value of the input position
     if(anti_depth == 0){
-        return pos.white_material_value + pos.black_material_value;
+        return PositionScore(pos);
     }
     // manage 50-moves rule
     if(pos.half_move_counter >= 50){
@@ -254,7 +254,7 @@ MoveAndPosition IterativeDeepening(Position& pos, int min_depth, int max_depth, 
         }
         std::cout << "I have considered " << n_explored_positions << " positions. \n";
         std::cout << "The best move is "; PrintMove(best_move.move);
-        // if(win_detected){ break; }
+        if(win_detected){ break; }
         // if a forced mate is found, there's no need to search deeper 
     }
     return best_move;

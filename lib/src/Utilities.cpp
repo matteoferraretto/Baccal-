@@ -43,6 +43,11 @@ void clear_last_active_bit(uint64_t& bitboard){
     bitboard &= bitboard - 1;
 }
 
+size_t pop_count(uint64_t& bitboard){
+    std::bitset<64> b(bitboard);
+    return b.count();
+}
+
 void PrintBitboard(uint64_t bitboard){
     int i, j;
     bool bit;

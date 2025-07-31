@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <cstdint>
+#include <bitset>
 
 // random generator of 64-bit unsigned integers
 uint64_t rand64();
@@ -53,6 +54,8 @@ bool bit_get(uint64_t bitboard, int i, int j);
 bool bit_get(const uint64_t& bitboard, const unsigned long& square);
 
 void clear_last_active_bit(uint64_t& bitboard); // set to 0 the last bit which is 1
+
+size_t pop_count(uint64_t& bitboard); // count the number of 1 in the binary representation of bitboard
 
 void PrintBitboard(uint64_t bitboard);
 
@@ -153,6 +156,10 @@ const int kingPST_Endgame[64] = {
     -30, -30,   0,   0,   0,   0, -30, -30,
     -50, -30, -30, -30, -30, -30, -30, -50
 };
+
+// malus for every pair of doubled pawns (2 pairs of doubled pawns = - 1 pawn)
+const int MALUS_FOR_DOUBLED_PAWNS = 50; 
+const int BONUS_FOR_PASSED_PAWNS = 50;
 
 // constants relevant for move heuristic scoring
 const int BONUS_FOR_CHECKS = 1000;

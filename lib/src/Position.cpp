@@ -219,9 +219,11 @@ void PrintBoard(Position pos){
 };
 
 // assign a score to a given position
-int Score(Position pos){
+int PositionScore(Position& pos){
     // we assume that material value is pre-calculated! It should be done when a position is generated
+    // this is the starting point for the position score
     int score = pos.white_material_value + pos.black_material_value;
+    
     // loop over the pieces to add extra value based on the position of the piece
     unsigned long square;
     uint64_t piece;
@@ -271,8 +273,11 @@ int Score(Position pos){
         _BitScanForward64(&square, piece);
         score += pawnPST[square];
         clear_last_active_bit(piece);   
-        // add malus for doubled or isolated pawns ...
         // bonus for passed pawns ...
+        if(mask_white_passed_pawn[square] & pos.pieces[11]){ continue; }
+        else{
+            score += BONUS_FOR_PASSED_PAWNS;
+        }
     }
     // black king
     piece = pos.pieces[6];
@@ -320,9 +325,19 @@ int Score(Position pos){
         _BitScanForward64(&square, piece);
         score -= pawnPST[56 - square + 2*(square%8)];
         clear_last_active_bit(piece);
-        // malus for doubled or isolated pawns...
-        // bonus for passed pawns
+        // bonus for passed pawns: the black pawn looks forward and if no white pawns are found, it is a passer
+        if(mask_black_passed_pawn[square] & pos.pieces[5]){ continue; }
+        else{
+            score -= BONUS_FOR_PASSED_PAWNS;
+        }
     }
+
+    // malus for doubled pawns (or bonus for opponent's doubled pawns):
+    score += (
+        count_doubled_pawns(pos.pieces[11]) - count_doubled_pawns(pos.pieces[5])
+    ) * MALUS_FOR_DOUBLED_PAWNS; 
+
+
     return score;
 }
 

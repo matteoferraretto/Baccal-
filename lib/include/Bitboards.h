@@ -114,3 +114,48 @@ void CleanBitboards();
 
 // generate the bitboard of covered squares from the pieces
 uint64_t GetCoveredSquares(uint64_t pieces[12], uint64_t& all_pieces, bool by_white);
+
+// Bitboards to detect passed pawns and outposts
+// . . . . . . . .
+// x x x . . . . .
+// x x x . . . . .
+// . o . . . . . . ---> a white pawn on b5 looks ahead at these squares to detect if there are enemy pawns (any rank)
+// . . . . . . . . ---> similarly, a knight in b5 is in an outpost square if in these squares there are no enemy pawns
+// . . . . . . . .      (only 5th rank)
+// . . . . . . . .
+// . . . . . . . .
+// similarly:
+// . . . . . . . .
+// . . . . . . . .
+// . . . . o . . .
+// . . . x x x . . ----> a black pawn on e6 looks at these squares
+// . . . x x x . .
+// . . . x x x . . 
+// . . . x x x . .
+// . . . . . . . .
+constexpr uint64_t file_A = 0x0101010101010101ULL;
+constexpr uint64_t files_bitboards[8] = {
+    file_A, file_A << 1, file_A << 2, file_A << 3, file_A << 4, file_A << 5, file_A << 6, file_A << 7
+};
+
+constexpr uint64_t rank_1 = 0xFF;
+constexpr uint64_t ranks_bitboards[8] = {
+    rank_1, rank_1 << (8*1), rank_1 << (8*2), rank_1 << (8*3), rank_1 << (8*4), rank_1 << (8*5), rank_1 << (8*6), rank_1 << (8*7)
+};
+
+extern uint64_t mask_white_passed_pawn[64];
+extern uint64_t mask_black_passed_pawn[64];
+
+void get_passed_pawn_masks();
+
+// Detect doubled pawns to penalize this situation
+// pawn bitboard b ---->    b &= b >> 8   -----> count the bits = n. doubled pawns
+// . . . . . . . .        . . . . . . . .
+// . . . . . . . .        . . . . . . . .
+// . . . . . . . .        . . . . . . . . 
+// . x . . . . . . ---->  . x . . . . . . -----> 3
+// . x . . . . . .        . x . . . . . .
+// . x . . x . x .        . . . . x . . .
+// . . . . x . . .        . . . . . . . .
+// . . . . . . . .        . . . . . . . .
+size_t count_doubled_pawns(uint64_t pawn_bitboard);

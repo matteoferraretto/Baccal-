@@ -30,7 +30,7 @@ Position PositionFromFen(std::string fen);
 
 void PrintBoard(Position pos);
 
-int Score(Position pos);
+int PositionScore(Position& pos);
 
 // structure that packs move and position
 struct MoveAndPosition

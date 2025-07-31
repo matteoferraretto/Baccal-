@@ -9,6 +9,7 @@
 #include <Baccala.h>
 #include <chrono>
 #include <TranspositionTable.h>
+#include <bitset>
 
 int main(){
 
@@ -16,20 +17,8 @@ int main(){
     TTInit();
     PreComputeBitboards();
 
-    Position pos = PositionFromFen("7k/P6p/8/8/8/8/K7/8 w - - 0 0");
+    Position pos = PositionFromFen(benchmark_position_fen);
     PrintBoard(pos);
-    
-/*
-    // score moves
-    ScoreAllMoves(all_moves);
-    std::size_t n_moves = all_moves.size();
-    // sort moves (slow for debugging)
-    std::cout << "Sorting moves: \n";
-    for(int move_index = 0; move_index < n_moves; move_index++){
-        PickBestMove(all_moves, n_moves, move_index);
-        PrintMove(all_moves[move_index].move);
-        std::cout << all_moves[move_index].score;
-    }*/
 
     // start clock 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();

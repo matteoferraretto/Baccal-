@@ -16,6 +16,9 @@ uint64_t bishop_masks[64];
 uint64_t bishop_magics[64];
 uint64_t *bishop_covered_squares_bitboards = nullptr;
 
+uint64_t mask_white_passed_pawn[64];
+uint64_t mask_black_passed_pawn[64];
+
 
 uint64_t knight_covered_squares(int i, int j){
     uint64_t knight_bitboard = 0;
@@ -412,6 +415,8 @@ void PreComputeBitboards(){
     // initialize covered squares for sliding pieces
     find_rook_magic(n_bits_rook, rook_covered_squares_bitboards, rook_magics);
     find_bishop_magic(n_bits_bishop, bishop_covered_squares_bitboards, bishop_magics);
+    // initialize masks for passed pawn and outpost detection
+    get_passed_pawn_masks();
 }
 
 
@@ -545,4 +550,37 @@ uint64_t GetCoveredSquares(uint64_t pieces[12], uint64_t& all_pieces, bool by_wh
     }
 
     return attacks;
+}
+
+void get_passed_pawn_masks(){
+    int i, j;
+    uint64_t rank_bb, file_bb;
+    for(int square = 0; square < 63; square++){
+        i = square / 8; j = square % 8;
+        // black:
+        rank_bb = 0; file_bb = 0;
+        for(int rank = i+1; rank < 7; rank++){
+            rank_bb |= ranks_bitboards[rank];
+        }
+        for(int file = j-1; file <= j+1; file++){
+            if(file < 0 || file > 8){ continue; }
+            file_bb |= files_bitboards[file];  
+        }
+        mask_black_passed_pawn[square] = rank_bb & file_bb;
+        // same for white:
+        rank_bb = 0; file_bb = 0;
+        for(int rank = i-1; rank > 0; rank--){
+            rank_bb |= ranks_bitboards[rank];
+        }
+        for(int file = j-1; file <= j+1; file++){
+            if(file < 0 || file > 8){ continue; }
+            file_bb |= files_bitboards[file];  
+        }
+        mask_white_passed_pawn[square] = rank_bb & file_bb;
+    }
+}
+
+size_t count_doubled_pawns(uint64_t pawn_bitboard){
+    uint64_t bb = pawn_bitboard & (pawn_bitboard >> 8);
+    return pop_count(bb);
 }
