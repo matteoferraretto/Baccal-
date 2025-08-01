@@ -1,5 +1,6 @@
 #include <Bitboards.h>
 #include <Utilities.h>
+#include <fstream>
 
 uint64_t knight_covered_squares_bitboards[64]; 
 uint64_t king_covered_squares_bitboards[64];
@@ -382,7 +383,7 @@ uint64_t bishop_hash_index(uint64_t blockers, int square, int n_attacks){
 }
 
 
-void PreComputeBitboards(){
+void PreComputeBitboards(bool retrieve_from_file){
     uint64_t bitboard;
     int i, j;
     // dynamic allocate attack arrays
@@ -412,9 +413,23 @@ void PreComputeBitboards(){
         rook_masks[square] = rook_relevant_blockers_mask(i, j);
         bishop_masks[square] = bishop_relevant_blockers_mask(i, j);
     }
-    // initialize covered squares for sliding pieces
-    find_rook_magic(n_bits_rook, rook_covered_squares_bitboards, rook_magics);
-    find_bishop_magic(n_bits_bishop, bishop_covered_squares_bitboards, bishop_magics);
+    // initialize covered squares for sliding pieces and save them
+    if(!retrieve_from_file){
+        find_rook_magic(n_bits_rook, rook_covered_squares_bitboards, rook_magics);
+        find_bishop_magic(n_bits_bishop, bishop_covered_squares_bitboards, bishop_magics);
+        // save data
+        write_to_file(rook_magics, 64, "../assets/rook_magics.txt");
+        write_to_file(rook_covered_squares_bitboards, 64*n_rook_attacks, "../assets/rook_attacks.txt");
+        write_to_file(bishop_magics, 64, "../assets/bishop_magics.txt");
+        write_to_file(bishop_covered_squares_bitboards, 64*n_bishop_attacks, "../assets/bishop_attacks.txt");
+    }
+    // or load from a file
+    else{
+        read_from_file(rook_magics, 64, "../assets/rook_magics.txt");
+        read_from_file(rook_covered_squares_bitboards, 64*n_rook_attacks, "../assets/rook_attacks.txt");
+        read_from_file(bishop_magics, 64, "../assets/bishop_magics.txt");
+        read_from_file(bishop_covered_squares_bitboards, 64*n_bishop_attacks, "../assets/bishop_attacks.txt");
+    }
     // initialize masks for passed pawn and outpost detection
     get_passed_pawn_masks();
 }

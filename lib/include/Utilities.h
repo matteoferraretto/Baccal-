@@ -10,9 +10,13 @@ uint64_t rand64();
 // integer power
 int IntPow(int x, unsigned int p);
 
+// write / read bitboard array to / from file
+void write_to_file(uint64_t* arr, size_t size, std::string file_name);
+void read_from_file(uint64_t* arr, size_t size, std::string file_name);
+
 // relevant positions
 const std::string starting_position_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0";
-const std::string benchmark_position_fen = "1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - - 0 0"; // 15 seconds for iterative search to max depth 6; 313 seconds to max depth 8
+const std::string benchmark_position_fen = "1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - - 0 0"; // 15 seconds for iterative search to max depth 6; 313 seconds to max depth 8; best move: qd1+
 
 // pieces values
 const int WHITE_ROOK_VALUE = 500;
@@ -96,7 +100,7 @@ const int knightPST[64] = {
     -40, -20,   0,   0,   0,   0, -20, -40,
     -50, -40, -30, -30, -30, -30, -40, -50
 };
-const int pawnPST[64] = {
+const int white_pawnPST[64] = {
       0,   0,   0,   0,   0,   0,   0,   0,
      50,  50,  50,  50,  50,  50,  50,  50,
      10,  10,  20,  30,  30,  20,  10,  10,
@@ -104,6 +108,16 @@ const int pawnPST[64] = {
       0,   0,   0,  20,  20,   0,   0,   0,
       5,  -5, -10,   0,   0, -10,  -5,   5,
       5,  10,  10, -20, -20,  10,  10,   5,
+      0,   0,   0,   0,   0,   0,   0,   0
+};
+const int black_pawnPST[64] = {
+      0,   0,   0,   0,   0,   0,   0,   0,
+      5,  10,  10, -20, -20,  10,  10,   5,  
+      5,  -5, -10,   0,   0, -10,  -5,   5,   
+      0,   0,   0,  20,  20,   0,   0,   0,
+      5,   5,  10,  25,  25,  10,   5,   5,
+      10,  10,  20, 30,  30,  20,  10,  10,
+      50,  50,  50, 50,  50,  50,  50,  50,
       0,   0,   0,   0,   0,   0,   0,   0
 };
 const int bishopPST[64] = {

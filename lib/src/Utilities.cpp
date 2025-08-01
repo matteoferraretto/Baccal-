@@ -1,6 +1,7 @@
 #include <Utilities.h>
 #include <random>
 #include <cassert>
+#include <fstream>
 
 std::mt19937_64 rng(20250704); // Fixed seed for reproducibility
 uint64_t rand64(){
@@ -14,6 +15,32 @@ int IntPow(int x, unsigned int p){
     if (p%2 == 0) return tmp * tmp;
     else return x * tmp * tmp;
 }
+
+void write_to_file(uint64_t* arr, size_t size, std::string file_name){
+    std::ofstream fout(file_name);
+    if(!fout){
+        std::cout << "Unable to write data on file. \n";
+        return;
+    }
+    for(int i = 0; i < size; i++){
+        fout << arr[i] << "\n";
+    }
+    fout.close();
+}
+
+void read_from_file(uint64_t* arr, size_t size, std::string file_name){
+    std::ifstream fin(file_name);
+    if(!fin){
+        std::cout << "Unable to read data from file. \n";
+        return;
+    }
+    int i=0; uint64_t x;
+    while(fin >> x && i < size){
+        arr[i] = x; i++;
+    }
+    fin.close();
+}
+
 
 void bit_set(uint64_t& bitboard, int i, int j){
     bitboard |= (1ULL << (8*i+j));

@@ -28,7 +28,30 @@ void PickBestMove(std::vector<MoveAndPosition>& moves, std::size_t n_moves, int 
     iter_swap(moves.begin() + i, moves.begin() + best_index);
 }
 
-int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, int& n_explored_positions){
+bool SafeNullMoveSearch(Position& pos){
+    // if the side to move is in check, it is NOT safe to skip a move
+    if(pos.white_to_move){
+        if((pos.pieces[0] & pos.black_covered_squares) != 0){ return false; }
+    }
+    else{
+        if((pos.pieces[6] & pos.white_covered_squares) != 0){ return false; }
+    }
+    // if very few pieces are remaining (<= 6) avoid it
+    if(pop_count(pos.all_pieces) <= 6){ return false; }
+    // if only pawns and kings are remaining (i.e. NO other pieces!)
+    // add-up bitboard of pieces (no kings, no pawns) and check if it is zero
+    if((pos.pieces[1] | pos.pieces[2] | pos.pieces[3] | pos.pieces[4] | pos.pieces[7] | pos.pieces[8] | pos.pieces[9] | pos.pieces[10]) == 0){
+        return false;
+    }
+    // more safety checks? 
+    // ...
+    // in all the other cases, we are good to go
+    return true;
+}
+
+
+
+int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, int& n_explored_positions, bool can_do_null){
     // ------------------------------------------------------
     // ----- RETRIEVE SCORE FROM TRANSPOSITION TABLE --------
     // ------------------------------------------------------
@@ -53,24 +76,17 @@ int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, int& n_ex
     // -----------------------------------------------------------------------
     // count considered positions (total number of nodes)
     n_explored_positions++; 
-    // limit case: at anti_depth = 0 just return the material value of the input position
-    if(anti_depth == 0){
-        return PositionScore(pos);
-    }
     // manage 50-moves rule
     if(pos.half_move_counter >= 50){
         return 0;
     }
+    // limit case: at anti_depth = 0 just return the material value of the input position
+    if(anti_depth == 0){
+        return PositionScore(pos);
+    }
     // else generate all the new positions applying all the legal moves 
     // then recursively call this function and update best_evaluation if needed
     int eval, best_evaluation;
-    if(pos.white_to_move){
-        best_evaluation = negative_infinity; 
-    }
-    else{
-        best_evaluation = positive_infinity;
-    }
-    Position new_pos;
     MoveAndPosition move_and_pos;
     std::vector<MoveAndPosition> legal_moves = LegalMoves(pos);
     std::size_t n_moves = legal_moves.size();
@@ -93,6 +109,35 @@ int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, int& n_ex
             else{ return 100000 + anti_depth; } // adding the depth is used to consider a mate in 1 better than a mate in 2 or in 3 etc
         }
     }
+    pos.white_to_move ? best_evaluation = negative_infinity : best_evaluation = positive_infinity;
+
+    // ---------------------------------
+    // ------ NULL MOVE PRUNING --------
+    // ---------------------------------
+    /*if(can_do_null && anti_depth >= 3){ // only applied far from the horizon
+        if(SafeNullMoveSearch(pos)){
+            int r = 2; // reduction of depth search
+            if(pos.white_to_move){
+                // make null move
+                Position new_pos = pos; 
+                new_pos.white_to_move = false; 
+                new_pos.en_passant_target_square = 0;
+                // launch a shallow evaluation function with no rights of making null move
+                // the evaluation is 2 plies shorter than a normal search
+                eval = -BestEvaluation(new_pos, anti_depth - r, -beta, -beta + 1, n_explored_positions, false);
+            }
+            else{
+                // make null move
+                Position new_pos = pos; 
+                new_pos.white_to_move = true; 
+                new_pos.en_passant_target_square = 0;
+                // launch a shallow evaluation function with no rights of making null move
+                // the evaluation is 2 plies shorter than a normal search
+                eval = -BestEvaluation(new_pos, anti_depth - r, -beta, -beta+1, n_explored_positions, false);
+            }
+            if(eval >= beta){ return eval; }
+        }
+    } */
 
     // ---------------------------------------------------------
     // ------ MIN - MAX SEARCH WITH ALPHA - BETA PRUNING -------
@@ -107,7 +152,7 @@ int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, int& n_ex
         move_and_pos = legal_moves[move_index];
         // white to move
         if(pos.white_to_move){
-            eval = BestEvaluation(move_and_pos.position, anti_depth-1, alpha, beta, n_explored_positions);
+            eval = BestEvaluation(move_and_pos.position, anti_depth - 1, alpha, beta, n_explored_positions, true);
             best_evaluation = std::max(best_evaluation, eval);
             if(best_evaluation >= 100000){ break; }
             alpha = std::max(alpha, eval); // best evaluation for white encountered so far down the tree
@@ -115,13 +160,12 @@ int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, int& n_ex
         }
         // black to move
         else{
-            eval = BestEvaluation(move_and_pos.position, anti_depth-1, alpha, beta, n_explored_positions);
+            eval = BestEvaluation(move_and_pos.position, anti_depth - 1, alpha, beta, n_explored_positions, true);
             best_evaluation = std::min(best_evaluation, eval);
             if(best_evaluation <= -100000){ break; }
             beta = std::min(beta, eval);
             if(beta <= alpha){ break; }
         }
-    }
 
     // --------------------------------------------------------
     // ------ STORE POSITION IN THE TRANSPOSITION TABLE -------
@@ -134,6 +178,8 @@ int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, int& n_ex
     else
         flag = EXACT;
     TTStore(anti_depth, zobrist_key, best_evaluation, flag);
+    
+    }
 
     return best_evaluation;
 }
@@ -166,7 +212,7 @@ MoveAndPosition BestMove(Position pos, int depth){
         m = legal_moves[move_index];
         std::cout << "depth: " << depth << " ; move: "; PrintMove(m.move);
         // generate child position and find its best evaluation down the tree 
-        eval = BestEvaluation(m.position, depth-1, negative_infinity, positive_infinity, /*TranspositionTable,*/ n_explored_positions); // depth-1 because we are rooting from the child position
+        eval = BestEvaluation(m.position, depth-1, negative_infinity, positive_infinity, /*TranspositionTable,*/ n_explored_positions, true); // depth-1 because we are rooting from the child position
         std::cout << "eval: " << eval << "\n";
         // if white to move and the evaluation at given depth of this move is higher than all the previous ones, overwrite best move
         if(pos.white_to_move){
@@ -223,7 +269,7 @@ MoveAndPosition IterativeDeepening(Position& pos, int min_depth, int max_depth, 
             m = legal_moves[move_index];
             std::cout << "move: "; PrintMove(m.move);
             // generate child position and find its best evaluation down the tree 
-            eval = BestEvaluation(m.position, depth-1, negative_infinity, positive_infinity, /*TranspositionTable,*/ n_explored_positions); // depth-1 because we are rooting from the child position
+            eval = BestEvaluation(m.position, depth-1, negative_infinity, positive_infinity, /*TranspositionTable,*/ n_explored_positions, true); // depth-1 because we are rooting from the child position
             std::cout << "eval: " << eval << "\n";
             // if white to move and the evaluation at given depth of this move is higher than all the previous ones, overwrite best move
             if(pos.white_to_move){

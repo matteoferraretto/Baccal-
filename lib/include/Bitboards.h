@@ -107,7 +107,7 @@ uint64_t rook_hash_index(uint64_t blockers, int square, int n_attacks);
 uint64_t bishop_hash_index(uint64_t blockers, int square, int n_attacks);
 
 // Functions to run at the engine start that pre-calculates covered squares
-void PreComputeBitboards();
+void PreComputeBitboards(bool retrieve_from_file);
 
 // clean-up
 void CleanBitboards();

@@ -10,20 +10,27 @@
 #include <chrono>
 #include <TranspositionTable.h>
 #include <bitset>
+#include <fstream>
 
 int main(){
 
     InitializeZobrist();
     TTInit();
-    PreComputeBitboards();
+    PreComputeBitboards(true); // true = read from file
 
-    Position pos = PositionFromFen(benchmark_position_fen);
+    std::string pos_fen;
+    unsigned int max_depth;
+    std::cout << "Insert a valid FEN string \n";
+    std::getline( std::cin, pos_fen );
+    Position pos = PositionFromFen(pos_fen);
     PrintBoard(pos);
+    std::cout << "Insert max depth of search \n";
+    std::cin >> max_depth;
 
     // start clock 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
-    IterativeDeepening(pos, 2, 20, 2);
+    IterativeDeepening(pos, 2, max_depth, 2);
 
     // stop clock 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();

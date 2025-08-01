@@ -271,7 +271,7 @@ int PositionScore(Position& pos){
     piece = pos.pieces[5];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        score += pawnPST[square];
+        score += white_pawnPST[square];
         clear_last_active_bit(piece);   
         // bonus for passed pawns ...
         if(mask_white_passed_pawn[square] & pos.pieces[11]){ continue; }
@@ -323,7 +323,7 @@ int PositionScore(Position& pos){
     piece = pos.pieces[11];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        score -= pawnPST[56 - square + 2*(square%8)];
+        score -= black_pawnPST[square];
         clear_last_active_bit(piece);
         // bonus for passed pawns: the black pawn looks forward and if no white pawns are found, it is a passer
         if(mask_black_passed_pawn[square] & pos.pieces[5]){ continue; }
@@ -336,7 +336,6 @@ int PositionScore(Position& pos){
     score += (
         count_doubled_pawns(pos.pieces[11]) - count_doubled_pawns(pos.pieces[5])
     ) * MALUS_FOR_DOUBLED_PAWNS; 
-
 
     return score;
 }
@@ -715,8 +714,16 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                     // also change bitboards of black pieces and recompute values (this is always a capture)
                     m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
-                    bit_clear(m.position.pieces[captured_piece_index], target_square);
-                    bit_clear(m.position.black_pieces, target_square);                        
+                    if(pos.en_passant_target_square == 0){ // normal capture 
+                        bit_clear(m.position.pieces[captured_piece_index], target_square);
+                        bit_clear(m.position.black_pieces, target_square);            
+                    }          
+                    else{   // if it is en-passant, capture the piece correctly
+                        target_square += 8;
+                        bit_clear(m.position.pieces[captured_piece_index], target_square);
+                        bit_clear(m.position.black_pieces, target_square); 
+                        target_square -= 8;           
+                    }
                     // compute all pieces bitboard and the covered squares
                     m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
                     m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
@@ -1294,8 +1301,16 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                     // also change bitboards of enemy pieces and recompute values (this is always a capture)
                     m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
-                    bit_clear(m.position.pieces[captured_piece_index], target_square);
-                    bit_clear(m.position.white_pieces, target_square);                        
+                    if(pos.en_passant_target_square == 0){
+                        bit_clear(m.position.pieces[captured_piece_index], target_square);
+                        bit_clear(m.position.white_pieces, target_square);                    
+                    }
+                    else{
+                        target_square -= 8;
+                        bit_clear(m.position.pieces[captured_piece_index], target_square);
+                        bit_clear(m.position.white_pieces, target_square);   
+                        target_square += 8;                 
+                    }   
                     // compute all pieces bitboard and the covered squares
                     m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
                     m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
