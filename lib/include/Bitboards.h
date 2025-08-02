@@ -2,10 +2,13 @@
 #include <cstdint>
 #include <Utilities.h>
 
+// change one --> change the others
 const int n_bits_rook = 12; // bits used for magic hashing with rooks
 const int n_bits_bishop = 9; // bits used for magic hashing with bishops
-const int n_attacks_rook = 4096; // 2^12
-const int n_attacks_bishop = 512; // 2^9
+const int n_attacks_rook = 4096; // 2^n_bits_rook
+const int n_attacks_bishop = 512; // 2^n_bits_bishop
+const int shift_rook = 52; // 64 - n_bits_rook
+const int shift_bishop = 55; // 64 - n_bits_bishop
 
 // arrays that store all the possible movements of the non-sliding pieces
 // this is used to avoid on-the-fly calculation during the min-max process

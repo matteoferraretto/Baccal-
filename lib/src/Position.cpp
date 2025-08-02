@@ -127,7 +127,7 @@ Position PositionFromFen(std::string fen)
 
     // set half move counter and move counter from fen
     pos.half_move_counter = std::stoi(words[4]);
-    pos.move_counter = std::stoi(words[5]);
+//    pos.move_counter = std::stoi(words[5]);
 
     // complete pieces bitboards for sliding pieces
     uint64_t hash_index, piece;
@@ -341,9 +341,8 @@ int PositionScore(Position& pos){
 }
 
 // FIND LIST OF LEGAL MOVES
-std::vector<MoveAndPosition> LegalMoves(const Position& pos){
-    std::vector<MoveAndPosition> all_moves;
-    all_moves.reserve(MAX_NUMBER_OF_MOVES); // preallocate sufficient memory to avoid array copying
+void LegalMoves(Position& pos, MoveAndPosition* all_moves){
+    size_t move_index = 0;
     bool is_capture, is_illegal;
     uint64_t is_check;
     uint64_t piece, hash_index_rook, hash_index_bishop;
@@ -354,7 +353,10 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
     MoveAndPosition m;
     m.score = 0;
 
-    if((pos.pieces[0] == 0) || (pos.pieces[6] == 0)){ return all_moves; }
+    if((pos.pieces[0] | pos.pieces[6]) == 0){
+        pos.n_legal_moves = 0;
+        return; 
+    }
 
     // WHITE TO MOVE
     if(pos.white_to_move){
@@ -410,7 +412,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                 if(is_check){ flags += 16; }
                 // encode move if legal
                 m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves.push_back(m);
+                all_moves[move_index] = m;
+                move_index++;
                 // remove considered attack
                 clear_last_active_bit(attacks); 
             }
@@ -470,7 +473,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                 if(is_check){ flags += 16; }
                 // encode move 
                 m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves.push_back(m);
+                all_moves[move_index] = m;
+                move_index++;
                 // remove considered attack
                 clear_last_active_bit(attacks); 
             }
@@ -532,7 +536,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                 if(is_check){ flags += 16; }
                 // encode move 
                 m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves.push_back(m);
+                all_moves[move_index] = m;
+                move_index++;
                 // remove considered attack
                 clear_last_active_bit(attacks); 
             }
@@ -591,7 +596,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                 if(is_check){ flags += 16; }
                 // encode move 
                 m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves.push_back(m);
+                all_moves[move_index] = m;
+                move_index++;
                 // remove considered attack
                 clear_last_active_bit(attacks); 
             }
@@ -647,7 +653,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                 if(is_check){ flags += 16; }
                 // encode move 
                 m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves.push_back(m);
+                all_moves[move_index] = m;
+                move_index++;
                 clear_last_active_bit(attacks); // remove considered attack
             }
             // remove considered piece
@@ -661,14 +668,14 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
             _BitScanForward64(&square, piece); // find position of piece and assign it to square
             // CAPTURES
             attacks = white_pawn_covered_squares_bitboards[square]; // retrieve attack bitboard
-            attacks &= pos.black_pieces | pos.en_passant_target_square; // only attacked squares occupied by enemy pieces are valid for movement
+            attacks &= (pos.black_pieces | pos.en_passant_target_square); // only attacked squares occupied by enemy pieces are valid for movement
             while(attacks){
                 flags = 1;
                 _BitScanForward64(&target_square, attacks); // find the target square
                 is_capture = true; // this is necessarily a capture!
                 flags += 8; // capture flag
                 // check what black piece has been captured
-                for(uint8_t index = 6; index < 12; index++){
+                for(int index = 6; index < 12; index++){
                     if(bit_get(pos.pieces[index], target_square)){
                         captured_piece_index = index;
                         break;
@@ -702,7 +709,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                         if(is_check){ flags += 16; }
                         // encode move
                         m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, promoted_piece_index, flags);
-                        all_moves.push_back(m);
+                        all_moves[move_index] = m;
+                        move_index++;
                     }
                 }
                 else{
@@ -714,16 +722,17 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                     // also change bitboards of black pieces and recompute values (this is always a capture)
                     m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
-                    if(pos.en_passant_target_square == 0){ // normal capture 
+                    if(pos.en_passant_target_square == 0ULL){ // no en passant
                         bit_clear(m.position.pieces[captured_piece_index], target_square);
-                        bit_clear(m.position.black_pieces, target_square);            
-                    }          
-                    else{   // if it is en-passant, capture the piece correctly
+                        bit_clear(m.position.black_pieces, target_square);   
+                    } 
+                    else{ // en passant capture
+                        captured_piece_index = 11;
                         target_square += 8;
                         bit_clear(m.position.pieces[captured_piece_index], target_square);
-                        bit_clear(m.position.black_pieces, target_square); 
-                        target_square -= 8;           
-                    }
+                        bit_clear(m.position.black_pieces, target_square);   
+                        target_square -= 8;
+                    }               
                     // compute all pieces bitboard and the covered squares
                     m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
                     m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
@@ -739,7 +748,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                     if(is_check){ flags += 16; }
                     // encode move
                     m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                    all_moves.push_back(m);
+                    all_moves[move_index] = m;
+                    move_index++;
                 }
                 clear_last_active_bit(attacks); // remove considered attack
             }
@@ -800,7 +810,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                         if(is_check){ flags += 16; }             
                         // flag that this is a promotion ...
                         m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, 15/*no capture*/, promoted_piece_index, flags);
-                        all_moves.push_back(m);
+                        all_moves[move_index] = m;
+                        move_index++;
                     }
                 }
                 // if this is a double push, flag it to manage en-passant target squares later
@@ -830,7 +841,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                     if(is_check){ flags += 16; }   
                     flags += 2;
                     m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, 15/*no capture*/, 15/*no promotion*/, flags);
-                    all_moves.push_back(m);
+                    all_moves[move_index] = m;
+                    move_index++;
                 }
                 else{
                     flags = 1;
@@ -855,7 +867,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                     if(is_check){ flags += 16; }   
                     // encode move if legal 
                     m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, 15/*no capture*/, 15/*no promotion*/, flags);
-                    all_moves.push_back(m);
+                    all_moves[move_index] = m;
+                    move_index++;
                 }
                 clear_last_active_bit(attacks); // remove considered attack
             }
@@ -901,7 +914,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                         // no need to check legality: the move is always legal within these conditions
                         // encode move, conventionally considered as a king move from square = 60 to target_square = 62
                         m.move = EncodeMove(60, 62, 0/*king*/, 15/*no capture*/, 15/*no promotion*/, flags); 
-                        all_moves.push_back(m);
+                        all_moves[move_index] = m;
+                        move_index++;
                    } 
                 }
             }   
@@ -940,7 +954,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                         is_check = m.position.pieces[6] & m.position.white_covered_squares;
                         if(is_check){ flags += 16; }   
                         m.move = EncodeMove(60, 58, 0/*king*/, 15/*no capture*/, 15/*no promotion*/, flags); 
-                        all_moves.push_back(m);
+                        all_moves[move_index] = m;
+                        move_index++;
                    } 
                 }
             }   
@@ -1002,7 +1017,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                 if(is_check){ flags += 16; }
                 // encode move 
                 m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves.push_back(m);
+                all_moves[move_index] = m;
+                move_index++;
                 clear_last_active_bit(attacks); // remove considered attack
             }
             // remove considered piece
@@ -1061,7 +1077,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                 if(is_check){ flags += 16; }
                 // encode move 
                 m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves.push_back(m);
+                all_moves[move_index] = m;
+                move_index++;
                 clear_last_active_bit(attacks); // remove considered attack
             }
             // remove considered piece
@@ -1122,7 +1139,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                 if(is_check){ flags += 16; }
                 // encode move 
                 m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves.push_back(m);
+                all_moves[move_index] = m;
+                move_index++;
                 clear_last_active_bit(attacks); // remove considered attack
             }
             // remove considered piece
@@ -1180,7 +1198,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                 if(is_check){ flags += 16; }
                 // encode move 
                 m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves.push_back(m);
+                all_moves[move_index] = m;
+                move_index++;
                 clear_last_active_bit(attacks); // remove considered attack
             }
             // remove considered piece
@@ -1235,7 +1254,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                 if(is_check){ flags += 16; }
                 // encode move 
                 m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves.push_back(m);
+                all_moves[move_index] = m;
+                move_index++;
                 clear_last_active_bit(attacks); // remove considered attack
             }
             // remove considered piece
@@ -1288,7 +1308,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                         is_check = m.position.pieces[0] & m.position.black_covered_squares;
                         if(is_check){ flags += 16; }            
                         m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, promoted_piece_index, flags);
-                        all_moves.push_back(m);
+                        all_moves[move_index] = m;
+                        move_index++;
                     }
                 }
                 else{
@@ -1301,11 +1322,12 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                     // also change bitboards of enemy pieces and recompute values (this is always a capture)
                     m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
-                    if(pos.en_passant_target_square == 0){
+                    if(pos.en_passant_target_square == 0){ // no en passant
                         bit_clear(m.position.pieces[captured_piece_index], target_square);
                         bit_clear(m.position.white_pieces, target_square);                    
                     }
-                    else{
+                    else{ // en passant
+                        captured_piece_index = 5;
                         target_square -= 8;
                         bit_clear(m.position.pieces[captured_piece_index], target_square);
                         bit_clear(m.position.white_pieces, target_square);   
@@ -1325,7 +1347,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                     is_check = m.position.pieces[0] & m.position.black_covered_squares;
                     if(is_check){ flags += 16; }
                     m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                    all_moves.push_back(m);
+                    all_moves[move_index] = m;
+                    move_index++;
                 }
                 clear_last_active_bit(attacks); // remove considered attack
             }
@@ -1365,7 +1388,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                         if(is_check){ flags += 16; }             
                         // flag that this is a promotion ...
                         m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, 15/*no capture*/, promoted_piece_index, flags);
-                        all_moves.push_back(m);
+                        all_moves[move_index] = m;
+                        move_index++;
                     }
                 }
                 // if this is a double push, flag it to manage en-passant target squares
@@ -1393,7 +1417,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                     // encode move
                     flags += 2;
                     m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, 15/*no capture*/, 15/*no promotion*/, flags);
-                    all_moves.push_back(m);
+                    all_moves[move_index] = m;
+                    move_index++;
                 }
                 else{
                     flags = 1;
@@ -1418,7 +1443,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                     if(is_check){ flags += 16; }   
                     // encode move if legal 
                     m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, 15/*no capture*/, 15/*no promotion*/, flags);
-                    all_moves.push_back(m);
+                    all_moves[move_index] = m;
+                    move_index++;
                 }
                 clear_last_active_bit(attacks); // remove considered attack
             }
@@ -1460,7 +1486,8 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                         is_check = m.position.pieces[0] & m.position.black_covered_squares;
                         if(is_check){ flags += 16; }   
                         m.move = EncodeMove(4, 6, 6/*king*/, 15/*no capture*/, 15/*no promotion*/, flags); 
-                        all_moves.push_back(m);
+                        all_moves[move_index] = m;
+                        move_index++;
                    } 
                 }
             }   
@@ -1499,13 +1526,13 @@ std::vector<MoveAndPosition> LegalMoves(const Position& pos){
                         is_check = m.position.pieces[0] & m.position.black_covered_squares;
                         if(is_check){ flags += 16; }   
                         m.move = EncodeMove(4, 2, 6/*king*/, 15/*no capture*/, 15/*no promotion*/, flags); 
-                        all_moves.push_back(m);
+                        all_moves[move_index] = m;
+                        move_index++;
                    } 
                 }
             }   
         }
-
     }
 
-    return all_moves;
+    pos.n_legal_moves = move_index;
 }

@@ -367,18 +367,16 @@ void find_bishop_magic(unsigned int n_bits, uint64_t *attacks, uint64_t magics[6
 }
 
 uint64_t rook_hash_index(uint64_t blockers, int square, int n_attacks){
-    int shift = 64 - n_bits_rook;
     uint64_t mask = rook_masks[square]; 
     uint64_t magic = rook_magics[square];
-    uint64_t hash_index = ((blockers & mask) * magic) >> shift;
+    uint64_t hash_index = ((blockers & mask) * magic) >> shift_rook;
     return (square * n_attacks + hash_index);
 }
 
 uint64_t bishop_hash_index(uint64_t blockers, int square, int n_attacks){
-    int shift = 64 - n_bits_bishop;
     uint64_t mask = bishop_masks[square]; 
     uint64_t magic = bishop_magics[square];
-    uint64_t hash_index = ((blockers & mask) * magic) >> shift;
+    uint64_t hash_index = ((blockers & mask) * magic) >> shift_bishop;
     return (square * n_attacks + hash_index);
 }
 

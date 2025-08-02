@@ -15,7 +15,7 @@ struct Position
     bool can_black_castle_kingside = false;
     bool can_black_castle_queenside = false;
     unsigned int half_move_counter = 0;
-    unsigned int move_counter = 0;
+//    unsigned int move_counter = 0;
     uint64_t en_passant_target_square = 0ULL;
     int white_material_value = 0;
     int black_material_value = 0;
@@ -24,6 +24,7 @@ struct Position
     uint64_t all_pieces = 0ULL;
     uint64_t white_covered_squares = 0ULL;
     uint64_t black_covered_squares = 0ULL;
+    size_t n_legal_moves = 0;
 };
 
 Position PositionFromFen(std::string fen);
@@ -43,7 +44,7 @@ struct MoveAndPosition
 // Generate all the possible moves following the rules, 
 // but without checking if the king is left in danger by that move.
 // This is done later! So these moves are technically NOT the legal moves 
-std::vector<MoveAndPosition> LegalMoves(const Position& pos);
+void LegalMoves(Position& pos, MoveAndPosition* legal_moves);
 
 // Consider all the moves, filter out illegal moves that leave the king in check and generate the new position
 // This function is optimized for the engine purposes:

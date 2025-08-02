@@ -17,6 +17,7 @@ void read_from_file(uint64_t* arr, size_t size, std::string file_name);
 // relevant positions
 const std::string starting_position_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0";
 const std::string benchmark_position_fen = "1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - - 0 0"; // 15 seconds for iterative search to max depth 6; 313 seconds to max depth 8; best move: qd1+
+const std::string sebastian_lague_fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q2/PPPBBPpP/R3K2R w KQkq - 0 0"; // Perft 4 : 3 553 501 positions; time 1.18 s for him (insanely fast considering that his code was not implementing bitboards ...)
 
 // pieces values
 const int WHITE_ROOK_VALUE = 500;
