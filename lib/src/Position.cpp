@@ -666,9 +666,9 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
         piece = pos.pieces[piece_index];
         while(piece){
             _BitScanForward64(&square, piece); // find position of piece and assign it to square
-            // CAPTURES
+            // NORMAL CAPTURES
             attacks = white_pawn_covered_squares_bitboards[square]; // retrieve attack bitboard
-            attacks &= (pos.black_pieces | pos.en_passant_target_square); // only attacked squares occupied by enemy pieces are valid for movement
+            attacks &= pos.black_pieces | pos.en_passant_target_square; // only attacked squares occupied by enemy pieces are valid for movement
             while(attacks){
                 flags = 1;
                 _BitScanForward64(&target_square, attacks); // find the target square
@@ -722,7 +722,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                     // also change bitboards of black pieces and recompute values (this is always a capture)
                     m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
-                    if(pos.en_passant_target_square == 0ULL){ // no en passant
+                    if((pos.en_passant_target_square & (1 << target_square)) == 0){ // no en passant
                         bit_clear(m.position.pieces[captured_piece_index], target_square);
                         bit_clear(m.position.black_pieces, target_square);   
                     } 
@@ -923,7 +923,8 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
         // Castles queenside
         if(pos.can_white_castle_queenside){ 
             if(!bit_get(pos.all_pieces, 59) && 
-                !bit_get(pos.all_pieces, 58)){ 
+                !bit_get(pos.all_pieces, 58) &&
+                !bit_get(pos.all_pieces, 57)){ 
                 if(!bit_get(pos.black_covered_squares, 60) &&
                     !bit_get(pos.black_covered_squares, 59) &&
                     !bit_get(pos.black_covered_squares, 58)){
@@ -1322,11 +1323,11 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                     // also change bitboards of enemy pieces and recompute values (this is always a capture)
                     m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
-                    if(pos.en_passant_target_square == 0){ // no en passant
+                    if((pos.en_passant_target_square & (1 << target_square)) == 0){ // NO en passant
                         bit_clear(m.position.pieces[captured_piece_index], target_square);
-                        bit_clear(m.position.white_pieces, target_square);                    
+                        bit_clear(m.position.white_pieces, target_square);    
                     }
-                    else{ // en passant
+                    else{ // NO en passant
                         captured_piece_index = 5;
                         target_square -= 8;
                         bit_clear(m.position.pieces[captured_piece_index], target_square);
@@ -1410,7 +1411,10 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                     m.position.half_move_counter = 0;
                     // update side to move and add en-passant target!
                     m.position.white_to_move = true;
-                    m.position.en_passant_target_square = 0ULL; target_square -= 8; bit_set(m.position.en_passant_target_square, target_square); target_square += 8;
+                    m.position.en_passant_target_square = 0ULL; 
+                    target_square -= 8; 
+                    bit_set(m.position.en_passant_target_square, target_square); 
+                    target_square += 8;
                     // check if the move is a check
                     is_check = m.position.pieces[0] & m.position.black_covered_squares;
                     if(is_check){ flags += 16; }   
@@ -1495,7 +1499,8 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
         // Castles queenside
         if(pos.can_black_castle_queenside){ 
             if(!bit_get(pos.all_pieces, 3) && 
-                !bit_get(pos.all_pieces, 2)){ 
+                !bit_get(pos.all_pieces, 2) &&
+                !bit_get(pos.all_pieces, 1)){ 
                 if(!bit_get(pos.white_covered_squares, 4) &&
                     !bit_get(pos.white_covered_squares, 3) &&
                     !bit_get(pos.white_covered_squares, 2)){

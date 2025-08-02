@@ -24,7 +24,6 @@ int main(){
     std::getline( std::cin, pos_fen );
     Position pos = PositionFromFen(pos_fen);
     PrintBoard(pos);
-    PrintBitboard(pos.en_passant_target_square);
     std::cout << "Insert max depth of search \n";
     std::cin >> max_depth;
 
@@ -41,13 +40,13 @@ int main(){
         MoveAndPosition m = legal_moves[i];
         std::cout << "\t "; PrintMove(m.move);
         std::cout << "\t " << Perft(m.position, max_depth-1) << "\n";
-        MoveAndPosition new_legal_moves[256];
+ /*       MoveAndPosition new_legal_moves[256];
         LegalMoves(m.position, new_legal_moves);
 
         for(int j=0; j<m.position.n_legal_moves; j++){
             std::cout << "\t\t";
             PrintMove(new_legal_moves[j].move);
-        }
+        }*/
     }
 
     // stop clock 
