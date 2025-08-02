@@ -185,6 +185,7 @@ int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, int& n_ex
             beta = std::min(beta, eval);
             if(beta <= alpha){ break; }
         }
+    }
 
     // --------------------------------------------------------
     // ------ STORE POSITION IN THE TRANSPOSITION TABLE -------
@@ -197,8 +198,6 @@ int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, int& n_ex
     else
         flag = EXACT;
     TTStore(anti_depth, zobrist_key, best_evaluation, flag);
-    
-    }
 
     return best_evaluation;
 }
@@ -288,10 +287,10 @@ MoveAndPosition IterativeDeepening(Position& pos, int min_depth, int max_depth, 
             // pick move with highest score
             PickBestMove(legal_moves, n_moves, move_index);
             m = legal_moves[move_index];
-            //std::cout << "move: "; PrintMove(m.move);
+            std::cout << "move: "; PrintMove(m.move);
             // generate child position and find its best evaluation down the tree 
             eval = BestEvaluation(m.position, depth-1, negative_infinity, positive_infinity, /*TranspositionTable,*/ n_explored_positions, true); // depth-1 because we are rooting from the child position
-            //std::cout << "eval: " << eval << "\n";
+            std::cout << "eval: " << eval << "\n";
             // if white to move and the evaluation at given depth of this move is higher than all the previous ones, overwrite best move
             if(pos.white_to_move){
                 legal_moves[move_index].score = eval; // update score with the evaluation at current depth
@@ -319,7 +318,7 @@ MoveAndPosition IterativeDeepening(Position& pos, int min_depth, int max_depth, 
                 }
             }
         }
-        //std::cout << "I have considered " << n_explored_positions << " positions. \n";
+        std::cout << "I have considered " << n_explored_positions << " positions. \n";
         std::cout << "The best move is "; PrintMove(best_move.move);
         if(win_detected){ break; }
         // if a forced mate is found, there's no need to search deeper 

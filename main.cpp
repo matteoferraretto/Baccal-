@@ -30,7 +30,8 @@ int main(){
     // start clock 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
-    //IterativeDeepening(pos, 2, max_depth, 2);
+//    IterativeDeepening(pos, 2, max_depth, 2);
+    
     std::cout << "Perft = " << Perft(pos, max_depth) << "\n";
 
     MoveAndPosition legal_moves[256];
@@ -40,14 +41,14 @@ int main(){
         MoveAndPosition m = legal_moves[i];
         std::cout << "\t "; PrintMove(m.move);
         std::cout << "\t " << Perft(m.position, max_depth-1) << "\n";
- /*       MoveAndPosition new_legal_moves[256];
+        /*MoveAndPosition new_legal_moves[256];
         LegalMoves(m.position, new_legal_moves);
 
         for(int j=0; j<m.position.n_legal_moves; j++){
             std::cout << "\t\t";
             PrintMove(new_legal_moves[j].move);
         }*/
-    }
+    } 
 
     // stop clock 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();

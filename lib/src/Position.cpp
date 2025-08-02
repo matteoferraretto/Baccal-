@@ -702,7 +702,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                         is_illegal = m.position.pieces[0] & m.position.black_covered_squares;
                         if(is_illegal){ clear_last_active_bit(attacks); continue; }
                         // standard updates
-                        m.position.white_to_move = !pos.white_to_move;
+                        m.position.white_to_move = false;
                         m.position.en_passant_target_square = 0ULL;
                         // check if the move is a check
                         is_check = m.position.pieces[6] & m.position.white_covered_squares;
@@ -1288,9 +1288,12 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                         flags = 1;
                         // Generate new position applying the move
                         m.position = pos;
-                        // move the piece in white pieces bitboards
+                        // move the piece in black pieces bitboards
                         bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[promoted_piece_index], target_square);
                         bit_clear(m.position.black_pieces, square); bit_set(m.position.black_pieces, target_square);
+                        // capture the piece 
+                        bit_clear(m.position.pieces[captured_piece_index], target_square);
+                        bit_clear(m.position.white_pieces, target_square);
                         // update material value
                         m.position.black_material_value += PIECES_VALUES[promoted_piece_index] - BLACK_PAWN_VALUE;
                         m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
