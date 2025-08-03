@@ -700,7 +700,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                         m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
                         // check if move is legal
                         is_illegal = m.position.pieces[0] & m.position.black_covered_squares;
-                        if(is_illegal){ clear_last_active_bit(attacks); continue; }
+                        if(is_illegal){ continue; }
                         // standard updates
                         m.position.white_to_move = false;
                         m.position.en_passant_target_square = 0ULL;
@@ -1303,7 +1303,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                         m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
                         // check if move is legal
                         is_illegal = m.position.pieces[6] & m.position.white_covered_squares;
-                        if(is_illegal){ clear_last_active_bit(attacks); continue; }
+                        if(is_illegal){ continue; }
                         m.position.half_move_counter = 0;
                         // standard updates
                         m.position.white_to_move = true;
