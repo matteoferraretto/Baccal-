@@ -527,9 +527,9 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                 if(is_illegal){ clear_last_active_bit(attacks); continue; }
                 // castling rights are lost
                 if(square == 63) { m.position.can_white_castle_kingside = false; }
-                if(square == 56) { m.position.can_white_castle_queenside = false; }
+                else if(square == 56) { m.position.can_white_castle_queenside = false; }
                 // standard updates
-                m.position.white_to_move = !pos.white_to_move;
+                m.position.white_to_move = false;
                 m.position.en_passant_target_square = 0ULL;
                 // check if the move is a check
                 is_check = m.position.pieces[6] & m.position.white_covered_squares;
@@ -722,7 +722,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                     // also change bitboards of black pieces and recompute values (this is always a capture)
                     m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
-                    if((pos.en_passant_target_square & (1 << target_square)) == 0){ // no en passant
+                    if((pos.en_passant_target_square & (1ULL << target_square)) == 0){ // no en passant
                         bit_clear(m.position.pieces[captured_piece_index], target_square);
                         bit_clear(m.position.black_pieces, target_square);   
                     } 
@@ -1131,7 +1131,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                 if(is_illegal){ clear_last_active_bit(attacks); continue; }
                 // castling rights are lost
                 if(square == 7) { m.position.can_black_castle_kingside = false; }
-                if(square == 0) { m.position.can_black_castle_queenside = false; }
+                else if(square == 0) { m.position.can_black_castle_queenside = false; }
                 // standard updates
                 m.position.white_to_move = true;
                 m.position.en_passant_target_square = 0ULL;
@@ -1326,11 +1326,11 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                     // also change bitboards of enemy pieces and recompute values (this is always a capture)
                     m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
-                    if((pos.en_passant_target_square & (1 << target_square)) == 0){ // NO en passant
+                    if((pos.en_passant_target_square & (1ULL << target_square)) == 0){ // NO en passant
                         bit_clear(m.position.pieces[captured_piece_index], target_square);
                         bit_clear(m.position.white_pieces, target_square);    
                     }
-                    else{ // NO en passant
+                    else{ // en passant
                         captured_piece_index = 5;
                         target_square -= 8;
                         bit_clear(m.position.pieces[captured_piece_index], target_square);
