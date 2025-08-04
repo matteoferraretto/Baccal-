@@ -2,7 +2,7 @@
 #include <Position.h>
 
 // Assign a heuristic score to all the moves
-void ScoreAllMoves(MoveAndPosition* moves, size_t n_moves);
+void ScoreAllMoves(MoveAndPosition* moves, uint8_t n_moves);
 
 // PICK MOVE
 // In the alpha-beta pruning, instead of sorting the moves, we just pick the move with highest score 
@@ -10,7 +10,7 @@ void ScoreAllMoves(MoveAndPosition* moves, size_t n_moves);
 // In the min-max search, we loop over the unsorted moves 
 // if we are currently considering the i-th move, we swap legal_moves[i] with legal_moves[best_idx],
 // where best_idx is the index of the move with highest score considering only moves from index i to n_moves.
-void PickBestMove(MoveAndPosition* moves, size_t n_moves, int i);
+void PickBestMove(MoveAndPosition* moves, uint8_t n_moves, int i);
 
 // PERFT: performance testing
 // this is a standard test to check performance of move generation
@@ -18,6 +18,7 @@ void PickBestMove(MoveAndPosition* moves, size_t n_moves, int i);
 // this is also useful for debugging
 // see results at https://www.chessprogramming.org/Perft_Results
 unsigned long long int Perft(Position pos, int depth);
+void PerftTesting();
 
 // MIN - MAX SEARCH with ALPHA - BETA PRUNING
 // at every node of the search we have two values as estimated so far:

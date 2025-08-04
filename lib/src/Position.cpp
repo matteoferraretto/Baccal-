@@ -33,73 +33,73 @@ Position PositionFromFen(std::string fen)
         square = 8*i + j;
         // depending on the piece, determine the masks
         if(c == 'K'){ 
-            pos.white_material_value += WHITE_KING_VALUE;
+            //pos.white_material_value += WHITE_KING_VALUE;
             bit_set(pos.pieces[0], i, j);
             bit_set(pos.white_pieces, i, j);
             pos.white_covered_squares |= king_covered_squares_bitboards[square];
         }
         else if(c == 'Q'){ 
-            pos.white_material_value += WHITE_QUEEN_VALUE;
+            //pos.white_material_value += WHITE_QUEEN_VALUE;
             bit_set(pos.pieces[1], i, j);
             bit_set(pos.white_pieces, i, j);
             // calculation of covered squares is delayed for sliding pieces --> see below
         }
         else if(c == 'R'){ 
-            pos.white_material_value += WHITE_ROOK_VALUE;
+            //pos.white_material_value += WHITE_ROOK_VALUE;
             bit_set(pos.pieces[2], i, j);
             bit_set(pos.white_pieces, i, j);
             // calculation of covered squares is delayed for sliding pieces --> see below
         }
         else if(c == 'B'){ 
-            pos.white_material_value += WHITE_BISHOP_VALUE;
+            //pos.white_material_value += WHITE_BISHOP_VALUE;
             bit_set(pos.pieces[3], i, j);
             bit_set(pos.white_pieces, i, j);
             // calculation of covered squares is delayed for sliding pieces --> see below
         }
         else if(c == 'N'){ 
-            pos.white_material_value += WHITE_KNIGHT_VALUE;
+            //pos.white_material_value += WHITE_KNIGHT_VALUE;
             bit_set(pos.pieces[4], i, j);
             bit_set(pos.white_pieces, i, j);
             pos.white_covered_squares |= knight_covered_squares_bitboards[square];
         }
         else if(c == 'P'){ 
-            pos.white_material_value += WHITE_PAWN_VALUE;
+            //pos.white_material_value += WHITE_PAWN_VALUE;
             bit_set(pos.pieces[5], i, j);
             bit_set(pos.white_pieces, i, j);
             pos.white_covered_squares |= white_pawn_covered_squares_bitboards[square];
         }
         else if(c == 'k'){ 
-            pos.black_material_value += BLACK_KING_VALUE;
+            //pos.black_material_value += BLACK_KING_VALUE;
             bit_set(pos.pieces[6], i, j);
             bit_set(pos.black_pieces, i, j);
             pos.black_covered_squares |= king_covered_squares_bitboards[square];
         }
         else if(c == 'q'){ 
-            pos.black_material_value += BLACK_QUEEN_VALUE;
+            //pos.black_material_value += BLACK_QUEEN_VALUE;
             bit_set(pos.pieces[7], i, j);
             bit_set(pos.black_pieces, i, j);
             // calculation of covered squares is delayed for sliding pieces --> see below
         }
         else if(c == 'r'){ 
-            pos.black_material_value += BLACK_ROOK_VALUE;
+            //pos.black_material_value += BLACK_ROOK_VALUE;
             bit_set(pos.pieces[8], i, j);
             bit_set(pos.black_pieces, i, j);
             // calculation of covered squares is delayed for sliding pieces --> see below
         }
         else if(c == 'b'){ 
-            pos.black_material_value += BLACK_BISHOP_VALUE;
+            //pos.black_material_value += BLACK_BISHOP_VALUE;
             bit_set(pos.pieces[9], i, j);
             bit_set(pos.black_pieces, i, j);
             // calculation of covered squares is delayed for sliding pieces --> see below
         }
         else if(c == 'n'){ 
-            pos.black_material_value += BLACK_KNIGHT_VALUE;
+            //pos.black_material_value += BLACK_KNIGHT_VALUE;
             bit_set(pos.pieces[10], i, j);
             bit_set(pos.black_pieces, i, j);
             pos.black_covered_squares |= knight_covered_squares_bitboards[square];
         }
         else if(c == 'p'){ 
-            pos.black_material_value += BLACK_PAWN_VALUE;
+            //pos.black_material_value += BLACK_PAWN_VALUE;
             bit_set(pos.pieces[11], i, j);
             bit_set(pos.black_pieces, i, j);
             pos.black_covered_squares |= black_pawn_covered_squares_bitboards[square];
@@ -222,7 +222,7 @@ void PrintBoard(Position pos){
 int PositionScore(Position& pos){
     // we assume that material value is pre-calculated! It should be done when a position is generated
     // this is the starting point for the position score
-    int score = pos.white_material_value + pos.black_material_value;
+/*    int score = pos.white_material_value + pos.black_material_value;
     
     // loop over the pieces to add extra value based on the position of the piece
     unsigned long square;
@@ -336,8 +336,8 @@ int PositionScore(Position& pos){
     score += (
         count_doubled_pawns(pos.pieces[11]) - count_doubled_pawns(pos.pieces[5])
     ) * MALUS_FOR_DOUBLED_PAWNS; 
-
-    return score;
+*/
+    return 0;
 }
 
 // FIND LIST OF LEGAL MOVES
@@ -388,7 +388,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                             break;
                         }
                     }
-                    m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
+                    //m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
                     bit_clear(m.position.pieces[captured_piece_index], target_square);
                     bit_clear(m.position.black_pieces, target_square);
@@ -452,7 +452,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                             break;
                         }
                     }
-                    m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
+                    //m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
                     bit_clear(m.position.pieces[captured_piece_index], target_square);
                     bit_clear(m.position.black_pieces, target_square);
@@ -512,7 +512,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                             break;
                         }
                     }
-                    m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
+                    //m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
                     bit_clear(m.position.pieces[captured_piece_index], target_square);
                     bit_clear(m.position.black_pieces, target_square);
@@ -575,7 +575,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                             break;
                         }
                     }
-                    m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
+                    //m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
                     bit_clear(m.position.pieces[captured_piece_index], target_square);
                     bit_clear(m.position.black_pieces, target_square);
@@ -632,7 +632,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                             break;
                         }
                     }
-                    m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
+                    //m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
                     bit_clear(m.position.pieces[captured_piece_index], target_square);
                     bit_clear(m.position.black_pieces, target_square);
@@ -689,8 +689,8 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                         // move the piece in white pieces bitboards
                         bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[promoted_piece_index], target_square);
                         bit_clear(m.position.white_pieces, square); bit_set(m.position.white_pieces, target_square);
-                        m.position.white_material_value += PIECES_VALUES[promoted_piece_index] - WHITE_PAWN_VALUE;
-                        m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
+                        //m.position.white_material_value += PIECES_VALUES[promoted_piece_index] - WHITE_PAWN_VALUE;
+                        //m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
                         m.position.half_move_counter = 0;
                         bit_clear(m.position.pieces[captured_piece_index], target_square);
                         bit_clear(m.position.black_pieces, target_square);                        
@@ -720,7 +720,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                     bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
                     bit_clear(m.position.white_pieces, square); bit_set(m.position.white_pieces, target_square);
                     // also change bitboards of black pieces and recompute values (this is always a capture)
-                    m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
+                    //m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
                     if((pos.en_passant_target_square & (1ULL << target_square)) == 0){ // no en passant
                         bit_clear(m.position.pieces[captured_piece_index], target_square);
@@ -793,7 +793,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                         bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[promoted_piece_index], target_square);
                         bit_clear(m.position.white_pieces, square); bit_set(m.position.white_pieces, target_square);
                         // spawn the new piece 
-                        m.position.white_material_value += PIECES_VALUES[promoted_piece_index] - WHITE_PAWN_VALUE;
+                        //m.position.white_material_value += PIECES_VALUES[promoted_piece_index] - WHITE_PAWN_VALUE;
                         // compute all pieces bitboard and the covered squares
                         m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
                         m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
@@ -833,9 +833,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                     // standard updates
                     m.position.white_to_move = false;
                     m.position.en_passant_target_square = 0ULL;
-                    target_square += 8;
-                    bit_set(m.position.en_passant_target_square, target_square);
-                    target_square -= 8;
+                    m.position.en_passant_target_square |= (1ULL << (target_square + 8));
                     // check if the move is a check
                     is_check = m.position.pieces[6] & m.position.white_covered_squares;
                     if(is_check){ flags += 16; }   
@@ -891,15 +889,14 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                         // Generate new position applying the move
                         m.position = pos;
                         // move king and rook in white pieces bitboards
-                        unsigned long temp; // in order to use bit_clear and bit_set, we need the second argument to be stored in memory... du palle
-                        temp = 60; bit_clear(m.position.pieces[0], temp);
-                        temp = 62; bit_set(m.position.pieces[0], temp);
-                        temp = 63; bit_clear(m.position.pieces[2], temp);
-                        temp = 61; bit_set(m.position.pieces[2], temp);
-                        temp = 60; bit_clear(m.position.white_pieces, temp);
-                        temp = 63; bit_clear(m.position.white_pieces, temp);
-                        temp = 61; bit_set(m.position.white_pieces, temp);
-                        temp = 62; bit_set(m.position.white_pieces, temp);
+                        m.position.pieces[0] &= ~(1ULL << 60);
+                        m.position.pieces[0] |= (1ULL << 62);
+                        m.position.pieces[2] &= ~(1ULL << 63);
+                        m.position.pieces[2] |= (1ULL << 61);
+                        m.position.white_pieces &= ~(1ULL << 60);
+                        m.position.white_pieces &= ~(1ULL << 63);
+                        m.position.white_pieces |= (1ULL << 61);
+                        m.position.white_pieces |= (1ULL << 62);
                         // compute all pieces bitboard and the covered squares
                         m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
                         m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
@@ -907,6 +904,8 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                         m.position.half_move_counter++;
                         // standard updates
                         m.position.white_to_move = false;
+                        m.position.can_white_castle_kingside = false;
+                        m.position.can_white_castle_queenside = false;
                         m.position.en_passant_target_square = 0ULL;
                         // check if the move is a check
                         is_check = m.position.pieces[6] & m.position.white_covered_squares;
@@ -934,15 +933,14 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                         // Generate new position applying the move
                         m.position = pos;
                         // move king and rook in white pieces bitboards
-                        unsigned long temp;
-                        temp = 60; bit_clear(m.position.pieces[0], temp);
-                        temp = 58; bit_set(m.position.pieces[0], temp);
-                        temp = 56; bit_clear(m.position.pieces[2], temp);
-                        temp = 59; bit_set(m.position.pieces[2], temp);
-                        temp = 60; bit_clear(m.position.white_pieces, temp);
-                        temp = 56; bit_clear(m.position.white_pieces, temp);
-                        temp = 58; bit_set(m.position.white_pieces, temp);
-                        temp = 59; bit_set(m.position.white_pieces, temp);
+                        m.position.pieces[0] &= ~(1ULL << 60); // bit clear (faster like this)
+                        m.position.pieces[0] |= (1ULL << 58);
+                        m.position.pieces[2] &= ~(1ULL << 56);
+                        m.position.pieces[2] |= (1ULL << 59); // bit set (faster like this)
+                        m.position.white_pieces &= ~(1ULL << 60);
+                        m.position.white_pieces &= ~(1ULL << 56);
+                        m.position.white_pieces |= (1ULL << 58);
+                        m.position.white_pieces |= (1ULL << 59);
                         // compute all pieces bitboard and the covered squares
                         m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
                         m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
@@ -950,6 +948,8 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                         m.position.half_move_counter++;
                         // standard updates
                         m.position.white_to_move = false;
+                        m.position.can_white_castle_kingside = false;
+                        m.position.can_white_castle_queenside = false;
                         m.position.en_passant_target_square = 0ULL;
                         // check if the move is a check
                         is_check = m.position.pieces[6] & m.position.white_covered_squares;
@@ -994,7 +994,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                             break;
                         }
                     }
-                    m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
+                    //m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
                     bit_clear(m.position.pieces[captured_piece_index], target_square);
                     bit_clear(m.position.white_pieces, target_square);
@@ -1057,7 +1057,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                             break;
                         }
                     }
-                    m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
+                    //m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
                     bit_clear(m.position.pieces[captured_piece_index], target_square);
                     bit_clear(m.position.white_pieces, target_square);
@@ -1116,7 +1116,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                             break;
                         }
                     }
-                    m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
+                    //m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
                     bit_clear(m.position.pieces[captured_piece_index], target_square);
                     bit_clear(m.position.white_pieces, target_square);
@@ -1178,7 +1178,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                             break;
                         }
                     }
-                    m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
+                    //m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
                     bit_clear(m.position.pieces[captured_piece_index], target_square);
                     bit_clear(m.position.white_pieces, target_square);
@@ -1234,7 +1234,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                             break;
                         }
                     }
-                    m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
+                    //m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
                     bit_clear(m.position.pieces[captured_piece_index], target_square);
                     bit_clear(m.position.white_pieces, target_square);
@@ -1295,8 +1295,8 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                         bit_clear(m.position.pieces[captured_piece_index], target_square);
                         bit_clear(m.position.white_pieces, target_square);
                         // update material value
-                        m.position.black_material_value += PIECES_VALUES[promoted_piece_index] - BLACK_PAWN_VALUE;
-                        m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
+                        //m.position.black_material_value += PIECES_VALUES[promoted_piece_index] - BLACK_PAWN_VALUE;
+                        //m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
                         // compute all pieces bitboard and the covered squares
                         m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
                         m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
@@ -1324,7 +1324,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                     bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
                     bit_clear(m.position.black_pieces, square); bit_set(m.position.black_pieces, target_square);
                     // also change bitboards of enemy pieces and recompute values (this is always a capture)
-                    m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
+                    //m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
                     m.position.half_move_counter = 0;
                     if((pos.en_passant_target_square & (1ULL << target_square)) == 0){ // NO en passant
                         bit_clear(m.position.pieces[captured_piece_index], target_square);
@@ -1375,7 +1375,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                         // move the piece in white pieces bitboards
                         bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[promoted_piece_index], target_square);
                         bit_clear(m.position.black_pieces, square); bit_set(m.position.black_pieces, target_square);
-                        m.position.black_material_value += PIECES_VALUES[promoted_piece_index] - BLACK_PAWN_VALUE;
+                        //m.position.black_material_value += PIECES_VALUES[promoted_piece_index] - BLACK_PAWN_VALUE;
                         // compute all pieces bitboard and the covered squares
                         m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
                         m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
@@ -1415,9 +1415,7 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                     // update side to move and add en-passant target!
                     m.position.white_to_move = true;
                     m.position.en_passant_target_square = 0ULL; 
-                    target_square -= 8; 
-                    bit_set(m.position.en_passant_target_square, target_square); 
-                    target_square += 8;
+                    m.position.en_passant_target_square |= (1ULL << (target_square - 8));
                     // check if the move is a check
                     is_check = m.position.pieces[0] & m.position.black_covered_squares;
                     if(is_check){ flags += 16; }   
@@ -1472,22 +1470,23 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                         // Generate new position applying the move
                         m.position = pos;
                         // move king and rook in white pieces bitboards
-                        unsigned long temp; // in order to use bit_clear and bit_set, we need the second argument to be stored in memory... du palle
-                        temp = 4; bit_clear(m.position.pieces[6], temp);
-                        temp = 6; bit_set(m.position.pieces[6], temp);
-                        temp = 7; bit_clear(m.position.pieces[8], temp);
-                        temp = 5; bit_set(m.position.pieces[8], temp);
-                        temp = 4; bit_clear(m.position.black_pieces, temp);
-                        temp = 7; bit_clear(m.position.black_pieces, temp);
-                        temp = 5; bit_set(m.position.black_pieces, temp);
-                        temp = 6; bit_set(m.position.black_pieces, temp);
+                        m.position.pieces[6] &= ~(1ULL << 4);
+                        m.position.pieces[6] |= (1ULL << 6);
+                        m.position.pieces[8] &= ~(1ULL << 7);
+                        m.position.pieces[8] |= (1ULL << 5);
+                        m.position.black_pieces &= ~(1ULL << 4);
+                        m.position.black_pieces &= ~(1ULL << 7);
+                        m.position.black_pieces |= (1ULL << 5);
+                        m.position.black_pieces |= (1ULL << 6);
                         // compute all pieces bitboard and the covered squares
                         m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
                         m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
                         m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
                         m.position.half_move_counter++;
-                        // standard updates
+                        // standard updates -> loose castling rights
                         m.position.white_to_move = true;
+                        m.position.can_black_castle_kingside = false;
+                        m.position.can_black_castle_queenside = false;
                         m.position.en_passant_target_square = 0ULL;
                         // check if the move is a check
                         is_check = m.position.pieces[0] & m.position.black_covered_squares;
@@ -1513,15 +1512,14 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                         // Generate new position applying the move
                         m.position = pos;
                         // move king and rook in white pieces bitboards
-                        unsigned long temp; // in order to use bit_clear and bit_set, we need the second argument to be stored in memory... du palle
-                        temp = 4; bit_clear(m.position.pieces[6], temp);
-                        temp = 2; bit_set(m.position.pieces[6], temp);
-                        temp = 0; bit_clear(m.position.pieces[8], temp);
-                        temp = 3; bit_set(m.position.pieces[8], temp);
-                        temp = 4; bit_clear(m.position.black_pieces, temp);
-                        temp = 0; bit_clear(m.position.black_pieces, temp);
-                        temp = 2; bit_set(m.position.black_pieces, temp);
-                        temp = 3; bit_set(m.position.black_pieces, temp);
+                        m.position.pieces[6] &= ~(1ULL << 4);
+                        m.position.pieces[6] |= (1ULL << 2);
+                        m.position.pieces[8] &= ~1ULL;
+                        m.position.pieces[8] |= (1ULL << 3);
+                        m.position.black_pieces &= ~(1ULL << 4);
+                        m.position.black_pieces &= ~1ULL;
+                        m.position.black_pieces |= (1ULL << 2);
+                        m.position.black_pieces |= (1ULL << 3);
                         // compute all pieces bitboard and the covered squares
                         m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
                         m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
@@ -1529,6 +1527,8 @@ void LegalMoves(Position& pos, MoveAndPosition* all_moves){
                         m.position.half_move_counter++;
                         // standard updates
                         m.position.white_to_move = true;
+                        m.position.can_black_castle_kingside = false;
+                        m.position.can_black_castle_queenside = false;
                         m.position.en_passant_target_square = 0ULL;
                         // check if the move is a check
                         is_check = m.position.pieces[0] & m.position.black_covered_squares;

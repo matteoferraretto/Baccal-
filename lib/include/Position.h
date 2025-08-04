@@ -4,6 +4,19 @@
 #include <vector>
 #include <Move.h>
 
+// Class Position is made as follows:
+// - 12 bitboards storing the position of the 12 types of pieces: K Q R B N P k q r b n p
+// - 3 bitboards with mask of white pieces, black pieces and all pieces (meant to avoid repeated calculations in move generation)
+// - 1 bitboard with mask of en passant target square
+// - 1 uint8_t with relevant info:
+//      bits      _            _                   _                  _                _                   _               _                _
+//      info  [nothing] [black in check?] [white in check?] [can black O-O-O?] [can black O-O?] [can white O-O-O?] [can white O-O?] [white to move?]
+// - 1 uint8_t half_move_counter to account for the 50 moves rule 
+//      from 0 to 50 and we have 2 extra bits
+// - 1 uint8_t n_legal_moves representing the number of legal moves
+//      from 0 to 2^8 - 1 = 255 (max allowed size is 256)
+// TOTAL MEMORY REQUIRED 
+// 64 x 12 + 64 x 3 + 64 x 1 + 8 x 1 + 8 x 1 + 8 x 1 = 1048 bits = 131 bytes
 struct Position
 {
     uint64_t pieces[12] = {
@@ -14,17 +27,17 @@ struct Position
     bool can_white_castle_queenside = false;
     bool can_black_castle_kingside = false;
     bool can_black_castle_queenside = false;
-    unsigned int half_move_counter = 0;
+    uint8_t half_move_counter = 0;
 //    unsigned int move_counter = 0;
     uint64_t en_passant_target_square = 0ULL;
-    int white_material_value = 0;
-    int black_material_value = 0;
+//    int white_material_value = 0;
+//    int black_material_value = 0;
     uint64_t white_pieces = 0ULL;
     uint64_t black_pieces = 0ULL;
     uint64_t all_pieces = 0ULL;
     uint64_t white_covered_squares = 0ULL;
     uint64_t black_covered_squares = 0ULL;
-    size_t n_legal_moves = 0;
+    uint8_t n_legal_moves = 0;
 };
 
 Position PositionFromFen(std::string fen);

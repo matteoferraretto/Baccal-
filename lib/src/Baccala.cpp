@@ -8,14 +8,14 @@
 #include <iostream>
 
 
-void ScoreAllMoves(MoveAndPosition* moves, size_t n_moves){
+void ScoreAllMoves(MoveAndPosition* moves, uint8_t n_moves){
     MoveAndPosition m;
     for(int move_index = 0; move_index < n_moves; move_index++){
         moves[move_index].score = ScoreMove(moves[move_index].move);
     }
 }
 
-void PickBestMove(MoveAndPosition* moves, size_t n_moves, int i){
+void PickBestMove(MoveAndPosition* moves, uint8_t n_moves, int i){
     int best_index = i; // assume the current move is best
     // Loop over remaining moves: ... i+1, i+2, ... , n_moves
     for(int j = i+1; j < n_moves; j++){
@@ -69,6 +69,31 @@ unsigned long long int Perft(Position pos, int depth){
     return n_nodes;
 }
 
+void PerftTesting(){
+    std::string pos1_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    std::string pos2_fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 0";
+    std::string pos3_fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1";
+    std::string pos4_fen = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1";
+    std::string pos5_fen = "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8";
+    std::string pos6_fen = "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10";
+    Position pos1 = PositionFromFen(pos1_fen);
+    Position pos2 = PositionFromFen(pos2_fen);
+    Position pos3 = PositionFromFen(pos3_fen);
+    Position pos4 = PositionFromFen(pos4_fen);
+    Position pos5 = PositionFromFen(pos5_fen);
+    Position pos6 = PositionFromFen(pos6_fen);
+
+    int depth = 5;
+    std::cout << "Performing Perft test at depth " << depth << ".\n 1 = ok; 0 = not ok. The test can take a few minutes...\n";
+    std::cout << "Testing position 1: "; std::cout << (Perft(pos1, depth) == 4865609) << "\n";
+    std::cout << "Testing position 2: "; std::cout << (Perft(pos2, depth) == 193690690) << "\n";
+    std::cout << "Testing position 3: "; std::cout << (Perft(pos3, depth) == 674624) << "\n";
+    std::cout << "Testing position 4: "; std::cout << (Perft(pos4, depth) == 15833292) << "\n";
+    std::cout << "Testing position 5: "; std::cout << (Perft(pos5, depth) == 89941194) << "\n";
+    std::cout << "Testing position 6: "; std::cout << (Perft(pos6, depth) == 164075551) << "\n";
+}
+
+
 int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, int& n_explored_positions, bool can_do_null){
     // ------------------------------------------------------
     // ----- RETRIEVE SCORE FROM TRANSPOSITION TABLE --------
@@ -108,7 +133,7 @@ int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, int& n_ex
     MoveAndPosition move_and_pos;
     MoveAndPosition legal_moves[MAX_NUMBER_OF_MOVES];
     LegalMoves(pos, legal_moves);
-    size_t n_moves = pos.n_legal_moves;
+    uint8_t n_moves = pos.n_legal_moves;
     // manage stalemate and checkmate: no legal moves in the current position
     if(n_moves == 0){
         if(pos.white_to_move){
@@ -217,7 +242,7 @@ MoveAndPosition BestMove(Position pos, int depth){
     }
     MoveAndPosition legal_moves[MAX_NUMBER_OF_MOVES];
     LegalMoves(pos, legal_moves);
-    size_t n_moves = pos.n_legal_moves;
+    uint8_t n_moves = pos.n_legal_moves;
     best_move = legal_moves[0];
     // Loop through the legal moves to assign a heuristic score
     ScoreAllMoves(legal_moves, n_moves);
@@ -265,7 +290,7 @@ MoveAndPosition IterativeDeepening(Position& pos, int min_depth, int max_depth, 
     MoveAndPosition m, best_move;
     MoveAndPosition legal_moves[MAX_NUMBER_OF_MOVES];
     LegalMoves(pos, legal_moves);
-    size_t n_moves = pos.n_legal_moves;
+    uint8_t n_moves = pos.n_legal_moves;
     best_move = legal_moves[0];
     // Loop through the legal moves to assign a heuristic score
     ScoreAllMoves(legal_moves, n_moves);
