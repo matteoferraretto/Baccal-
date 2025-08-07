@@ -51,12 +51,15 @@ const int n_squares_for_bishop_blockers[64] = {
 // bit-wise operations for bitboards
 void bit_set(uint64_t& bitboard, int i, int j);
 void bit_set(uint64_t& bitboard, unsigned long& square);
+void bit_set_opt(uint64_t& bitboard, const uint8_t& square);
 
 void bit_clear(uint64_t& bitboard, int i, int j);
 void bit_clear(uint64_t& bitboard, unsigned long& square);
+void bit_clear_opt(uint64_t& bitboard, const uint8_t& square);
 
 bool bit_get(uint64_t bitboard, int i, int j);
 bool bit_get(const uint64_t& bitboard, const unsigned long& square);
+bool bit_get_opt(const uint64_t& bitboard, const uint8_t& square);
 
 void clear_last_active_bit(uint64_t& bitboard); // set to 0 the last bit which is 1
 

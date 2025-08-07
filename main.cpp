@@ -17,7 +17,7 @@ int main(){
     InitializeZobrist();
     TTInit();
     PreComputeBitboards(true); // true = read from file
-/*
+
     std::string pos_fen;
     unsigned int max_depth;
     std::cout << "Insert a valid FEN string \n";
@@ -26,13 +26,30 @@ int main(){
     PrintBoard(pos);
     std::cout << "Insert max depth of search \n";
     std::cin >> max_depth;
-*/
 
     // start clock 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
+    MoveNew pseudolegal_moves[256];
+    for(int move_index = 0; move_index < 256; move_index++){
+        pseudolegal_moves[move_index] = 0;
+    }
+    MoveNew move;
+    StateMemory state;
+
+    PseudoLegalMoves(pos, pseudolegal_moves);
+    for(int move_index = 0; move_index < 256; move_index++){
+        move = pseudolegal_moves[move_index];
+        if(move == 0){ continue; }
+        std::cout << std::endl;
+        PrintMoveNew(move);
+        MakeMove(pos, move, state);
+        PrintBoard(pos);
+        UnmakeMove(pos, move, state);
+    }
+
 //    IterativeDeepening(pos, 2, max_depth, 2);
-    PerftTesting();
+    //PerftTesting();
     
 /*    std::cout << "Perft = " << Perft(pos, max_depth) << "\n";
 

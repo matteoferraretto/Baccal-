@@ -22,12 +22,55 @@
 // we can change this convention later ...
 typedef uint32_t Move;
 
+// [4 bits] [6 bits] [6 bits]
+//  flags      to      from
+//      flags = 0 -> quiet move
+//      flags = 1 -> double pawn push
+//      flags = 2 -> kingside castling
+//      flags = 3 -> queenside castling
+//      flags = 4 -> standard capture
+//      flags = 5 -> en-passant capture 
+//      flags = 6 -> nothing 
+//      flags = 7 -> nothing
+//      flags = 8 -> promotion to knight
+//      flags = 9 -> promotion to bishop
+//      flags = 10 -> promotion to rook
+//      flags = 11 -> promotion to queen
+//      flags = 12 -> capture and promotion to knight
+//      flags = 13 -> capture and promotion to bishop
+//      flags = 14 -> capture and promotion to rook
+//      flags = 15 -> capture and promotion to queen
+typedef uint16_t MoveNew;
+
+struct StateMemory{
+    uint64_t moved_piece = 0ULL;
+    uint64_t captured_piece = 0ULL;
+    uint64_t friendly_pieces = 0ULL;
+    uint64_t enemy_pieces = 0ULL;
+    uint8_t moved_piece_index = 0;
+    uint8_t captured_piece_index = 0;
+    uint8_t half_move_counter = 0;
+    bool can_white_castle_kingside = false;
+    bool can_white_castle_queenside = false;
+    bool can_black_castle_kingside = false;
+    bool can_black_castle_queenside = false;
+};
+
 // define a null move: flags = 0; promo = 15; capt = 15; piece = 15; to = 0; from = 0;
 const Move NULL_MOVE = 16773120;
 
 // theoretical maximum number of moves in a given position (this is an overestimate, however we consider eating the king as a move, so this might be reasonable)
 // for 99.99% of positions this is definitely fine, maybe edge cases could exceed this value
 const int MAX_NUMBER_OF_MOVES = 256;
+
+inline MoveNew EncodeMoveNew(unsigned long from, unsigned long to, uint16_t flags){
+    uint16_t move = 0;
+    // progress of move bits:       // 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    move = (uint16_t)from;          // 0 0 0 0 0 0 0 0 0 0 s s s s s s 
+    move |= ((uint16_t)to << 6);    // 0 0 0 0 t t t t t t s s s s s s
+    move |= flags << 12;            // f f f f t t t t t t s s s s s s
+    return move;
+}
 
 // functions that help to encode a move from all the info
 inline Move EncodeMove(uint8_t from, uint8_t to, uint8_t piece, uint8_t captured = 15, uint8_t promotion = 15, uint8_t flags = 0) 
@@ -65,6 +108,16 @@ inline void PrintMove(const Move& m){
     move_str += SquareToAlphabet(to);
     if(promotion != 15){ move_str += PieceToAlphabet(promotion); }
     if(is_check){ move_str += "+"; }
+    std::cout << move_str << "\n";
+}
+
+inline void PrintMoveNew(const MoveNew& move){
+    uint8_t from, to;
+    std::string move_str;
+    from = move & 0b00111111;
+    to = (move >> 6) & 0b00111111;
+    move_str = SquareToAlphabet(from);
+    move_str += SquareToAlphabet(to);
     std::cout << move_str << "\n";
 }
 

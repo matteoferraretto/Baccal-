@@ -54,6 +54,16 @@ struct MoveAndPosition
     int score;
 };
 
+// Generate all the PSEUDOLEGAL moves, which means:
+//  - move a piece from a square to another square following the rules
+//  - if the square is occupied by a friendly piece, don't consider the move
+//  - ignore if the move leaves the king in danger (whence PSEUDOlegal)
+void PseudoLegalMoves(const Position& pos, MoveNew* moves);
+
+void MakeMove(Position& pos, const MoveNew& move, StateMemory& state);
+
+void UnmakeMove(Position& pos, const MoveNew& move, const StateMemory& state);
+
 // Generate all the possible moves following the rules, 
 // but without checking if the king is left in danger by that move.
 // This is done later! So these moves are technically NOT the legal moves 
