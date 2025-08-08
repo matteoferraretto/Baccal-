@@ -25,7 +25,7 @@ int main(){
     Position pos = PositionFromFen(pos_fen);
     PrintBoard(pos);
     std::cout << "Insert max depth of search \n";
-    std::cin >> max_depth;
+    std::cin >> max_depth; 
 
     // start clock 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
@@ -38,22 +38,31 @@ int main(){
     StateMemory state;
 
     PseudoLegalMoves(pos, pseudolegal_moves);
-    for(int move_index = 0; move_index < 256; move_index++){
-        move = pseudolegal_moves[move_index];
-        if(move == 0){ continue; }
-        std::cout << std::endl;
-        PrintMoveNew(move);
-        MakeMove(pos, move, state);
-        PrintBoard(pos);
-        UnmakeMove(pos, move, state);
-    }
 
 //    IterativeDeepening(pos, 2, max_depth, 2);
     //PerftTesting();
-    
-/*    std::cout << "Perft = " << Perft(pos, max_depth) << "\n";
+    //PerftNewTesting();
 
-    MoveAndPosition legal_moves[256];
+    int perft = 0, total = 0;
+
+    for(int move_index = 0; move_index < 256; move_index++){
+        move = pseudolegal_moves[move_index];
+        if(move == 0){ break; }
+        MakeMove(pos, move, state);
+        if(!IsLegal(pos, move)){
+            UnmakeMove(pos, move, state); 
+            continue; 
+        }
+        PrintMoveNew(move);
+        perft = PerftNew(pos, max_depth - 1, state);
+        total += perft;
+        std::cout << "Perft = " << perft << "\n";
+        UnmakeMove(pos, move, state);
+    }
+
+    std::cout << "\nPerft = " << total << "\n"; 
+
+/*    MoveAndPosition legal_moves[256];
     LegalMoves(pos, legal_moves);
     size_t n_moves = pos.n_legal_moves;
     for(int i=0; i<n_moves; i++){

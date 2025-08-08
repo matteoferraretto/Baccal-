@@ -62,6 +62,8 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves);
 
 void MakeMove(Position& pos, const MoveNew& move, StateMemory& state);
 
+bool IsLegal(Position& pos, const Move& move);
+
 void UnmakeMove(Position& pos, const MoveNew& move, const StateMemory& state);
 
 // Generate all the possible moves following the rules, 

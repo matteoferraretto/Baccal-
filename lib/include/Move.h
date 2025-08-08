@@ -47,6 +47,7 @@ struct StateMemory{
     uint64_t captured_piece = 0ULL;
     uint64_t friendly_pieces = 0ULL;
     uint64_t enemy_pieces = 0ULL;
+    uint64_t en_passant_target_square;
     uint8_t moved_piece_index = 0;
     uint8_t captured_piece_index = 0;
     uint8_t half_move_counter = 0;
@@ -112,12 +113,17 @@ inline void PrintMove(const Move& m){
 }
 
 inline void PrintMoveNew(const MoveNew& move){
-    uint8_t from, to;
+    uint8_t from, to, flags;
     std::string move_str;
     from = move & 0b00111111;
     to = (move >> 6) & 0b00111111;
+    flags = move >> 12;
     move_str = SquareToAlphabet(from);
     move_str += SquareToAlphabet(to);
+    if(flags == 15 || flags == 11){ move_str += "Q"; }
+    else if(flags == 14 || flags == 10){ move_str += "R"; }
+    else if(flags == 13 || flags == 9){ move_str += "B"; }
+    else if(flags == 12 || flags == 8){ move_str += "N"; }
     std::cout << move_str << "\n";
 }
 

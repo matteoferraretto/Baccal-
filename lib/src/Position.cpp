@@ -398,7 +398,7 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
             _BitScanForward64(&square, piece); // find position of queen and assign it to square
             // retrieve bitboard of queen moves
             hash_index_rook = rook_hash_index(pos.all_pieces, square, n_attacks_rook);
-            attacks = rook_covered_squares_bitboards[hash_index_rook] | bishop_covered_squares_bitboards[hash_index_bishop];
+            attacks = rook_covered_squares_bitboards[hash_index_rook];
             attacks &= ~pos.white_pieces; // excluse self-capture
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square
@@ -416,7 +416,7 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
         while(piece){ // consider all the queens
             _BitScanForward64(&square, piece); // find position of queen and assign it to square
             hash_index_bishop = bishop_hash_index(pos.all_pieces, square, n_attacks_bishop);
-            attacks = rook_covered_squares_bitboards[hash_index_rook] | bishop_covered_squares_bitboards[hash_index_bishop];
+            attacks = bishop_covered_squares_bitboards[hash_index_bishop];
             attacks &= ~pos.white_pieces; // excluse self-capture
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square
@@ -542,15 +542,12 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
         if(pos.can_white_castle_kingside){ // 1. you still have right to castle from game history
             if(!bit_get(pos.all_pieces, 61) && 
                 !bit_get(pos.all_pieces, 62)){ // 2. the in-between squares are empty
-                if(!bit_get(pos.black_covered_squares, 60) &&
-                    !bit_get(pos.black_covered_squares, 61) &&
-                    !bit_get(pos.black_covered_squares, 62)){ // 3. king does not pass through a square covered by opponent
-                   if(bit_get(pos.pieces[0], 60) &&
-                        bit_get(pos.pieces[2], 63)){ // 4. king and rook are in the correct position
-                        moves[move_index] = EncodeMoveNew(60, 62, 2); 
-                        move_index++;
-                   } 
-                }
+                // 3. king does not pass through a square covered by opponent
+                if(bit_get(pos.pieces[0], 60) &&
+                    bit_get(pos.pieces[2], 63)){ // 4. king and rook are in the correct position
+                    moves[move_index] = EncodeMoveNew(60, 62, 2); 
+                    move_index++;
+                } 
             }   
         }
         // Castles queenside
@@ -558,15 +555,11 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
             if(!bit_get(pos.all_pieces, 59) && 
                 !bit_get(pos.all_pieces, 58) &&
                 !bit_get(pos.all_pieces, 57)){ 
-                if(!bit_get(pos.black_covered_squares, 60) &&
-                    !bit_get(pos.black_covered_squares, 59) &&
-                    !bit_get(pos.black_covered_squares, 58)){
-                   if(bit_get(pos.pieces[0], 60) &&
-                        bit_get(pos.pieces[2], 56)){ 
-                        moves[move_index] = EncodeMove(60, 58, 3); 
-                        move_index++;
-                   } 
-                }
+                if(bit_get(pos.pieces[0], 60) &&
+                    bit_get(pos.pieces[2], 56)){ 
+                    moves[move_index] = EncodeMove(60, 58, 3); 
+                    move_index++;
+                } 
             }   
         }
     }
@@ -621,7 +614,7 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
             _BitScanForward64(&square, piece); // find position of queen and assign it to square
             // retrieve bitboard of queen moves
             hash_index_rook = rook_hash_index(pos.all_pieces, square, n_attacks_rook);
-            attacks = rook_covered_squares_bitboards[hash_index_rook] | bishop_covered_squares_bitboards[hash_index_bishop];
+            attacks = rook_covered_squares_bitboards[hash_index_rook];
             attacks &= ~pos.black_pieces; // excluse self-capture
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square
@@ -639,7 +632,7 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
         while(piece){ // consider all the queens
             _BitScanForward64(&square, piece); // find position of queen and assign it to square
             hash_index_bishop = bishop_hash_index(pos.all_pieces, square, n_attacks_bishop);
-            attacks = rook_covered_squares_bitboards[hash_index_rook] | bishop_covered_squares_bitboards[hash_index_bishop];
+            attacks = bishop_covered_squares_bitboards[hash_index_bishop];
             attacks &= ~pos.black_pieces; // excluse self-capture
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square
@@ -681,7 +674,7 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square
                 // in case of promotion, loop over all possible promoted pieces
-                if(target_square / 8 == 0){
+                if(target_square / 8 == 7){
                     for(uint8_t promoted_piece_index = 7; promoted_piece_index < 11; promoted_piece_index++){
                         flags = 22 - promoted_piece_index;
                         moves[move_index] = EncodeMoveNew(square, target_square, flags);
@@ -765,15 +758,11 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
         if(pos.can_black_castle_kingside){ 
             if(!bit_get(pos.all_pieces, 5) && 
                 !bit_get(pos.all_pieces, 6)){ 
-                if(!bit_get(pos.white_covered_squares, 4) &&
-                    !bit_get(pos.white_covered_squares, 5) &&
-                    !bit_get(pos.white_covered_squares, 6)){ 
-                   if(bit_get(pos.pieces[6], 4) &&
-                        bit_get(pos.pieces[8], 7)){ 
-                        moves[move_index] = EncodeMoveNew(4, 6, 2);
-                        move_index++;
-                   } 
-                }
+                if(bit_get(pos.pieces[6], 4) &&
+                    bit_get(pos.pieces[8], 7)){ 
+                    moves[move_index] = EncodeMoveNew(4, 6, 2);
+                    move_index++;
+                } 
             }   
         }
 
@@ -782,15 +771,11 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
             if(!bit_get(pos.all_pieces, 3) && 
                 !bit_get(pos.all_pieces, 2) &&
                 !bit_get(pos.all_pieces, 1)){ 
-                if(!bit_get(pos.white_covered_squares, 4) &&
-                    !bit_get(pos.white_covered_squares, 3) &&
-                    !bit_get(pos.white_covered_squares, 2)){
-                   if(bit_get(pos.pieces[6], 4) &&
-                        bit_get(pos.pieces[8], 0)){ 
-                        moves[move_index] = EncodeMoveNew(4, 2, 3); 
-                        move_index++;
-                   } 
-                }
+                if(bit_get(pos.pieces[6], 4) &&
+                    bit_get(pos.pieces[8], 0)){ 
+                    moves[move_index] = EncodeMoveNew(4, 2, 3); 
+                    move_index++;
+                } 
             }   
         }
     }
@@ -799,7 +784,7 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
 
 void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
     uint8_t from, to, flags;
-    uint8_t moved_piece_index, captured_piece_index = 12, promoted_piece_index = 12; // 12 = no piece captured
+    uint8_t moved_piece_index = 0, captured_piece_index = 12, promoted_piece_index = 12; // 12 = no piece captured
     // retrieve info from the move
     from = move & 0b00111111;
     to = (move >> 6) & 0b00111111;
@@ -810,7 +795,6 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
         for(uint8_t piece_index = 0; piece_index < 6; piece_index++){
             if(bit_get_opt(pos.pieces[piece_index], from)){
                 moved_piece_index = piece_index;
-                state.moved_piece_index = moved_piece_index;
                 break;
             }
         }
@@ -827,10 +811,11 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
                 break;
             }
         }
-        state.captured_piece_index = captured_piece_index;
         // update en passant target
-        if(flags == 5){ // double pawn push
-            bit_set_opt(pos.en_passant_target_square, to + 8);
+        state.en_passant_target_square = pos.en_passant_target_square;
+        if(flags == 1){ // double pawn push
+            pos.en_passant_target_square = 1ULL << (to + 8);
+            //bit_set_opt(pos.en_passant_target_square, to + 8);
         }
         else{
             pos.en_passant_target_square = 0ULL;
@@ -840,9 +825,14 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
         else if(flags == 10 || flags == 14){ promoted_piece_index = 2; } // rook
         else if(flags == 9 || flags == 13){ promoted_piece_index = 3; } // bishop
         else if(flags == 8 || flags == 12){ promoted_piece_index = 4; } // knight
-        // remove the piece from the starting square
+        // save current state
+        state.moved_piece_index = moved_piece_index;
+        state.captured_piece_index = captured_piece_index;
         state.moved_piece = pos.pieces[moved_piece_index]; // save before changing
         state.friendly_pieces = pos.white_pieces;
+        state.enemy_pieces = pos.black_pieces;
+        state.captured_piece = pos.pieces[captured_piece_index];
+        // remove the piece from the starting square
         bit_clear_opt(pos.pieces[moved_piece_index], from);
         bit_clear_opt(pos.white_pieces, from);
         // spawn the moved piece on the target square
@@ -853,10 +843,9 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
             // if en passant, piece is not in the target square
             if(flags == 5){
                 bit_clear_opt(pos.pieces[11], to + 8);
+                bit_clear_opt(pos.black_pieces, to + 8);
             }
             else{
-                state.captured_piece = pos.pieces[captured_piece_index];
-                state.enemy_pieces = pos.black_pieces;
                 bit_clear_opt(pos.pieces[captured_piece_index], to);
                 bit_clear_opt(pos.black_pieces, to);
             }
@@ -870,11 +859,14 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
         if(flags == 2){// kingside castle
             // transfer the rook
             bit_clear_opt(pos.pieces[2], 63); bit_set_opt(pos.pieces[2], 61);
+            bit_clear_opt(pos.white_pieces, 63); bit_set_opt(pos.white_pieces, 61);
         }
         else if(flags == 3){// queenside castle
             // transfer the rook
-            bit_clear_opt(pos.pieces[2], 56); bit_set_opt(pos.pieces[2], 58);
+            bit_clear_opt(pos.pieces[2], 56); bit_set_opt(pos.pieces[2], 59);
+            bit_clear_opt(pos.white_pieces, 56); bit_set_opt(pos.white_pieces, 59);
         }
+
         // CASTLING RIGHTS
         // save current castling rights 
         state.can_white_castle_kingside = pos.can_white_castle_kingside;
@@ -885,19 +877,22 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
             pos.can_white_castle_queenside = false;
         }
         // if you move the rook on h1 
-        else if(moved_piece_index == 2 && from == 63){
+        if(moved_piece_index == 2 && from == 63){
             pos.can_white_castle_kingside = false;
         }
         // if you move the rook on a1
-        else if(moved_piece_index == 2 && from == 56){
+        if(moved_piece_index == 2 && from == 56){
             pos.can_white_castle_queenside = false;
         }
+
         // increment half move counter in case of capture or pawn move
         if(captured_piece_index != 12 || moved_piece_index == 5){
             state.half_move_counter = pos.half_move_counter;
             pos.half_move_counter = 0;
         }
         else{ pos.half_move_counter++; }
+        // update bitboards
+        pos.all_pieces = pos.white_pieces | pos.black_pieces;
         // update side to move
         pos.white_to_move = false;
     }
@@ -908,7 +903,6 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
         for(uint8_t piece_index = 6; piece_index < 12; piece_index++){
             if(bit_get_opt(pos.pieces[piece_index], from)){
                 moved_piece_index = piece_index;
-                state.moved_piece_index = moved_piece_index;
                 break;
             }
         }
@@ -925,10 +919,11 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
                 break;
             }
         }
-        state.captured_piece_index = captured_piece_index;
         // update en passant target
-        if(flags == 5){ // double pawn push
-            bit_set_opt(pos.en_passant_target_square, to - 8);
+        state.en_passant_target_square = pos.en_passant_target_square;
+        if(flags == 1){ // double pawn push
+            pos.en_passant_target_square = 1ULL << (to - 8);
+            //bit_set_opt(pos.en_passant_target_square, to - 8);
         }
         else{
             pos.en_passant_target_square = 0ULL;
@@ -938,9 +933,14 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
         else if(flags == 10 || flags == 14){ promoted_piece_index = 8; } // rook
         else if(flags == 9 || flags == 13){ promoted_piece_index = 9; } // bishop
         else if(flags == 8 || flags == 12){ promoted_piece_index = 10; } // knight
-        // remove the piece from the starting square
+        // memorize current state
+        state.moved_piece_index = moved_piece_index;
+        state.captured_piece_index = captured_piece_index;
         state.moved_piece = pos.pieces[moved_piece_index]; // save before changing
         state.friendly_pieces = pos.black_pieces;
+        state.enemy_pieces = pos.white_pieces;
+        state.captured_piece = pos.pieces[captured_piece_index];
+        // remove the piece from the starting square
         bit_clear_opt(pos.pieces[moved_piece_index], from);
         bit_clear_opt(pos.black_pieces, from);
         // spawn the moved piece on the target square
@@ -951,10 +951,9 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
             // if en passant, piece is not in the target square
             if(flags == 5){
                 bit_clear_opt(pos.pieces[5], to - 8);
+                bit_clear_opt(pos.white_pieces, to - 8);
             }
             else{
-                state.captured_piece = pos.pieces[captured_piece_index];
-                state.enemy_pieces = pos.white_pieces;
                 bit_clear_opt(pos.pieces[captured_piece_index], to);
                 bit_clear_opt(pos.white_pieces, to);
             }
@@ -968,10 +967,12 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
         if(flags == 2){// kingside castle
             // transfer the rook
             bit_clear_opt(pos.pieces[8], 7); bit_set_opt(pos.pieces[8], 5);
+            bit_clear_opt(pos.black_pieces, 7); bit_set_opt(pos.black_pieces, 5);
         }
         else if(flags == 3){// queenside castle
             // transfer the rook
             bit_clear_opt(pos.pieces[8], 0); bit_set_opt(pos.pieces[8], 3);
+            bit_clear_opt(pos.black_pieces, 0); bit_set_opt(pos.black_pieces, 3);
         }
         // CASTLING RIGHTS
         // save current castling rights 
@@ -983,11 +984,11 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
             pos.can_black_castle_queenside = false;
         }
         // if you move the rook on h8 
-        else if(moved_piece_index == 8 && from == 7){
+        if(moved_piece_index == 8 && from == 7){
             pos.can_black_castle_kingside = false;
         }
         // if you move the rook on a8
-        else if(moved_piece_index == 2 && from == 0){
+        if(moved_piece_index == 8 && from == 0){
             pos.can_black_castle_queenside = false;
         }
         // Reset half move counter in case of capture or pawn move
@@ -997,6 +998,8 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
         }
         // ...or else increment it 
         else{ pos.half_move_counter++; }
+        // update bitboards
+        pos.all_pieces = pos.white_pieces | pos.black_pieces;
         // update side to move
         pos.white_to_move = true;
     }
@@ -1026,6 +1029,15 @@ void UnmakeMove(Position& pos, const MoveNew& move, const StateMemory& state){
             bit_clear_opt(pos.pieces[promoted_piece_index], to);
             bit_set_opt(pos.pieces[11], from);
         }
+        // in case of castling, reposition the rook correctly
+        if(flags == 2){ // kingside
+            bit_clear_opt(pos.pieces[8], 5);
+            bit_set_opt(pos.pieces[8], 7);
+        }
+        else if(flags == 3){ // queenside
+            bit_clear_opt(pos.pieces[8], 3);
+            bit_set_opt(pos.pieces[8], 0);
+        }
         // restore group bitboards
         pos.white_pieces = state.enemy_pieces;
         pos.black_pieces = state.friendly_pieces;
@@ -1038,6 +1050,8 @@ void UnmakeMove(Position& pos, const MoveNew& move, const StateMemory& state){
             pos.half_move_counter = state.half_move_counter;
         }
         else{ pos.half_move_counter--; }
+        // restore en-passant target square
+        pos.en_passant_target_square = state.en_passant_target_square;
         // update side to move
         pos.white_to_move = false;
     }
@@ -1059,6 +1073,15 @@ void UnmakeMove(Position& pos, const MoveNew& move, const StateMemory& state){
             bit_clear_opt(pos.pieces[promoted_piece_index], to);
             bit_set_opt(pos.pieces[5], from);
         }
+        // in case of castling, reposition the rook correctly
+        if(flags == 2){ // kingside
+            bit_clear_opt(pos.pieces[2], 61);
+            bit_set_opt(pos.pieces[2], 63);
+        }
+        else if(flags == 3){// queenside
+            bit_clear_opt(pos.pieces[2], 59);
+            bit_set_opt(pos.pieces[2], 56);
+        }
         // restore group bitboards
         pos.white_pieces = state.friendly_pieces;
         pos.black_pieces = state.enemy_pieces;
@@ -1071,11 +1094,60 @@ void UnmakeMove(Position& pos, const MoveNew& move, const StateMemory& state){
             pos.half_move_counter = state.half_move_counter;
         }
         else{ pos.half_move_counter--; }
+        // restore en-passant target
+        pos.en_passant_target_square = state.en_passant_target_square;
         // update side to move
         pos.white_to_move = true;
     }
 }
 
+bool IsLegal(Position& pos, const Move& move){ 
+    uint64_t is_illegal;
+    uint8_t flags = (move >> 12);
+    // if white to move and black's king is in check, pos is illegal
+    if(pos.white_to_move){
+        pos.white_covered_squares = GetCoveredSquares(pos.pieces, pos.all_pieces, true);
+        is_illegal = pos.pieces[6] & pos.white_covered_squares;
+        if(is_illegal){ return false; }
+        // if black just castled (so now is white to move), control that the black king was not passing through a square covered by white
+        if(flags == 2){
+            if(bit_get(pos.white_covered_squares, 4) ||
+                bit_get(pos.white_covered_squares, 5) ||
+                bit_get(pos.white_covered_squares, 6)){
+                    return false;
+            }
+        }
+        else if(flags == 3){
+            if(bit_get(pos.white_covered_squares, 2) ||
+                bit_get(pos.white_covered_squares, 3) ||
+                bit_get(pos.white_covered_squares, 4)){
+                    return false;
+            }
+        }
+        return true;
+    }
+    // if black to move and white's king is in check, pos is illegal
+    else{
+        pos.black_covered_squares = GetCoveredSquares(pos.pieces, pos.all_pieces, false);
+        is_illegal = pos.pieces[0] & pos.black_covered_squares;
+        if(is_illegal){ return false; }
+        if(flags == 2){
+            if(bit_get(pos.black_covered_squares, 60) ||
+                bit_get(pos.black_covered_squares, 61) ||
+                bit_get(pos.black_covered_squares, 62)){
+                    return false;
+            }
+        }
+        else if(flags == 3){
+            if(bit_get(pos.black_covered_squares, 60) ||
+                bit_get(pos.black_covered_squares, 59) ||
+                bit_get(pos.black_covered_squares, 58)){
+                    return false;
+            }
+        }
+        return true;
+    }
+}
 
 // FIND LIST OF LEGAL MOVES
 void LegalMoves(Position& pos, MoveAndPosition* all_moves){

@@ -18,7 +18,9 @@ void PickBestMove(MoveAndPosition* moves, uint8_t n_moves, int i);
 // this is also useful for debugging
 // see results at https://www.chessprogramming.org/Perft_Results
 unsigned long long int Perft(Position pos, int depth);
+unsigned long long int PerftNew(Position pos, int depth, StateMemory state);
 void PerftTesting();
+void PerftNewTesting();
 
 // MIN - MAX SEARCH with ALPHA - BETA PRUNING
 // at every node of the search we have two values as estimated so far:
