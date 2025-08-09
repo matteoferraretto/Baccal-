@@ -43,7 +43,7 @@ typedef uint32_t Move;
 typedef uint16_t MoveNew;
 
 struct StateMemory{
-    uint64_t moved_piece = 0ULL;
+    //uint64_t moved_piece = 0ULL;
     uint64_t captured_piece = 0ULL;
     uint64_t friendly_pieces = 0ULL;
     uint64_t enemy_pieces = 0ULL;

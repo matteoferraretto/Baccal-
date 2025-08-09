@@ -48,6 +48,11 @@ const int n_squares_for_bishop_blockers[64] = {
     6, 5, 5, 5, 5, 5, 5, 6
 };
 
+const uint64_t BLACK_QUEENSIDE_CASTLE_MASK = (7ULL << 2);
+const uint64_t BLACK_KINGSIDE_CASTLE_MASK = (7ULL << 4);
+const uint64_t WHITE_QUEENSIDE_CASTLE_MASK = (7ULL << 58);
+const uint64_t WHITE_KINGSIDE_CASTLE_MASK = (7ULL << 60);
+
 // bit-wise operations for bitboards
 void bit_set(uint64_t& bitboard, int i, int j);
 void bit_set(uint64_t& bitboard, unsigned long& square);

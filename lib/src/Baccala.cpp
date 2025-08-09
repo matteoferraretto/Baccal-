@@ -70,12 +70,11 @@ unsigned long long int Perft(Position pos, int depth){
 }
 
 unsigned long long int PerftNew(Position pos, int depth, StateMemory state){
-    unsigned long long int n_nodes = 0;
-    
     if(depth == 0){ return 1ULL; }
 
+    unsigned long long int n_nodes = 0;
+    
     // generate legal moves
-    MoveNew move;
     MoveNew moves[MAX_NUMBER_OF_MOVES];
     for(int move_index = 0; move_index < MAX_NUMBER_OF_MOVES; move_index++){
         moves[move_index] = 0;
@@ -83,16 +82,14 @@ unsigned long long int PerftNew(Position pos, int depth, StateMemory state){
     PseudoLegalMoves(pos, moves);
 
     for(int move_index = 0; move_index < MAX_NUMBER_OF_MOVES; move_index++){
-        move = moves[move_index];
-        if(move == 0){ break; }
-        MakeMove(pos, move, state);
-        if(!IsLegal(pos, move)){
-            UnmakeMove(pos, move, state);
-            continue;
+        //move = moves[move_index];
+        if(moves[move_index] == 0){ break; }
+        MakeMove(pos, moves[move_index], state);
+        if(IsLegal(pos, moves[move_index])){
+            n_nodes += PerftNew(pos, depth - 1, state);
         }
         //std::cout << "\t"; PrintMoveNew(move);
-        n_nodes += PerftNew(pos, depth - 1, state);
-        UnmakeMove(pos, move, state);
+        UnmakeMove(pos, moves[move_index], state);
     }
 
     return n_nodes;

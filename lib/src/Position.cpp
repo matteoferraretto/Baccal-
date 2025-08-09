@@ -815,7 +815,6 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
         state.en_passant_target_square = pos.en_passant_target_square;
         if(flags == 1){ // double pawn push
             pos.en_passant_target_square = 1ULL << (to + 8);
-            //bit_set_opt(pos.en_passant_target_square, to + 8);
         }
         else{
             pos.en_passant_target_square = 0ULL;
@@ -828,7 +827,6 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
         // save current state
         state.moved_piece_index = moved_piece_index;
         state.captured_piece_index = captured_piece_index;
-        state.moved_piece = pos.pieces[moved_piece_index]; // save before changing
         state.friendly_pieces = pos.white_pieces;
         state.enemy_pieces = pos.black_pieces;
         state.captured_piece = pos.pieces[captured_piece_index];
@@ -923,7 +921,6 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
         state.en_passant_target_square = pos.en_passant_target_square;
         if(flags == 1){ // double pawn push
             pos.en_passant_target_square = 1ULL << (to - 8);
-            //bit_set_opt(pos.en_passant_target_square, to - 8);
         }
         else{
             pos.en_passant_target_square = 0ULL;
@@ -936,7 +933,6 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
         // memorize current state
         state.moved_piece_index = moved_piece_index;
         state.captured_piece_index = captured_piece_index;
-        state.moved_piece = pos.pieces[moved_piece_index]; // save before changing
         state.friendly_pieces = pos.black_pieces;
         state.enemy_pieces = pos.white_pieces;
         state.captured_piece = pos.pieces[captured_piece_index];
@@ -1011,11 +1007,12 @@ void UnmakeMove(Position& pos, const MoveNew& move, const StateMemory& state){
     from = move & 0b00111111;
     to = (move >> 6) & 0b00111111;
     flags = (move >> 12);
+    // reposition the moved piece
+    bit_clear_opt(pos.pieces[state.moved_piece_index], to);
+    bit_set_opt(pos.pieces[state.moved_piece_index], from);
 
     // black made the pseudomove
     if(pos.white_to_move){
-        // reposition the moved piece
-        pos.pieces[state.moved_piece_index] = state.moved_piece;
         // reposition the captured piece
         if(state.captured_piece_index != 12){
             pos.pieces[state.captured_piece_index] = state.captured_piece;
@@ -1058,8 +1055,6 @@ void UnmakeMove(Position& pos, const MoveNew& move, const StateMemory& state){
 
     // if white made the pseudomove 
     else{
-        // reposition the moved piece
-        pos.pieces[state.moved_piece_index] = state.moved_piece;
         // reposition the captured piece
         if(state.captured_piece_index != 12){
             pos.pieces[state.captured_piece_index] = state.captured_piece;
@@ -1102,48 +1097,103 @@ void UnmakeMove(Position& pos, const MoveNew& move, const StateMemory& state){
 }
 
 bool IsLegal(Position& pos, const Move& move){ 
-    uint64_t is_illegal;
+    uint64_t attacks;
+    unsigned long king_square;
     uint8_t flags = (move >> 12);
     // if white to move and black's king is in check, pos is illegal
     if(pos.white_to_move){
-        pos.white_covered_squares = GetCoveredSquares(pos.pieces, pos.all_pieces, true);
-        is_illegal = pos.pieces[6] & pos.white_covered_squares;
-        if(is_illegal){ return false; }
+        // step 1: get black's king position
+        _BitScanForward64(&king_square, pos.pieces[6]);
+        // step 2: check attacks from white king
+        attacks = king_covered_squares_bitboards[king_square];
+        if(attacks & pos.pieces[0]){ return false; }
+        // step 3: check attacks from white knight
+        attacks = knight_covered_squares_bitboards[king_square];
+        if(attacks & pos.pieces[4]){ return false; }
+        // step 4: check attacks from white pawns
+        attacks = black_pawn_covered_squares_bitboards[king_square];
+        if(attacks & pos.pieces[5]){ return false; }
+        // step 5: check attacks from diagonal directions
+        uint64_t hash_index_bishop = bishop_hash_index(pos.all_pieces, king_square, n_attacks_bishop);
+        attacks = bishop_covered_squares_bitboards[hash_index_bishop];
+        if(attacks & (pos.pieces[1] | pos.pieces[3])){ return false; }
+        // step 6: check attacks from horizontal or vertical directions
+        uint64_t hash_index_rook = rook_hash_index(pos.all_pieces, king_square, n_attacks_rook);
+        attacks = rook_covered_squares_bitboards[hash_index_rook]; 
+        if(attacks & (pos.pieces[1] | pos.pieces[2])){ return false; }
+        // ...        
         // if black just castled (so now is white to move), control that the black king was not passing through a square covered by white
         if(flags == 2){
-            if(bit_get(pos.white_covered_squares, 4) ||
+            pos.white_covered_squares = GetCoveredSquares(pos.pieces, pos.all_pieces, true);
+            if(pos.white_covered_squares & BLACK_KINGSIDE_CASTLE_MASK){
+                return false;
+            }
+            //if(pos.pieces[6] & pos.white_covered_squares){ return false; }
+            /*if(bit_get(pos.white_covered_squares, 4) ||
                 bit_get(pos.white_covered_squares, 5) ||
                 bit_get(pos.white_covered_squares, 6)){
                     return false;
-            }
+            }*/
         }
         else if(flags == 3){
-            if(bit_get(pos.white_covered_squares, 2) ||
+            pos.white_covered_squares = GetCoveredSquares(pos.pieces, pos.all_pieces, true);
+            if(pos.white_covered_squares & BLACK_QUEENSIDE_CASTLE_MASK){
+                return false;
+            }
+            //if(pos.pieces[6] & pos.white_covered_squares){ return false; }
+            /*if(bit_get(pos.white_covered_squares, 2) ||
                 bit_get(pos.white_covered_squares, 3) ||
                 bit_get(pos.white_covered_squares, 4)){
                     return false;
-            }
+            }*/
         }
+        // if all the previous legality checks are passed, return true
         return true;
     }
     // if black to move and white's king is in check, pos is illegal
     else{
-        pos.black_covered_squares = GetCoveredSquares(pos.pieces, pos.all_pieces, false);
-        is_illegal = pos.pieces[0] & pos.black_covered_squares;
-        if(is_illegal){ return false; }
+        // step 1: get black's king position
+        _BitScanForward64(&king_square, pos.pieces[0]);
+        // step 2: check attacks from white king
+        attacks = king_covered_squares_bitboards[king_square];
+        if(attacks & pos.pieces[6]){ return false; }
+        // step 3: check attacks from white knight
+        attacks = knight_covered_squares_bitboards[king_square];
+        if(attacks & pos.pieces[10]){ return false; }
+        // step 4: check attacks from white pawns
+        attacks = white_pawn_covered_squares_bitboards[king_square];
+        if(attacks & pos.pieces[11]){ return false; }
+        // step 5: check attacks from diagonal directions
+        uint64_t hash_index_bishop = bishop_hash_index(pos.all_pieces, king_square, n_attacks_bishop);
+        attacks = bishop_covered_squares_bitboards[hash_index_bishop];
+        if(attacks & (pos.pieces[7] | pos.pieces[9])){ return false; }
+        // step 6: check attacks from horizontal or vertical directions
+        uint64_t hash_index_rook = rook_hash_index(pos.all_pieces, king_square, n_attacks_rook);
+        attacks = rook_covered_squares_bitboards[hash_index_rook]; 
+        if(attacks & (pos.pieces[7] | pos.pieces[8])){ return false; }
         if(flags == 2){
-            if(bit_get(pos.black_covered_squares, 60) ||
+            pos.black_covered_squares = GetCoveredSquares(pos.pieces, pos.all_pieces, false);
+            //if(pos.pieces[0] & pos.black_covered_squares){ return false; }
+            if(pos.black_covered_squares & WHITE_KINGSIDE_CASTLE_MASK){
+                return false;
+            }
+            /*if(bit_get(pos.black_covered_squares, 60) ||
                 bit_get(pos.black_covered_squares, 61) ||
                 bit_get(pos.black_covered_squares, 62)){
                     return false;
-            }
+            }*/
         }
         else if(flags == 3){
-            if(bit_get(pos.black_covered_squares, 60) ||
+            pos.black_covered_squares = GetCoveredSquares(pos.pieces, pos.all_pieces, false);
+            if(pos.black_covered_squares & WHITE_QUEENSIDE_CASTLE_MASK){
+                return false;
+            }
+            //if(pos.pieces[0] & pos.black_covered_squares){ return false; }
+            /*if(bit_get(pos.black_covered_squares, 60) ||
                 bit_get(pos.black_covered_squares, 59) ||
                 bit_get(pos.black_covered_squares, 58)){
                     return false;
-            }
+            }*/
         }
         return true;
     }
