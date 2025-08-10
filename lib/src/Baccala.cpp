@@ -69,8 +69,12 @@ unsigned long long int Perft(Position pos, int depth){
     return n_nodes;
 }
 
-unsigned long long int PerftNew(Position pos, int depth, StateMemory state){
+unsigned long long int PerftNew(Position& pos, int depth, StateMemory state){
     if(depth == 0){ return 1ULL; }
+
+    uint64_t zobrist_key = ZobristHashing(pos);
+    TTEntry* entry = TTProbe(zobrist_key);
+    if(entry && entry->depth == depth){ return entry->score; }
 
     unsigned long long int n_nodes = 0;
     
@@ -91,6 +95,8 @@ unsigned long long int PerftNew(Position pos, int depth, StateMemory state){
         //std::cout << "\t"; PrintMoveNew(move);
         UnmakeMove(pos, moves[move_index], state);
     }
+
+    TTStore(depth, zobrist_key, n_nodes, EXACT);
 
     return n_nodes;
 }
@@ -136,11 +142,17 @@ void PerftNewTesting(){
     int depth = 5;
     StateMemory state;
     std::cout << "Performing Perft test at depth " << depth << ".\n 1 = ok; 0 = not ok. The test can take a few minutes...\n";
+    TTInit();
     std::cout << "Testing position 1: "; std::cout << (PerftNew(pos1, depth, state) == 4865609) << "\n";
+    TTInit();
     std::cout << "Testing position 2: "; std::cout << (PerftNew(pos2, depth, state) == 193690690) << "\n";
+    TTInit();
     std::cout << "Testing position 3: "; std::cout << (PerftNew(pos3, depth, state) == 674624) << "\n";
+    TTInit();
     std::cout << "Testing position 4: "; std::cout << (PerftNew(pos4, depth, state) == 15833292) << "\n";
+    TTInit();
     std::cout << "Testing position 5: "; std::cout << (PerftNew(pos5, depth, state) == 89941194) << "\n";
+    TTInit();
     std::cout << "Testing position 6: "; std::cout << (PerftNew(pos6, depth, state) == 164075551) << "\n";
 }
 

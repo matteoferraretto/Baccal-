@@ -43,13 +43,10 @@ typedef uint32_t Move;
 typedef uint16_t MoveNew;
 
 struct StateMemory{
-    //uint64_t moved_piece = 0ULL;
-    uint64_t captured_piece = 0ULL;
-    uint64_t friendly_pieces = 0ULL;
-    uint64_t enemy_pieces = 0ULL;
     uint64_t en_passant_target_square;
     uint8_t moved_piece_index = 0;
     uint8_t captured_piece_index = 0;
+    uint8_t promoted_piece_index = 0;
     uint8_t half_move_counter = 0;
     bool can_white_castle_kingside = false;
     bool can_white_castle_queenside = false;

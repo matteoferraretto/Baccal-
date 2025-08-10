@@ -36,7 +36,7 @@ void InitializeZobrist(){
         }
     }
     zobrist_table.white_to_move = rand64();
-    for(int i=0; i<4; i++){
+    for(int i=0; i<16; i++){
         zobrist_table.castling_rights[i] = rand64();
     }
     for(int i=0; i<8; i++){
@@ -47,6 +47,7 @@ void InitializeZobrist(){
 uint64_t ZobristHashing(Position& pos) {
     // initialize value of 0
     uint64_t hash = 0;
+    uint8_t castling_hash = 0;
     uint64_t piece;
     unsigned long square;
     // encode squares and pieces
@@ -60,11 +61,12 @@ uint64_t ZobristHashing(Position& pos) {
     }
     // encode side to move
     if(pos.white_to_move){ hash ^= zobrist_table.white_to_move; }
-    // encode castling rights
-    if(pos.can_white_castle_kingside){ hash ^= zobrist_table.castling_rights[0]; }
-    else if(pos.can_white_castle_queenside){ hash ^= zobrist_table.castling_rights[1]; }
-    else if(pos.can_black_castle_kingside){ hash ^= zobrist_table.castling_rights[2]; }
-    else if(pos.can_black_castle_queenside){ hash ^= zobrist_table.castling_rights[3]; }
+    // encode castling rights 
+    castling_hash = pos.can_white_castle_kingside | 
+        (pos.can_white_castle_queenside << 1) | 
+        (pos.can_black_castle_kingside << 2) |
+        (pos.can_black_castle_queenside << 3); // 0, ... , 15 (labels combinations of castling rights)
+    hash ^= zobrist_table.castling_rights[castling_hash];
     // encode en-passant target
     if(pos.en_passant_target_square){ 
         _BitScanForward64(&square, pos.en_passant_target_square);

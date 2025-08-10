@@ -49,9 +49,9 @@ void bit_set(uint64_t& bitboard, int i, int j){
 void bit_set(uint64_t& bitboard, unsigned long& square){
     bitboard |= (1ULL << square);
 }
-void bit_set_opt(uint64_t& bitboard, const uint8_t& square){
+/*void bit_set_opt(uint64_t& bitboard, const uint8_t& square){
     bitboard |= (1ULL << square);
-}
+}*/
 
 void bit_clear(uint64_t bitboard, int i, int j){
     bitboard &= ~(1ULL << (8*i+j));
@@ -59,9 +59,9 @@ void bit_clear(uint64_t bitboard, int i, int j){
 void bit_clear(uint64_t& bitboard, unsigned long& square){
     bitboard &= ~(1ULL << square);
 }
-void bit_clear_opt(uint64_t& bitboard, const uint8_t& square){
+/*void bit_clear_opt(uint64_t& bitboard, const uint8_t& square){
     bitboard &= ~(1ULL << square);
-}
+}*/
 
 bool bit_get(uint64_t bitboard, int i, int j){
     return (bitboard >> (8*i+j)) & 1;
@@ -69,9 +69,9 @@ bool bit_get(uint64_t bitboard, int i, int j){
 bool bit_get(const uint64_t& bitboard, const unsigned long& square){
     return (bitboard >> square) & 1;
 }
-bool bit_get_opt(const uint64_t& bitboard, const uint8_t& square){
+/*bool bit_get_opt(const uint64_t& bitboard, const uint8_t& square){
     return (bitboard >> square) & 1;
-}
+}*/
 
 
 void clear_last_active_bit(uint64_t& bitboard){

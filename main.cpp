@@ -42,7 +42,7 @@ int main(){
 //    IterativeDeepening(pos, 2, max_depth, 2);
     //PerftTesting();
     PerftNewTesting();
-
+    
 /*    int perft = 0, total = 0;
 
     for(int move_index = 0; move_index < 256; move_index++){

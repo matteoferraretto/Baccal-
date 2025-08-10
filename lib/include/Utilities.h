@@ -36,6 +36,18 @@ const int PIECES_VALUES[12] = {
     10000, 900, 500, 300, 300, 100, -10000, -900, -500, -300, -300, -100
 };
 
+// geometry of the board
+const uint8_t RANK_OF_SQUARE[64] = {
+    0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1,
+    2, 2, 2, 2, 2, 2, 2, 2,
+    3, 3, 3, 3, 3, 3, 3, 3,
+    4, 4, 4, 4, 4, 4, 4, 4,
+    5, 5, 5, 5, 5, 5, 5, 5,
+    6, 6, 6, 6, 6, 6, 6, 6,
+    7, 7, 7, 7, 7, 7, 7, 7
+};
+
 // for each square we store the number of squares where one can put a blocker for bishop
 const int n_squares_for_bishop_blockers[64] = {
     6, 5, 5, 5, 5, 5, 5, 6,
@@ -56,15 +68,21 @@ const uint64_t WHITE_KINGSIDE_CASTLE_MASK = (7ULL << 60);
 // bit-wise operations for bitboards
 void bit_set(uint64_t& bitboard, int i, int j);
 void bit_set(uint64_t& bitboard, unsigned long& square);
-void bit_set_opt(uint64_t& bitboard, const uint8_t& square);
+inline void bit_set_opt(uint64_t& bitboard, const uint8_t& square){
+    bitboard |= (1ULL << square);
+}
 
 void bit_clear(uint64_t& bitboard, int i, int j);
 void bit_clear(uint64_t& bitboard, unsigned long& square);
-void bit_clear_opt(uint64_t& bitboard, const uint8_t& square);
+inline void bit_clear_opt(uint64_t& bitboard, const uint8_t& square){
+    bitboard &= ~(1ULL << square);
+}
 
 bool bit_get(uint64_t bitboard, int i, int j);
 bool bit_get(const uint64_t& bitboard, const unsigned long& square);
-bool bit_get_opt(const uint64_t& bitboard, const uint8_t& square);
+inline bool bit_get_opt(const uint64_t& bitboard, const uint8_t& square){
+    return (bitboard >> square) & 1;
+}
 
 void clear_last_active_bit(uint64_t& bitboard); // set to 0 the last bit which is 1
 
