@@ -11,11 +11,15 @@ uint64_t black_pawn_advance_squares_bitboards[64];
 
 uint64_t rook_masks[64];
 uint64_t rook_magics[64];
+MaskAndMagic rook_mm[64];
 uint64_t *rook_covered_squares_bitboards = nullptr;
+uint64_t rook_covered_squares_bb[64][4096];
 
 uint64_t bishop_masks[64];
 uint64_t bishop_magics[64];
+MaskAndMagic bishop_mm[64];
 uint64_t *bishop_covered_squares_bitboards = nullptr;
+uint64_t bishop_covered_squares_bb[64][512];
 
 uint64_t mask_white_passed_pawn[64];
 uint64_t mask_black_passed_pawn[64];
@@ -365,11 +369,11 @@ void find_bishop_magic(unsigned int n_bits, uint64_t *attacks, uint64_t magics[6
         magics[square] = magic;
     }
 }
-
+/*
 uint64_t rook_hash_index(uint64_t blockers, int square, int n_attacks){
-    uint64_t mask = rook_masks[square]; 
-    uint64_t magic = rook_magics[square];
-    uint64_t hash_index = ((blockers & mask) * magic) >> shift_rook;
+    //uint64_t mask = rook_masks[square]; 
+    //uint64_t magic = rook_magics[square];
+    uint64_t hash_index = ((blockers & rook_masks[square]) * rook_magics[square]) >> shift_rook;
     return (square * n_attacks + hash_index);
 }
 
@@ -378,7 +382,7 @@ uint64_t bishop_hash_index(uint64_t blockers, int square, int n_attacks){
     uint64_t magic = bishop_magics[square];
     uint64_t hash_index = ((blockers & mask) * magic) >> shift_bishop;
     return (square * n_attacks + hash_index);
-}
+}*/
 
 
 void PreComputeBitboards(bool retrieve_from_file){
@@ -428,6 +432,17 @@ void PreComputeBitboards(bool retrieve_from_file){
         read_from_file(bishop_magics, 64, "../assets/bishop_magics.txt");
         read_from_file(bishop_covered_squares_bitboards, 64*n_bishop_attacks, "../assets/bishop_attacks.txt");
     }
+    // try this ...
+    for(int square = 0; square < 64; square++){
+        rook_mm[square] = {rook_masks[square], rook_magics[square]}; 
+        bishop_mm[square] = {bishop_masks[square], bishop_magics[square]};
+        for(int hash = 0; hash < 4096; hash++){
+            rook_covered_squares_bb[square][hash] = rook_covered_squares_bitboards[square*4096+hash];
+        }
+        for(int hash = 0; hash < 512; hash++){
+            bishop_covered_squares_bb[square][hash] = bishop_covered_squares_bitboards[square*512+hash];
+        }
+    }
     // initialize masks for passed pawn and outpost detection
     get_passed_pawn_masks();
 }
@@ -445,7 +460,6 @@ uint64_t GetCoveredSquares(uint64_t pieces[12], uint64_t& all_pieces, bool by_wh
     unsigned long square;
     uint64_t hash_index_rook, hash_index_bishop;
 
-    // white to move:
     if(by_white){
 
         // KING

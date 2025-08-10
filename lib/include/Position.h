@@ -28,10 +28,7 @@ struct Position
     bool can_black_castle_kingside = false;
     bool can_black_castle_queenside = false;
     uint8_t half_move_counter = 0;
-//    unsigned int move_counter = 0;
     uint64_t en_passant_target_square = 0ULL;
-//    int white_material_value = 0;
-//    int black_material_value = 0;
     uint64_t white_pieces = 0ULL;
     uint64_t black_pieces = 0ULL;
     uint64_t all_pieces = 0ULL;
@@ -46,30 +43,18 @@ void PrintBoard(Position pos);
 
 int PositionScore(Position& pos);
 
-// structure that packs move and position
-struct MoveAndPosition
-{
-    Move move;
-    Position position;
-    int score;
-};
 
 // Generate all the PSEUDOLEGAL moves, which means:
 //  - move a piece from a square to another square following the rules
 //  - if the square is occupied by a friendly piece, don't consider the move
 //  - ignore if the move leaves the king in danger (whence PSEUDOlegal)
-void PseudoLegalMoves(const Position& pos, MoveNew* moves);
+void PseudoLegalMoves(Position& pos, Move* moves);
 
-void MakeMove(Position& pos, const MoveNew& move, StateMemory& state);
+void MakeMove(Position& pos, const Move& move, StateMemory& state);
 
 bool IsLegal(Position& pos, const Move& move);
 
-void UnmakeMove(Position& pos, const MoveNew& move, const StateMemory& state);
-
-// Generate all the possible moves following the rules, 
-// but without checking if the king is left in danger by that move.
-// This is done later! So these moves are technically NOT the legal moves 
-void LegalMoves(Position& pos, MoveAndPosition* legal_moves);
+void UnmakeMove(Position& pos, const Move& move, const StateMemory& state);
 
 // Consider all the moves, filter out illegal moves that leave the king in check and generate the new position
 // This function is optimized for the engine purposes:

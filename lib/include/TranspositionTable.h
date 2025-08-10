@@ -27,7 +27,7 @@ struct TTEntry {
 
 // Transposition Table (TT)
 // it contains a table and methods to clear, fill or access the table
-const int TT_SIZE = 1 << 20; // 2^18 \approx 250 000 ---> we can do better!!
+const int TT_SIZE = 1 << 21; // 2^18 \approx 250 000 ---> we can do better!!
 
 extern TTEntry transposition_table[TT_SIZE];
 
@@ -66,7 +66,7 @@ void TTStore(int depth, uint64_t hash, int score, NodeFlag flag/*, Move best_mov
 struct ZobristTable {
     uint64_t pieces_and_squares[12][64];
     uint64_t white_to_move;
-    uint64_t castling_rights[4];
+    uint64_t castling_rights[16];
     uint64_t en_passant_file[8];
 };
 

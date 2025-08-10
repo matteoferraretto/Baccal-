@@ -2,26 +2,6 @@
 #include <cstdint>
 #include <Utilities.h>
 
-// we pack the structure Move in a single 32 bit number with the following convention
-// Bit index:  31             ...              0
-//           [flags][promo][capt][piece][to][from]
-// Bits:        6      4     4      4    6    6   = 30 total --> the last 2 bits are garbage.
-//          - from = 0, ... , 63 -> exactly 6 bits required
-//          - to   = 0, ... , 63 -> exactly 6 bits required
-//          - piece = 0, ... , 11, 15 = K, Q, R, B, N, P, k, q, r, b, n, p, nothing -> 4 bits (numbers from 12 to 14 are garbage)
-//          - capture = 0, ..., 11, 15 = K, Q, R, B, N, P, k, q, r, b, n, p, nothing -> 4 bits (numbers from 12 to 14 are garbage)
-//          - promoted piece = 1, 2, 3, 4, 6, 7, 8, 9, 15 = Q, R, B, N, q, r, b, n, nothing -> 4 bits (0, 5, 10, 11, 12, 13, 14 are garbage)
-//          - flags =   0 -> quiet
-//                      1 -> pawn move
-//                      2 -> double pawn-push
-//                      4 -> castling
-//                      8 -> capture
-//                      16 -> is check
-//                      ... <-- we have 2 more bits to use if needed
-// NB: the flags are powers of two because they are not mutually exclusive! A move can be at the same time an en-passang move and a capture, so both flags are active
-// we can change this convention later ...
-typedef uint32_t Move;
-
 // [4 bits] [6 bits] [6 bits]
 //  flags      to      from
 //      flags = 0 -> quiet move
@@ -40,7 +20,7 @@ typedef uint32_t Move;
 //      flags = 13 -> capture and promotion to bishop
 //      flags = 14 -> capture and promotion to rook
 //      flags = 15 -> capture and promotion to queen
-typedef uint16_t MoveNew;
+typedef uint16_t Move;
 
 struct StateMemory{
     uint64_t en_passant_target_square;
@@ -54,15 +34,12 @@ struct StateMemory{
     bool can_black_castle_queenside = false;
 };
 
-// define a null move: flags = 0; promo = 15; capt = 15; piece = 15; to = 0; from = 0;
-const Move NULL_MOVE = 16773120;
-
 // theoretical maximum number of moves in a given position (this is an overestimate, however we consider eating the king as a move, so this might be reasonable)
 // for 99.99% of positions this is definitely fine, maybe edge cases could exceed this value
 const int MAX_NUMBER_OF_MOVES = 256;
 
-inline MoveNew EncodeMoveNew(unsigned long from, unsigned long to, uint16_t flags){
-    uint16_t move = 0;
+inline Move EncodeMove(unsigned long from, unsigned long to, uint16_t flags){
+    Move move = 0;
     // progress of move bits:       // 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
     move = (uint16_t)from;          // 0 0 0 0 0 0 0 0 0 0 s s s s s s 
     move |= ((uint16_t)to << 6);    // 0 0 0 0 t t t t t t s s s s s s
@@ -70,46 +47,8 @@ inline MoveNew EncodeMoveNew(unsigned long from, unsigned long to, uint16_t flag
     return move;
 }
 
-// functions that help to encode a move from all the info
-inline Move EncodeMove(uint8_t from, uint8_t to, uint8_t piece, uint8_t captured = 15, uint8_t promotion = 15, uint8_t flags = 0) 
-{
-    return  (from & 0x3F) | // 0x3F in binary is 000...000111111 <--- last 6 bits are 1
-           ((to & 0x3F) << 6) |
-           ((piece & 0x0F) << 12) | // 0x0F in binary is 000...0001111 <--- last 4 bits are 1
-           ((captured & 0x0F) << 16) |
-           ((promotion & 0x0F) << 20) |
-           ((flags & 0x3F) << 24);
-}
 
-// decoding functions
-inline uint8_t MoveFrom(Move m)       { return  m        & 0x3F; }
-inline uint8_t MoveTo(Move m)         { return (m >> 6)  & 0x3F; }
-inline uint8_t MovePiece(Move m)      { return (m >> 12) & 0x0F; }
-inline uint8_t MoveCaptured(Move m)   { return (m >> 16) & 0x0F; }
-inline uint8_t MovePromotion(Move m)  { return (m >> 20) & 0x0F; }
-inline uint8_t MoveFlags(Move m)      { return (m >> 24) & 0x3F; }
-inline bool MoveIsCheck(Move m)       { return (m >> 28) & 1ULL; }
-
-// printing the move
-inline void PrintMove(const Move& m){
-    uint8_t from = MoveFrom(m);
-    uint8_t to = MoveTo(m);
-    uint8_t piece = MovePiece(m);
-    uint8_t captured = MoveCaptured(m);
-    uint8_t promotion = MovePromotion(m);
-    uint8_t flags = MoveFlags(m);
-    bool is_check = MoveIsCheck(m);
-    std::string move_str; 
-    move_str = PieceToAlphabet(piece);
-    move_str += SquareToAlphabet(from);
-    if(captured != 15){ move_str += "x"; } // manage capture
-    move_str += SquareToAlphabet(to);
-    if(promotion != 15){ move_str += PieceToAlphabet(promotion); }
-    if(is_check){ move_str += "+"; }
-    std::cout << move_str << "\n";
-}
-
-inline void PrintMoveNew(const MoveNew& move){
+inline void PrintMove(const Move& move){
     uint8_t from, to, flags;
     std::string move_str;
     from = move & 0b00111111;
@@ -166,6 +105,7 @@ inline void PrintMoveNew(const MoveNew& move){
 //      bonus for promotion = 2000 
 //      bonus for promotion to queen = 18000 --> promo bandwidth [2200 ; 20900]
 //      bonus for capture = 20000 --> captures bandwidth [10100 (eat pawn with king) ; 29900 (eat king with pawn)]
+/*
 inline int ScoreMove(Move& move){
     int score = 0;
     uint8_t piece = MovePiece(move);
@@ -186,4 +126,4 @@ inline int ScoreMove(Move& move){
         score += BONUS_FOR_CHECKS + abs(PIECES_VALUES[piece]);
     }
     return score;
-}
+}*/

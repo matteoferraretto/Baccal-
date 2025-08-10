@@ -5,10 +5,15 @@
 // change one --> change the others
 const int n_bits_rook = 12; // bits used for magic hashing with rooks
 const int n_bits_bishop = 9; // bits used for magic hashing with bishops
-const int n_attacks_rook = 4096; // 2^n_bits_rook
-const int n_attacks_bishop = 512; // 2^n_bits_bishop
-const int shift_rook = 52; // 64 - n_bits_rook
-const int shift_bishop = 55; // 64 - n_bits_bishop
+constexpr int n_attacks_rook = 4096; // 2^n_bits_rook
+constexpr int n_attacks_bishop = 512; // 2^n_bits_bishop
+constexpr int shift_rook = 52; // 64 - n_bits_rook
+constexpr int shift_bishop = 55; // 64 - n_bits_bishop
+
+struct MaskAndMagic{
+    uint64_t mask;
+    uint64_t magic;
+};
 
 // arrays that store all the possible movements of the non-sliding pieces
 // this is used to avoid on-the-fly calculation during the min-max process
@@ -22,11 +27,15 @@ extern uint64_t black_pawn_advance_squares_bitboards[64];
 // masks of relevant masks of sliding pieces
 extern uint64_t rook_masks[64];
 extern uint64_t rook_magics[64];
+extern MaskAndMagic rook_mm[64];
 extern uint64_t *rook_covered_squares_bitboards;
+extern uint64_t rook_covered_squares_bb[64][4096];
 
 extern uint64_t bishop_masks[64];
 extern uint64_t bishop_magics[64];
+extern MaskAndMagic bishop_mm[64];
 extern uint64_t *bishop_covered_squares_bitboards;
+extern uint64_t bishop_covered_squares_bb[64][512];
 
 // functions that generate covered square bitboards for non-sliding pieces when the piece is in the square (i, j)
 uint64_t knight_covered_squares(int i, int j);
@@ -106,8 +115,15 @@ uint64_t bishop_blockers_from_integer(uint64_t b, int i, int j);
 void find_rook_magic(unsigned int n_bits, uint64_t *attacks, uint64_t magics[64]);
 void find_bishop_magic(unsigned int n_bits, uint64_t *attacks, uint64_t magics[64]);
 // function that returns hash index for a given config. of blockers on a gien square
-uint64_t rook_hash_index(uint64_t blockers, int square, int n_attacks);
-uint64_t bishop_hash_index(uint64_t blockers, int square, int n_attacks);
+inline uint64_t rook_hash_index(const uint64_t& blockers, const int& square, const int& n_attacks){
+    MaskAndMagic mm = rook_mm[square];
+    uint64_t hash_index = ((blockers & mm.mask) * mm.magic) >> shift_rook;
+    return (square * n_attacks + hash_index);
+}
+inline uint64_t bishop_hash_index(const uint64_t& blockers, const int& square, const int& n_attacks){
+    uint64_t hash_index = ((blockers & bishop_masks[square]) * bishop_magics[square]) >> shift_bishop;
+    return (square * n_attacks + hash_index);
+}
 
 // Functions to run at the engine start that pre-calculates covered squares
 void PreComputeBitboards(bool retrieve_from_file);

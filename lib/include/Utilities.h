@@ -84,7 +84,10 @@ inline bool bit_get_opt(const uint64_t& bitboard, const uint8_t& square){
     return (bitboard >> square) & 1;
 }
 
-void clear_last_active_bit(uint64_t& bitboard); // set to 0 the last bit which is 1
+// set to 0 the last bit which is 1
+inline void clear_last_active_bit(uint64_t& bitboard){
+    bitboard &= bitboard - 1;
+} 
 
 size_t pop_count(uint64_t& bitboard); // count the number of 1 in the binary representation of bitboard
 

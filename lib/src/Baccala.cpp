@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <iostream>
 
-
+/*
 void ScoreAllMoves(MoveAndPosition* moves, uint8_t n_moves){
     MoveAndPosition m;
     for(int move_index = 0; move_index < n_moves; move_index++){
@@ -48,8 +48,9 @@ bool SafeNullMoveSearch(Position& pos){
     // ...
     // in all the other cases, we are good to go
     return true;
-}
+}*/
 
+/*
 unsigned long long int Perft(Position pos, int depth){
     unsigned long long int n_nodes = 0;
     
@@ -67,7 +68,7 @@ unsigned long long int Perft(Position pos, int depth){
     }
 
     return n_nodes;
-}
+}*/
 
 unsigned long long int PerftNew(Position& pos, int depth, StateMemory state){
     if(depth == 0){ return 1ULL; }
@@ -79,15 +80,11 @@ unsigned long long int PerftNew(Position& pos, int depth, StateMemory state){
     unsigned long long int n_nodes = 0;
     
     // generate legal moves
-    MoveNew moves[MAX_NUMBER_OF_MOVES];
-    for(int move_index = 0; move_index < MAX_NUMBER_OF_MOVES; move_index++){
-        moves[move_index] = 0;
-    }
+    Move moves[MAX_NUMBER_OF_MOVES];
     PseudoLegalMoves(pos, moves);
+    uint8_t n_moves = pos.n_legal_moves;
 
-    for(int move_index = 0; move_index < MAX_NUMBER_OF_MOVES; move_index++){
-        //move = moves[move_index];
-        if(moves[move_index] == 0){ break; }
+    for(int move_index = 0; move_index < n_moves; move_index++){
         MakeMove(pos, moves[move_index], state);
         if(IsLegal(pos, moves[move_index])){
             n_nodes += PerftNew(pos, depth - 1, state);
@@ -101,6 +98,7 @@ unsigned long long int PerftNew(Position& pos, int depth, StateMemory state){
     return n_nodes;
 }
 
+/*
 void PerftTesting(){
     std::string pos1_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     std::string pos2_fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 0";
@@ -123,7 +121,7 @@ void PerftTesting(){
     std::cout << "Testing position 4: "; std::cout << (Perft(pos4, depth) == 15833292) << "\n";
     std::cout << "Testing position 5: "; std::cout << (Perft(pos5, depth) == 89941194) << "\n";
     std::cout << "Testing position 6: "; std::cout << (Perft(pos6, depth) == 164075551) << "\n";
-}
+}*/
 
 void PerftNewTesting(){
     std::string pos1_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -156,7 +154,7 @@ void PerftNewTesting(){
     std::cout << "Testing position 6: "; std::cout << (PerftNew(pos6, depth, state) == 164075551) << "\n";
 }
 
-
+/*
 int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, int& n_explored_positions, bool can_do_null){
     // ------------------------------------------------------
     // ----- RETRIEVE SCORE FROM TRANSPOSITION TABLE --------
@@ -221,30 +219,6 @@ int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, int& n_ex
     // ---------------------------------
     // ------ NULL MOVE PRUNING --------
     // ---------------------------------
-    /*if(can_do_null && anti_depth >= 3){ // only applied far from the horizon
-        if(SafeNullMoveSearch(pos)){
-            int r = 2; // reduction of depth search
-            if(pos.white_to_move){
-                // make null move
-                Position new_pos = pos; 
-                new_pos.white_to_move = false; 
-                new_pos.en_passant_target_square = 0;
-                // launch a shallow evaluation function with no rights of making null move
-                // the evaluation is 2 plies shorter than a normal search
-                eval = -BestEvaluation(new_pos, anti_depth - r, -beta, -beta + 1, n_explored_positions, false);
-            }
-            else{
-                // make null move
-                Position new_pos = pos; 
-                new_pos.white_to_move = true; 
-                new_pos.en_passant_target_square = 0;
-                // launch a shallow evaluation function with no rights of making null move
-                // the evaluation is 2 plies shorter than a normal search
-                eval = -BestEvaluation(new_pos, anti_depth - r, -beta, -beta+1, n_explored_positions, false);
-            }
-            if(eval >= beta){ return eval; }
-        }
-    } */
 
     // ---------------------------------------------------------
     // ------ MIN - MAX SEARCH WITH ALPHA - BETA PRUNING -------
@@ -288,9 +262,9 @@ int BestEvaluation(Position& pos, int anti_depth, int alpha, int beta, int& n_ex
     TTStore(anti_depth, zobrist_key, best_evaluation, flag);
 
     return best_evaluation;
-}
+}*/
 
-
+/*
 MoveAndPosition BestMove(Position pos, int depth){
     // initialize stuff
     int eval;
@@ -310,8 +284,6 @@ MoveAndPosition BestMove(Position pos, int depth){
     // Loop through the legal moves to assign a heuristic score
     ScoreAllMoves(legal_moves, n_moves);
     // initialize the hash-map for the Transposition table
-/*    std::unordered_map<uint64_t, Position> TranspositionTable;
-    TranspositionTable.reserve(max_capacity_transposition_table);*/
     // loop over all the legal moves from the current position
     for(int move_index = 0; move_index < n_moves; move_index++){
         // pick move with highest score
@@ -319,7 +291,7 @@ MoveAndPosition BestMove(Position pos, int depth){
         m = legal_moves[move_index];
         //std::cout << "depth: " << depth << " ; move: "; PrintMove(m.move);
         // generate child position and find its best evaluation down the tree 
-        eval = BestEvaluation(m.position, depth-1, negative_infinity, positive_infinity, /*TranspositionTable,*/ n_explored_positions, true); // depth-1 because we are rooting from the child position
+        eval = BestEvaluation(m.position, depth-1, negative_infinity, positive_infinity, n_explored_positions, true); // depth-1 because we are rooting from the child position
         //std::cout << "eval: " << eval << "\n";
         // if white to move and the evaluation at given depth of this move is higher than all the previous ones, overwrite best move
         if(pos.white_to_move){
@@ -343,8 +315,8 @@ MoveAndPosition BestMove(Position pos, int depth){
     //std::cout << "I have considered " << n_explored_positions << " positions. \n";
     std::cout << "The best move is "; PrintMove(best_move.move);
     return best_move;
-}
-
+}*/
+/*
 MoveAndPosition IterativeDeepening(Position& pos, int min_depth, int max_depth, int depth_step){
     int eval;
     int best_evaluation;
@@ -357,9 +329,6 @@ MoveAndPosition IterativeDeepening(Position& pos, int min_depth, int max_depth, 
     best_move = legal_moves[0];
     // Loop through the legal moves to assign a heuristic score
     ScoreAllMoves(legal_moves, n_moves);
-    // initialize the hash-map for the Transposition table
-/*    std::unordered_map<uint64_t, Position> TranspositionTable;
-    TranspositionTable.reserve(max_capacity_transposition_table);*/
     // Start Iterative deepening
     for(int depth = min_depth; depth <= max_depth; depth += depth_step){
         n_explored_positions = 0;
@@ -377,7 +346,7 @@ MoveAndPosition IterativeDeepening(Position& pos, int min_depth, int max_depth, 
             m = legal_moves[move_index];
             std::cout << "move: "; PrintMove(m.move);
             // generate child position and find its best evaluation down the tree 
-            eval = BestEvaluation(m.position, depth-1, negative_infinity, positive_infinity, /*TranspositionTable,*/ n_explored_positions, true); // depth-1 because we are rooting from the child position
+            eval = BestEvaluation(m.position, depth-1, negative_infinity, positive_infinity, n_explored_positions, true); // depth-1 because we are rooting from the child position
             std::cout << "eval: " << eval << "\n";
             // if white to move and the evaluation at given depth of this move is higher than all the previous ones, overwrite best move
             if(pos.white_to_move){
@@ -413,3 +382,4 @@ MoveAndPosition IterativeDeepening(Position& pos, int min_depth, int max_depth, 
     }
     return best_move;
 }
+*/

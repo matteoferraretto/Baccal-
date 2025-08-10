@@ -73,11 +73,6 @@ bool bit_get(const uint64_t& bitboard, const unsigned long& square){
     return (bitboard >> square) & 1;
 }*/
 
-
-void clear_last_active_bit(uint64_t& bitboard){
-    bitboard &= bitboard - 1;
-}
-
 size_t pop_count(uint64_t& bitboard){
     std::bitset<64> b(bitboard);
     return b.count();

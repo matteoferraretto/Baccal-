@@ -340,13 +340,15 @@ int PositionScore(Position& pos){
     return 0;
 }
 
-void PseudoLegalMoves(const Position& pos, MoveNew* moves){
+void PseudoLegalMoves(Position& pos, Move* moves){
     uint8_t move_index = 0;
-    uint64_t piece, hash_index_rook, hash_index_bishop; 
+    uint64_t piece;
+    //uint64_t hash_index_rook, hash_index_bishop; 
     unsigned long square, target_square;
     uint64_t attacks;
     bool is_capture;
     uint16_t flags;
+    MaskAndMagic mm;
 
     // WHITE MOVES
     if(pos.white_to_move){
@@ -363,7 +365,7 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
                 is_capture = bit_get(pos.black_pieces, target_square);
                 is_capture ? flags = 4 : flags = 0;
                 // save the move
-                moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                moves[move_index] = EncodeMove(square, target_square, flags);
                 move_index++;
                 // remove considered attack
                 clear_last_active_bit(attacks); 
@@ -377,15 +379,16 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
         while(piece){ // consider all the queens
             _BitScanForward64(&square, piece); // find position of queen and assign it to square
             // retrieve bitboard of queen moves
-            hash_index_rook = rook_hash_index(pos.all_pieces, square, n_attacks_rook);
-            hash_index_bishop = bishop_hash_index(pos.all_pieces, square, n_attacks_bishop);
-            attacks = rook_covered_squares_bitboards[hash_index_rook] | bishop_covered_squares_bitboards[hash_index_bishop];
+            mm = rook_mm[square];
+            attacks = rook_covered_squares_bb[square][((pos.all_pieces & mm.mask) * mm.magic) >> shift_rook];
+            mm = bishop_mm[square];
+            attacks |= bishop_covered_squares_bb[square][((pos.all_pieces & mm.mask) * mm.magic) >> shift_bishop];
             attacks &= ~pos.white_pieces; // excluse self-capture
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square
                 is_capture = bit_get(pos.black_pieces, target_square);
                 is_capture ? flags = 4 : flags = 0;
-                moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                moves[move_index] = EncodeMove(square, target_square, flags);
                 move_index++;
                 clear_last_active_bit(attacks); 
             }
@@ -397,14 +400,14 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
         while(piece){
             _BitScanForward64(&square, piece); // find position of queen and assign it to square
             // retrieve bitboard of queen moves
-            hash_index_rook = rook_hash_index(pos.all_pieces, square, n_attacks_rook);
-            attacks = rook_covered_squares_bitboards[hash_index_rook];
+            mm = rook_mm[square];
+            attacks = rook_covered_squares_bb[square][((pos.all_pieces & mm.mask) * mm.magic) >> shift_rook];
             attacks &= ~pos.white_pieces; // excluse self-capture
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square
                 is_capture = bit_get(pos.black_pieces, target_square);
                 is_capture ? flags = 4 : flags = 0;
-                moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                moves[move_index] = EncodeMove(square, target_square, flags);
                 move_index++;
                 clear_last_active_bit(attacks); 
             }
@@ -415,14 +418,14 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
         piece = pos.pieces[3]; // retrieve bitboard of queens
         while(piece){ // consider all the queens
             _BitScanForward64(&square, piece); // find position of queen and assign it to square
-            hash_index_bishop = bishop_hash_index(pos.all_pieces, square, n_attacks_bishop);
-            attacks = bishop_covered_squares_bitboards[hash_index_bishop];
+            mm = bishop_mm[square];
+            attacks = bishop_covered_squares_bb[square][((pos.all_pieces & mm.mask) * mm.magic) >> shift_bishop];
             attacks &= ~pos.white_pieces; // excluse self-capture
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square
                 is_capture = bit_get(pos.black_pieces, target_square);
                 is_capture ? flags = 4 : flags = 0;
-                moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                moves[move_index] = EncodeMove(square, target_square, flags);
                 move_index++;
                 clear_last_active_bit(attacks); 
             }
@@ -440,7 +443,7 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
                 _BitScanForward64(&target_square, attacks); // find the target square
                 is_capture = bit_get(pos.black_pieces, target_square);
                 is_capture ? flags = 4 : flags = 0;
-                moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                moves[move_index] = EncodeMove(square, target_square, flags);
                 move_index++;
                 clear_last_active_bit(attacks); 
             }
@@ -461,13 +464,13 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
                 if(RANK_OF_SQUARE[target_square] == 0){
                     for(uint8_t promoted_piece_index = 1; promoted_piece_index < 5; promoted_piece_index++){
                         flags = 16 - promoted_piece_index;
-                        moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                        moves[move_index] = EncodeMove(square, target_square, flags);
                         move_index++;
                     }
                 }
                 else{ 
                     flags = 4;
-                    moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                    moves[move_index] = EncodeMove(square, target_square, flags);
                     move_index++;
                 }
                 clear_last_active_bit(attacks); // remove considered attack
@@ -478,7 +481,7 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square            
                 flags = 5;
-                moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                moves[move_index] = EncodeMove(square, target_square, flags);
                 move_index++;
                 clear_last_active_bit(attacks); // remove considered attack
             }
@@ -515,19 +518,19 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
                 if(RANK_OF_SQUARE[target_square] == 0){
                     for(uint8_t promoted_piece_index = 1; promoted_piece_index < 5; promoted_piece_index++){
                         flags = 12 - promoted_piece_index;
-                        moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                        moves[move_index] = EncodeMove(square, target_square, flags);
                         move_index++;
                     }
                 }
                 // if this is a double push, flag it to manage en-passant target squares later
                 else if(RANK_OF_SQUARE[target_square] == 4 && RANK_OF_SQUARE[square] == 6){
                     flags = 1;
-                    moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                    moves[move_index] = EncodeMove(square, target_square, flags);
                     move_index++;
                 }
                 else{
                     flags = 0;
-                    moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                    moves[move_index] = EncodeMove(square, target_square, flags);
                     move_index++;
                 }
                 clear_last_active_bit(attacks); // remove considered attack
@@ -545,7 +548,7 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
                 // 3. king does not pass through a square covered by opponent
                 if(bit_get(pos.pieces[0], 60) &&
                     bit_get(pos.pieces[2], 63)){ // 4. king and rook are in the correct position
-                    moves[move_index] = EncodeMoveNew(60, 62, 2); 
+                    moves[move_index] = EncodeMove(60, 62, 2); 
                     move_index++;
                 } 
             }   
@@ -579,7 +582,7 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
                 is_capture = bit_get(pos.white_pieces, target_square);
                 is_capture ? flags = 4 : flags = 0;
                 // save the move
-                moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                moves[move_index] = EncodeMove(square, target_square, flags);
                 move_index++;
                 // remove considered attack
                 clear_last_active_bit(attacks); 
@@ -593,15 +596,16 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
         while(piece){ // consider all the queens
             _BitScanForward64(&square, piece); // find position of queen and assign it to square
             // retrieve bitboard of queen moves
-            hash_index_rook = rook_hash_index(pos.all_pieces, square, n_attacks_rook);
-            hash_index_bishop = bishop_hash_index(pos.all_pieces, square, n_attacks_bishop);
-            attacks = rook_covered_squares_bitboards[hash_index_rook] | bishop_covered_squares_bitboards[hash_index_bishop];
+            mm = rook_mm[square];
+            attacks = rook_covered_squares_bb[square][((pos.all_pieces & mm.mask) * mm.magic) >> shift_rook];
+            mm = bishop_mm[square];
+            attacks |= bishop_covered_squares_bb[square][((pos.all_pieces & mm.mask) * mm.magic) >> shift_bishop];
             attacks &= ~pos.black_pieces; // excluse self-capture
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square
                 is_capture = bit_get(pos.white_pieces, target_square);
                 is_capture ? flags = 4 : flags = 0;
-                moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                moves[move_index] = EncodeMove(square, target_square, flags);
                 move_index++;
                 clear_last_active_bit(attacks); 
             }
@@ -613,14 +617,14 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
         while(piece){
             _BitScanForward64(&square, piece); // find position of queen and assign it to square
             // retrieve bitboard of queen moves
-            hash_index_rook = rook_hash_index(pos.all_pieces, square, n_attacks_rook);
-            attacks = rook_covered_squares_bitboards[hash_index_rook];
+            mm = rook_mm[square];
+            attacks = rook_covered_squares_bb[square][((pos.all_pieces & mm.mask) * mm.magic) >> shift_rook];
             attacks &= ~pos.black_pieces; // excluse self-capture
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square
                 is_capture = bit_get(pos.white_pieces, target_square);
                 is_capture ? flags = 4 : flags = 0;
-                moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                moves[move_index] = EncodeMove(square, target_square, flags);
                 move_index++;
                 clear_last_active_bit(attacks); 
             }
@@ -631,14 +635,14 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
         piece = pos.pieces[9]; // retrieve bitboard of queens
         while(piece){ // consider all the queens
             _BitScanForward64(&square, piece); // find position of queen and assign it to square
-            hash_index_bishop = bishop_hash_index(pos.all_pieces, square, n_attacks_bishop);
-            attacks = bishop_covered_squares_bitboards[hash_index_bishop];
+            mm = bishop_mm[square];
+            attacks = bishop_covered_squares_bb[square][((pos.all_pieces & mm.mask) * mm.magic) >> shift_bishop];
             attacks &= ~pos.black_pieces; // excluse self-capture
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square
                 is_capture = bit_get(pos.white_pieces, target_square);
                 is_capture ? flags = 4 : flags = 0;
-                moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                moves[move_index] = EncodeMove(square, target_square, flags);
                 move_index++;
                 clear_last_active_bit(attacks); 
             }
@@ -656,7 +660,7 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
                 _BitScanForward64(&target_square, attacks); // find the target square
                 is_capture = bit_get(pos.white_pieces, target_square);
                 is_capture ? flags = 4 : flags = 0;
-                moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                moves[move_index] = EncodeMove(square, target_square, flags);
                 move_index++;
                 clear_last_active_bit(attacks); 
             }
@@ -677,13 +681,13 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
                 if(RANK_OF_SQUARE[target_square] == 7){
                     for(uint8_t promoted_piece_index = 7; promoted_piece_index < 11; promoted_piece_index++){
                         flags = 22 - promoted_piece_index;
-                        moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                        moves[move_index] = EncodeMove(square, target_square, flags);
                         move_index++;
                     }
                 }
                 else{ 
                     flags = 4;
-                    moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                    moves[move_index] = EncodeMove(square, target_square, flags);
                     move_index++;
                 }
                 clear_last_active_bit(attacks); // remove considered attack
@@ -694,7 +698,7 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square
                 flags = 5;
-                moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                moves[move_index] = EncodeMove(square, target_square, flags);
                 move_index++;
                 clear_last_active_bit(attacks); // remove considered attack
             }
@@ -731,19 +735,19 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
                 if(RANK_OF_SQUARE[target_square] == 7){
                     for(uint8_t promoted_piece_index = 7; promoted_piece_index < 11; promoted_piece_index++){
                         flags = 22 - promoted_piece_index;
-                        moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                        moves[move_index] = EncodeMove(square, target_square, flags);
                         move_index++;
                     }
                 }
                 // if this is a double push, flag it to manage en-passant target squares later
                 else if(RANK_OF_SQUARE[target_square] == 3 && RANK_OF_SQUARE[square] == 1){
                     flags = 1;
-                    moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                    moves[move_index] = EncodeMove(square, target_square, flags);
                     move_index++;
                 }
                 else{
                     flags = 0;
-                    moves[move_index] = EncodeMoveNew(square, target_square, flags);
+                    moves[move_index] = EncodeMove(square, target_square, flags);
                     move_index++;
                 }
                 clear_last_active_bit(attacks); // remove considered attack
@@ -760,7 +764,7 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
                 !bit_get(pos.all_pieces, 6)){ 
                 if(bit_get(pos.pieces[6], 4) &&
                     bit_get(pos.pieces[8], 7)){ 
-                    moves[move_index] = EncodeMoveNew(4, 6, 2);
+                    moves[move_index] = EncodeMove(4, 6, 2);
                     move_index++;
                 } 
             }   
@@ -773,16 +777,16 @@ void PseudoLegalMoves(const Position& pos, MoveNew* moves){
                 !bit_get(pos.all_pieces, 1)){ 
                 if(bit_get(pos.pieces[6], 4) &&
                     bit_get(pos.pieces[8], 0)){ 
-                    moves[move_index] = EncodeMoveNew(4, 2, 3); 
+                    moves[move_index] = EncodeMove(4, 2, 3); 
                     move_index++;
                 } 
             }   
         }
     }
+    pos.n_legal_moves = move_index;
 }
 
-
-void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
+void MakeMove(Position& pos, const Move& move, StateMemory& state){
     uint8_t from, to, flags;
     uint8_t moved_piece_index = 0, captured_piece_index = 12, promoted_piece_index = 12; // 12 = no piece captured
     // retrieve info from the move
@@ -793,7 +797,7 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
     if(pos.white_to_move){
         // retrieve what piece has moved
         for(uint8_t piece_index = 0; piece_index < 6; piece_index++){
-            if(bit_get_opt(pos.pieces[piece_index], from)){
+            if(pos.pieces[piece_index] & (1ULL << from)){
                 moved_piece_index = piece_index;
                 break;
             }
@@ -801,7 +805,7 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
         // retrieve info about captured piece (if any)
         for(uint8_t piece_index = 6; piece_index < 12; piece_index++){
             // standard capture
-            if(bit_get_opt(pos.pieces[piece_index], to)){
+            if(pos.pieces[piece_index] & (1ULL << to)){
                 captured_piece_index = piece_index;
                 break;
             } 
@@ -897,7 +901,7 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
     else{
         // retrieve what piece has moved
         for(uint8_t piece_index = 6; piece_index < 12; piece_index++){
-            if(bit_get_opt(pos.pieces[piece_index], from)){
+            if(pos.pieces[piece_index] & (1ULL << from)){
                 moved_piece_index = piece_index;
                 break;
             }
@@ -905,7 +909,7 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
         // retrieve info about captured piece (if any)
         for(uint8_t piece_index = 0; piece_index < 6; piece_index++){
             // standard capture
-            if(bit_get_opt(pos.pieces[piece_index], to)){
+            if(pos.pieces[piece_index] & (1ULL << to)){
                 captured_piece_index = piece_index;
                 break;
             } 
@@ -995,9 +999,9 @@ void MakeMove(Position& pos, const MoveNew& move, StateMemory& state){
         // update side to move
         pos.white_to_move = true;
     }
-}
+} 
 
-void UnmakeMove(Position& pos, const MoveNew& move, const StateMemory& state){
+void UnmakeMove(Position& pos, const Move& move, const StateMemory& state){
     uint8_t from, to, flags;
     from = move & 0b00111111;
     to = (move >> 6) & 0b00111111;
@@ -1025,10 +1029,6 @@ void UnmakeMove(Position& pos, const MoveNew& move, const StateMemory& state){
             //pos.pieces[state.captured_piece_index] = state.captured_piece;
         }
         // remove promoted piece and restore the pawn 
-        /*if(flags == 11 || flags == 15){ promoted_piece_index = 7; } // queen
-        else if(flags == 10 || flags == 14){ promoted_piece_index = 8; } // rook
-        else if(flags == 9 || flags == 13){ promoted_piece_index = 9; } // bishop
-        else if(flags == 8 || flags == 12){ promoted_piece_index = 10; } // knight*/
         if(state.promoted_piece_index != 12){
             bit_clear_opt(pos.pieces[state.promoted_piece_index], to);
             bit_set_opt(pos.pieces[11], from);
@@ -1077,13 +1077,8 @@ void UnmakeMove(Position& pos, const MoveNew& move, const StateMemory& state){
                 bit_set_opt(pos.pieces[state.captured_piece_index], to);
                 bit_set_opt(pos.black_pieces, to);
             }
-            //pos.pieces[state.captured_piece_index] = state.captured_piece;
         }
         // remove promoted piece and restore the pawn 
-        /*if(flags == 11 || flags == 15){ promoted_piece_index = 1; } // queen
-        else if(flags == 10 || flags == 14){ promoted_piece_index = 2; } // rook
-        else if(flags == 9 || flags == 13){ promoted_piece_index = 3; } // bishop
-        else if(flags == 8 || flags == 12){ promoted_piece_index = 4; } // knight*/
         if(state.promoted_piece_index != 12){
             bit_clear_opt(pos.pieces[state.promoted_piece_index], to);
             bit_set_opt(pos.pieces[5], from);
@@ -1120,6 +1115,7 @@ void UnmakeMove(Position& pos, const MoveNew& move, const StateMemory& state){
 
 bool IsLegal(Position& pos, const Move& move){ 
     uint64_t attacks;
+    MaskAndMagic mm;
     unsigned long king_square;
     uint8_t flags = (move >> 12);
     // if white to move and black's king is in check, pos is illegal
@@ -1136,12 +1132,12 @@ bool IsLegal(Position& pos, const Move& move){
         attacks = black_pawn_covered_squares_bitboards[king_square];
         if(attacks & pos.pieces[5]){ return false; }
         // step 5: check attacks from diagonal directions
-        uint64_t hash_index_bishop = bishop_hash_index(pos.all_pieces, king_square, n_attacks_bishop);
-        attacks = bishop_covered_squares_bitboards[hash_index_bishop];
+        mm = bishop_mm[king_square];
+        attacks = bishop_covered_squares_bb[king_square][((pos.all_pieces & mm.mask) * mm.magic) >> shift_bishop];
         if(attacks & (pos.pieces[1] | pos.pieces[3])){ return false; }
         // step 6: check attacks from horizontal or vertical directions
-        uint64_t hash_index_rook = rook_hash_index(pos.all_pieces, king_square, n_attacks_rook);
-        attacks = rook_covered_squares_bitboards[hash_index_rook]; 
+        mm = rook_mm[king_square];
+        attacks = rook_covered_squares_bb[king_square][((pos.all_pieces & mm.mask) * mm.magic) >> shift_rook];
         if(attacks & (pos.pieces[1] | pos.pieces[2])){ return false; }
         // if black just castled (so now is white to move), control that the black king was not passing through a square covered by white
         if(flags == 2){
@@ -1173,12 +1169,12 @@ bool IsLegal(Position& pos, const Move& move){
         attacks = white_pawn_covered_squares_bitboards[king_square];
         if(attacks & pos.pieces[11]){ return false; }
         // step 5: check attacks from diagonal directions
-        uint64_t hash_index_bishop = bishop_hash_index(pos.all_pieces, king_square, n_attacks_bishop);
-        attacks = bishop_covered_squares_bitboards[hash_index_bishop];
+        mm = bishop_mm[king_square];
+        attacks = bishop_covered_squares_bb[king_square][((pos.all_pieces & mm.mask) * mm.magic) >> shift_bishop];
         if(attacks & (pos.pieces[7] | pos.pieces[9])){ return false; }
         // step 6: check attacks from horizontal or vertical directions
-        uint64_t hash_index_rook = rook_hash_index(pos.all_pieces, king_square, n_attacks_rook);
-        attacks = rook_covered_squares_bitboards[hash_index_rook]; 
+        mm = rook_mm[king_square];
+        attacks = rook_covered_squares_bb[king_square][((pos.all_pieces & mm.mask) * mm.magic) >> shift_rook];
         if(attacks & (pos.pieces[7] | pos.pieces[8])){ return false; }
         if(flags == 2){
             pos.black_covered_squares = GetCoveredSquares(pos.pieces, pos.all_pieces, false);
@@ -1195,1209 +1191,4 @@ bool IsLegal(Position& pos, const Move& move){
         }
         return true;
     }
-}
-
-// FIND LIST OF LEGAL MOVES
-void LegalMoves(Position& pos, MoveAndPosition* all_moves){
-    size_t move_index = 0;
-    bool is_capture, is_illegal;
-    uint64_t is_check;
-    uint64_t piece, hash_index_rook, hash_index_bishop;
-    uint64_t attacks = 0ULL;
-    unsigned long square, target_square;
-    uint8_t flags = 0;
-    uint8_t piece_index, captured_piece_index;
-    MoveAndPosition m;
-    m.score = 0;
-
-    if((pos.pieces[0] | pos.pieces[6]) == 0){
-        pos.n_legal_moves = 0;
-        return; 
-    }
-
-    // WHITE TO MOVE
-    if(pos.white_to_move){
-
-        // King
-        piece_index = 0;
-        piece = pos.pieces[piece_index]; // retrieve bitboard of king
-        while(piece){ 
-            _BitScanForward64(&square, piece); // find position of piece and assign it to square
-            attacks = king_covered_squares_bitboards[square]; // retrieve attack bitboard
-            attacks &= ~pos.white_pieces; // exclude self-capture
-            while(attacks){
-                flags = 0;
-                _BitScanForward64(&target_square, attacks); // find the target square
-                is_capture = bit_get(pos.black_pieces, target_square);
-                captured_piece_index = 15; // no capture (default)
-                // Generate new position applying the move
-                m.position = pos;
-                // move the piece in white pieces bitboards
-                bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
-                bit_clear(m.position.white_pieces, square); bit_set(m.position.white_pieces, target_square);
-                // if capture, also change bitboards of black pieces and recompute values
-                if(is_capture){
-                    flags += 8; // capture flag
-                    // check what black piece has been captured
-                    for(uint8_t index = 6; index < 12; index++){
-                        if(bit_get(pos.pieces[index], target_square)){
-                            captured_piece_index = index;
-                            break;
-                        }
-                    }
-                    //m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
-                    m.position.half_move_counter = 0;
-                    bit_clear(m.position.pieces[captured_piece_index], target_square);
-                    bit_clear(m.position.black_pieces, target_square);
-                }
-                else{ m.position.half_move_counter++; }
-                // compute all pieces bitboard and the covered squares
-                m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                // check if move is legal
-                is_illegal = m.position.pieces[0] & m.position.black_covered_squares;
-                if(is_illegal){ clear_last_active_bit(attacks); continue; }
-                // castling rights are lost
-                m.position.can_white_castle_kingside = false;
-                m.position.can_white_castle_queenside = false;
-                // standard updates
-                m.position.white_to_move = false;
-                m.position.en_passant_target_square = 0ULL;
-                // check if the move is a check
-                is_check = m.position.pieces[6] & m.position.white_covered_squares;
-                if(is_check){ flags += 16; }
-                // encode move if legal
-                m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves[move_index] = m;
-                move_index++;
-                // remove considered attack
-                clear_last_active_bit(attacks); 
-            }
-            // remove considered piece
-            clear_last_active_bit(piece);
-        }
-
-        // Queen
-        piece_index = 1;
-        piece = pos.pieces[piece_index]; // retrieve bitboard of queens
-        while(piece){ // consider all the queens
-            _BitScanForward64(&square, piece); // find position of queen and assign it to square
-            // retrieve bitboard of queen moves
-            hash_index_rook = rook_hash_index(pos.all_pieces, square, n_attacks_rook);
-            hash_index_bishop = bishop_hash_index(pos.all_pieces, square, n_attacks_bishop);
-            attacks = rook_covered_squares_bitboards[hash_index_rook] | bishop_covered_squares_bitboards[hash_index_bishop];
-            attacks &= ~pos.white_pieces; // excluse self-capture
-            // loop over all the attacks
-            while(attacks){
-                flags = 0;
-                _BitScanForward64(&target_square, attacks); // find the target square
-                is_capture = bit_get(pos.black_pieces, target_square);
-                captured_piece_index = 15; // no capture 
-                // Generate new position applying the move
-                m.position = pos;
-                // move the piece in white pieces bitboards
-                bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
-                bit_clear(m.position.white_pieces, square); bit_set(m.position.white_pieces, target_square);
-                // if capture, also change bitboards of black pieces and recompute values
-                if(is_capture){
-                    flags += 8; // capture flag
-                    // check what black piece has been captured
-                    for(uint8_t index = 6; index < 12; index++){
-                        if(bit_get(pos.pieces[index], target_square)){
-                            captured_piece_index = index;
-                            break;
-                        }
-                    }
-                    //m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
-                    m.position.half_move_counter = 0;
-                    bit_clear(m.position.pieces[captured_piece_index], target_square);
-                    bit_clear(m.position.black_pieces, target_square);
-                }
-                else{ m.position.half_move_counter++; }
-                // compute all pieces bitboard and the covered squares
-                m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                // check if move is legal
-                is_illegal = m.position.pieces[0] & m.position.black_covered_squares;
-                if(is_illegal){ clear_last_active_bit(attacks); continue; }
-                // standard updates
-                m.position.white_to_move = false;
-                m.position.en_passant_target_square = 0ULL;
-                // check if the move is a check
-                is_check = m.position.pieces[6] & m.position.white_covered_squares;
-                if(is_check){ flags += 16; }
-                // encode move 
-                m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves[move_index] = m;
-                move_index++;
-                // remove considered attack
-                clear_last_active_bit(attacks); 
-            }
-            // remove considered piece
-            clear_last_active_bit(piece);
-        }
-
-        // Rook
-        piece_index = 2;
-        piece = pos.pieces[piece_index];
-        while(piece){ // consider all the queens
-            _BitScanForward64(&square, piece); // find position of rook and assign it to square
-            // retrieve bitboard of rook moves
-            hash_index_rook = rook_hash_index(pos.all_pieces, square, n_attacks_rook);
-            attacks = rook_covered_squares_bitboards[hash_index_rook];
-            attacks &= ~pos.white_pieces; // excluse self-capture
-            // loop over all the attacks
-            while(attacks){
-                flags = 0;
-                _BitScanForward64(&target_square, attacks); // find the target square
-                is_capture = bit_get(pos.black_pieces, target_square);
-                captured_piece_index = 15; // no capture 
-                // Generate new position applying the move
-                m.position = pos;
-                // move the piece in white pieces bitboards
-                bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
-                bit_clear(m.position.white_pieces, square); bit_set(m.position.white_pieces, target_square);
-                // if capture, also change bitboards of black pieces and recompute values
-                if(is_capture){
-                    flags += 8; // capture flag
-                    // check what black piece has been captured
-                    for(uint8_t index = 6; index < 12; index++){
-                        if(bit_get(pos.pieces[index], target_square)){
-                            captured_piece_index = index;
-                            break;
-                        }
-                    }
-                    //m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
-                    m.position.half_move_counter = 0;
-                    bit_clear(m.position.pieces[captured_piece_index], target_square);
-                    bit_clear(m.position.black_pieces, target_square);
-                }
-                else{ m.position.half_move_counter++; }
-                // compute all pieces bitboard and the covered squares
-                m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                // check if move is legal
-                is_illegal = m.position.pieces[0] & m.position.black_covered_squares;
-                if(is_illegal){ clear_last_active_bit(attacks); continue; }
-                // castling rights are lost
-                if(square == 63) { m.position.can_white_castle_kingside = false; }
-                else if(square == 56) { m.position.can_white_castle_queenside = false; }
-                // standard updates
-                m.position.white_to_move = false;
-                m.position.en_passant_target_square = 0ULL;
-                // check if the move is a check
-                is_check = m.position.pieces[6] & m.position.white_covered_squares;
-                if(is_check){ flags += 16; }
-                // encode move 
-                m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves[move_index] = m;
-                move_index++;
-                // remove considered attack
-                clear_last_active_bit(attacks); 
-            }
-            // remove considered piece
-            clear_last_active_bit(piece);
-        }
-
-        // Bishop
-        piece_index = 3;
-        piece = pos.pieces[piece_index]; // retrieve bitboard of bishops
-        while(piece){ // consider all the bishops
-            _BitScanForward64(&square, piece); // find position of queen and assign it to square
-            // retrieve bitboard of bishop moves
-            hash_index_bishop = bishop_hash_index(pos.all_pieces, square, n_attacks_bishop);
-            attacks = bishop_covered_squares_bitboards[hash_index_bishop];
-            attacks &= ~pos.white_pieces; // excluse self-capture
-            // loop over all the attacks
-            while(attacks){
-                flags = 0;
-                _BitScanForward64(&target_square, attacks); // find the target square
-                is_capture = bit_get(pos.black_pieces, target_square);
-                captured_piece_index = 15; // no capture 
-                // Generate new position applying the move
-                m.position = pos;
-                // move the piece in white pieces bitboards
-                bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
-                bit_clear(m.position.white_pieces, square); bit_set(m.position.white_pieces, target_square);
-                // if capture, also change bitboards of black pieces and recompute values
-                if(is_capture){
-                    flags += 8; // capture flag
-                    // check what black piece has been captured
-                    for(uint8_t index = 6; index < 12; index++){
-                        if(bit_get(pos.pieces[index], target_square)){
-                            captured_piece_index = index;
-                            break;
-                        }
-                    }
-                    //m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
-                    m.position.half_move_counter = 0;
-                    bit_clear(m.position.pieces[captured_piece_index], target_square);
-                    bit_clear(m.position.black_pieces, target_square);
-                }
-                else{ m.position.half_move_counter++; }
-                // compute all pieces bitboard and the covered squares
-                m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                // check if move is legal
-                is_illegal = m.position.pieces[0] & m.position.black_covered_squares;
-                if(is_illegal){ clear_last_active_bit(attacks); continue; }
-                // standard updates
-                m.position.white_to_move = false;
-                m.position.en_passant_target_square = 0ULL;
-                // check if the move is a check
-                is_check = m.position.pieces[6] & m.position.white_covered_squares;
-                if(is_check){ flags += 16; }
-                // encode move 
-                m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves[move_index] = m;
-                move_index++;
-                // remove considered attack
-                clear_last_active_bit(attacks); 
-            }
-            // remove considered piece
-            clear_last_active_bit(piece);
-        }
-
-        // Knight
-        piece_index = 4;
-        piece = pos.pieces[piece_index]; // retrieve bitboard of knights
-        while(piece){ // consider all the knights
-            _BitScanForward64(&square, piece); // find position of piece and assign it to square
-            attacks = knight_covered_squares_bitboards[square]; // retrieve attack bitboard
-            attacks &= ~pos.white_pieces; // exclude self-capture
-            while(attacks){
-                flags = 0;
-                _BitScanForward64(&target_square, attacks); // find the target square
-                is_capture = bit_get(pos.black_pieces, target_square);
-                captured_piece_index = 15; // no capture 
-                // Generate new position applying the move
-                m.position = pos;
-                // move the piece in white pieces bitboards
-                bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
-                bit_clear(m.position.white_pieces, square); bit_set(m.position.white_pieces, target_square);
-                // if capture, also change bitboards of black pieces and recompute values
-                if(is_capture){
-                    flags += 8; // capture flag
-                    // check what black piece has been captured
-                    for(uint8_t index = 6; index < 12; index++){
-                        if(bit_get(pos.pieces[index], target_square)){
-                            captured_piece_index = index;
-                            break;
-                        }
-                    }
-                    //m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
-                    m.position.half_move_counter = 0;
-                    bit_clear(m.position.pieces[captured_piece_index], target_square);
-                    bit_clear(m.position.black_pieces, target_square);
-                }
-                else{ m.position.half_move_counter++; }
-                // compute all pieces bitboard and the covered squares
-                m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                // check if move is legal
-                is_illegal = m.position.pieces[0] & m.position.black_covered_squares;
-                if(is_illegal){ clear_last_active_bit(attacks); continue; }
-                // standard updates
-                m.position.white_to_move = !pos.white_to_move;
-                m.position.en_passant_target_square = 0ULL;
-                // check if the move is a check
-                is_check = m.position.pieces[6] & m.position.white_covered_squares;
-                if(is_check){ flags += 16; }
-                // encode move 
-                m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves[move_index] = m;
-                move_index++;
-                clear_last_active_bit(attacks); // remove considered attack
-            }
-            // remove considered piece
-            clear_last_active_bit(piece);
-        }
-
-        // Pawns 
-        piece_index = 5;
-        piece = pos.pieces[piece_index];
-        while(piece){
-            _BitScanForward64(&square, piece); // find position of piece and assign it to square
-            // NORMAL CAPTURES
-            attacks = white_pawn_covered_squares_bitboards[square]; // retrieve attack bitboard
-            attacks &= pos.black_pieces | pos.en_passant_target_square; // only attacked squares occupied by enemy pieces are valid for movement
-            while(attacks){
-                flags = 1;
-                _BitScanForward64(&target_square, attacks); // find the target square
-                is_capture = true; // this is necessarily a capture!
-                flags += 8; // capture flag
-                // check what black piece has been captured
-                for(int index = 6; index < 12; index++){
-                    if(bit_get(pos.pieces[index], target_square)){
-                        captured_piece_index = index;
-                        break;
-                    }
-                }
-                // in case of promotion, loop over all possible promoted pieces
-                if(target_square / 8 == 0){
-                    for(uint8_t promoted_piece_index = 1; promoted_piece_index < 5; promoted_piece_index++){
-                        // Generate new position applying the move
-                        m.position = pos;
-                        // move the piece in white pieces bitboards
-                        bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[promoted_piece_index], target_square);
-                        bit_clear(m.position.white_pieces, square); bit_set(m.position.white_pieces, target_square);
-                        //m.position.white_material_value += PIECES_VALUES[promoted_piece_index] - WHITE_PAWN_VALUE;
-                        //m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
-                        m.position.half_move_counter = 0;
-                        bit_clear(m.position.pieces[captured_piece_index], target_square);
-                        bit_clear(m.position.black_pieces, target_square);                        
-                        // compute all pieces bitboard and the covered squares
-                        m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                        m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                        m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                        // check if move is legal
-                        is_illegal = m.position.pieces[0] & m.position.black_covered_squares;
-                        if(is_illegal){ continue; }
-                        // standard updates
-                        m.position.white_to_move = false;
-                        m.position.en_passant_target_square = 0ULL;
-                        // check if the move is a check
-                        is_check = m.position.pieces[6] & m.position.white_covered_squares;
-                        if(is_check){ flags += 16; }
-                        // encode move
-                        m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, promoted_piece_index, flags);
-                        all_moves[move_index] = m;
-                        move_index++;
-                    }
-                }
-                else{
-                    // Generate new position applying the move
-                    m.position = pos;
-                    // move the piece in white pieces bitboards
-                    bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
-                    bit_clear(m.position.white_pieces, square); bit_set(m.position.white_pieces, target_square);
-                    // also change bitboards of black pieces and recompute values (this is always a capture)
-                    //m.position.black_material_value -= PIECES_VALUES[captured_piece_index];
-                    m.position.half_move_counter = 0;
-                    if((pos.en_passant_target_square & (1ULL << target_square)) == 0){ // no en passant
-                        bit_clear(m.position.pieces[captured_piece_index], target_square);
-                        bit_clear(m.position.black_pieces, target_square);   
-                    } 
-                    else{ // en passant capture
-                        captured_piece_index = 11;
-                        target_square += 8;
-                        bit_clear(m.position.pieces[captured_piece_index], target_square);
-                        bit_clear(m.position.black_pieces, target_square);   
-                        target_square -= 8;
-                    }               
-                    // compute all pieces bitboard and the covered squares
-                    m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                    m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                    m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                    // check if move is legal
-                    is_illegal = m.position.pieces[0] & m.position.black_covered_squares;
-                    if(is_illegal){ clear_last_active_bit(attacks); continue; }
-                    // standard updates
-                    m.position.white_to_move = false;
-                    m.position.en_passant_target_square = 0ULL;
-                    // check if the move is a check
-                    is_check = m.position.pieces[6] & m.position.white_covered_squares;
-                    if(is_check){ flags += 16; }
-                    // encode move
-                    m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                    all_moves[move_index] = m;
-                    move_index++;
-                }
-                clear_last_active_bit(attacks); // remove considered attack
-            }
-
-            // PUSH
-            attacks = white_pawn_advance_squares_bitboards[square]; // retrieve attack bitboard
-            attacks &= ~pos.all_pieces; // control that there are no blockers in front
-            // problem: so far, if a piece is in front of the pawn and the pawn is in the starting rank, it can still advance 2 squares!
-            // everything is ok if the attack bitboard looks like this (1-square push and 2-square push both possible)
-            // .............
-            // ... 0 1 0 ...
-            // ... 0 1 0 ...
-            // ... 0 0 0 ...
-            // ... 0 0 0 ...
-            // or like this (single push is possible, double push is not)
-            // .............
-            // ... 0 0 0 ...
-            // ... 0 1 0 ...
-            // ... 0 0 0 ...
-            // ... 0 0 0 ...
-            // but a bitboard like this is not acceptable (2-square push is possible, 1-square push is not):
-            // .............
-            // ... 0 1 0 ...
-            // ... 0 0 0 ...
-            // ... 0 0 0 ...
-            // ... 0 0 0 ...
-            // (of course the latter is an acceptable bitboard if the pawn starting square is in the 3rd rank)
-            if((square/8 == 6) && !bit_get(attacks, square - 8) && bit_get(attacks, square - 16)){
-                attacks = 0ULL;
-            }
-            while(attacks){
-                _BitScanForward64(&target_square, attacks); // find the target square
-                is_capture = false; // this is necessarily NOT a capture!
-                // in case of promotion, loop over all possible promoted pieces
-                if(target_square / 8 == 0){
-                    for(uint8_t promoted_piece_index = 1; promoted_piece_index < 5; promoted_piece_index++){
-                        flags = 1;
-                        // Generate new position applying the move
-                        m.position = pos;
-                        // move the piece in white pieces bitboards
-                        bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[promoted_piece_index], target_square);
-                        bit_clear(m.position.white_pieces, square); bit_set(m.position.white_pieces, target_square);
-                        // spawn the new piece 
-                        //m.position.white_material_value += PIECES_VALUES[promoted_piece_index] - WHITE_PAWN_VALUE;
-                        // compute all pieces bitboard and the covered squares
-                        m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                        m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                        m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                        // check if move is legal
-                        is_illegal = m.position.pieces[0] & m.position.black_covered_squares;
-                        if(is_illegal){ clear_last_active_bit(attacks); continue; }
-                        m.position.half_move_counter = 0;
-                        // standard updates
-                        m.position.white_to_move = false;
-                        m.position.en_passant_target_square = 0ULL;
-                        // check if the move is a check
-                        is_check = m.position.pieces[6] & m.position.white_covered_squares;
-                        if(is_check){ flags += 16; }             
-                        // flag that this is a promotion ...
-                        m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, 15/*no capture*/, promoted_piece_index, flags);
-                        all_moves[move_index] = m;
-                        move_index++;
-                    }
-                }
-                // if this is a double push, flag it to manage en-passant target squares later
-                else if(target_square / 8 == 4 && square / 8 == 6){
-                    flags = 1;
-                    // Generate new position applying the move
-                    m.position = pos;
-                    // move the piece in white pieces bitboards
-                    bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
-                    bit_clear(m.position.white_pieces, square); bit_set(m.position.white_pieces, target_square);
-                    // compute all pieces bitboard and the covered squares
-                    m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                    m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                    m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                    // check if move is legal
-                    is_illegal = m.position.pieces[0] & m.position.black_covered_squares;
-                    if(is_illegal){ clear_last_active_bit(attacks); continue; }
-                    m.position.half_move_counter = 0;
-                    // standard updates
-                    m.position.white_to_move = false;
-                    m.position.en_passant_target_square = 0ULL;
-                    m.position.en_passant_target_square |= (1ULL << (target_square + 8));
-                    // check if the move is a check
-                    is_check = m.position.pieces[6] & m.position.white_covered_squares;
-                    if(is_check){ flags += 16; }   
-                    flags += 2;
-                    m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, 15/*no capture*/, 15/*no promotion*/, flags);
-                    all_moves[move_index] = m;
-                    move_index++;
-                }
-                else{
-                    flags = 1;
-                    // Generate new position applying the move
-                    m.position = pos;
-                    // move the piece in white pieces bitboards
-                    bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
-                    bit_clear(m.position.white_pieces, square); bit_set(m.position.white_pieces, target_square);
-                    // compute all pieces bitboard and the covered squares
-                    m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                    m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                    m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                    // check if move is legal
-                    is_illegal = m.position.pieces[0] & m.position.black_covered_squares;
-                    if(is_illegal){ clear_last_active_bit(attacks); continue; }
-                    m.position.half_move_counter = 0;
-                    // standard updates
-                    m.position.white_to_move = false;
-                    m.position.en_passant_target_square = 0ULL;
-                    // check if the move is a check
-                    is_check = m.position.pieces[6] & m.position.white_covered_squares;
-                    if(is_check){ flags += 16; }   
-                    // encode move if legal 
-                    m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, 15/*no capture*/, 15/*no promotion*/, flags);
-                    all_moves[move_index] = m;
-                    move_index++;
-                }
-                clear_last_active_bit(attacks); // remove considered attack
-            }
-            // remove considered piece
-            clear_last_active_bit(piece);
-        }
-
-        // Castles kingside
-        // here I am nesting if statements, because if one of them fails there's no need to go ahead and check all the other conditions
-        // the conditions involving bit_get() require a few bitwise operations, which we can confortably skip in many positions
-        if(pos.can_white_castle_kingside){ // 1. you still have right to castle from game history
-            if(!bit_get(pos.all_pieces, 61) && 
-                !bit_get(pos.all_pieces, 62)){ // 2. the in-between squares are empty
-                if(!bit_get(pos.black_covered_squares, 60) &&
-                    !bit_get(pos.black_covered_squares, 61) &&
-                    !bit_get(pos.black_covered_squares, 62)){ // 3. king does not pass through a square covered by opponent
-                   if(bit_get(pos.pieces[0], 60) &&
-                        bit_get(pos.pieces[2], 63)){ // 4. king and rook are in the correct position
-                        flags = 4;
-                        // Generate new position applying the move
-                        m.position = pos;
-                        // move king and rook in white pieces bitboards
-                        m.position.pieces[0] &= ~(1ULL << 60);
-                        m.position.pieces[0] |= (1ULL << 62);
-                        m.position.pieces[2] &= ~(1ULL << 63);
-                        m.position.pieces[2] |= (1ULL << 61);
-                        m.position.white_pieces &= ~(1ULL << 60);
-                        m.position.white_pieces &= ~(1ULL << 63);
-                        m.position.white_pieces |= (1ULL << 61);
-                        m.position.white_pieces |= (1ULL << 62);
-                        // compute all pieces bitboard and the covered squares
-                        m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                        m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                        m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                        m.position.half_move_counter++;
-                        // standard updates
-                        m.position.white_to_move = false;
-                        m.position.can_white_castle_kingside = false;
-                        m.position.can_white_castle_queenside = false;
-                        m.position.en_passant_target_square = 0ULL;
-                        // check if the move is a check
-                        is_check = m.position.pieces[6] & m.position.white_covered_squares;
-                        if(is_check){ flags += 16; }   
-                        // no need to check legality: the move is always legal within these conditions
-                        // encode move, conventionally considered as a king move from square = 60 to target_square = 62
-                        m.move = EncodeMove(60, 62, 0/*king*/, 15/*no capture*/, 15/*no promotion*/, flags); 
-                        all_moves[move_index] = m;
-                        move_index++;
-                   } 
-                }
-            }   
-        }
-        // Castles queenside
-        if(pos.can_white_castle_queenside){ 
-            if(!bit_get(pos.all_pieces, 59) && 
-                !bit_get(pos.all_pieces, 58) &&
-                !bit_get(pos.all_pieces, 57)){ 
-                if(!bit_get(pos.black_covered_squares, 60) &&
-                    !bit_get(pos.black_covered_squares, 59) &&
-                    !bit_get(pos.black_covered_squares, 58)){
-                   if(bit_get(pos.pieces[0], 60) &&
-                        bit_get(pos.pieces[2], 56)){ 
-                        flags = 4;
-                        // Generate new position applying the move
-                        m.position = pos;
-                        // move king and rook in white pieces bitboards
-                        m.position.pieces[0] &= ~(1ULL << 60); // bit clear (faster like this)
-                        m.position.pieces[0] |= (1ULL << 58);
-                        m.position.pieces[2] &= ~(1ULL << 56);
-                        m.position.pieces[2] |= (1ULL << 59); // bit set (faster like this)
-                        m.position.white_pieces &= ~(1ULL << 60);
-                        m.position.white_pieces &= ~(1ULL << 56);
-                        m.position.white_pieces |= (1ULL << 58);
-                        m.position.white_pieces |= (1ULL << 59);
-                        // compute all pieces bitboard and the covered squares
-                        m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                        m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                        m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                        m.position.half_move_counter++;
-                        // standard updates
-                        m.position.white_to_move = false;
-                        m.position.can_white_castle_kingside = false;
-                        m.position.can_white_castle_queenside = false;
-                        m.position.en_passant_target_square = 0ULL;
-                        // check if the move is a check
-                        is_check = m.position.pieces[6] & m.position.white_covered_squares;
-                        if(is_check){ flags += 16; }   
-                        m.move = EncodeMove(60, 58, 0/*king*/, 15/*no capture*/, 15/*no promotion*/, flags); 
-                        all_moves[move_index] = m;
-                        move_index++;
-                   } 
-                }
-            }   
-        }
-        
-    }
-    
-    // BLACK TO MOVE
-    else{
-
-        // King
-        piece_index = 6;
-        piece = pos.pieces[piece_index]; // retrieve bitboard of king
-        while(piece){ 
-            _BitScanForward64(&square, piece); // find position of piece and assign it to square
-            attacks = king_covered_squares_bitboards[square]; // retrieve attack bitboard
-            attacks &= ~pos.black_pieces; // exclude self-capture
-            while(attacks){
-                flags = 0;
-                _BitScanForward64(&target_square, attacks); // find the target square
-                is_capture = bit_get(pos.white_pieces, target_square);
-                captured_piece_index = 15; // no capture 
-                // generate new position
-                m.position = pos;
-                // move the piece in black pieces bitboards
-                bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
-                bit_clear(m.position.black_pieces, square); bit_set(m.position.black_pieces, target_square);
-                // if capture, also change bitboards of white pieces and recompute values
-                if(is_capture){
-                    flags += 8; // capture flag
-                    // check what black piece has been captured
-                    for(uint8_t index = 0; index < 6; index++){
-                        if(bit_get(pos.pieces[index], target_square)){
-                            captured_piece_index = index;
-                            break;
-                        }
-                    }
-                    //m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
-                    m.position.half_move_counter = 0;
-                    bit_clear(m.position.pieces[captured_piece_index], target_square);
-                    bit_clear(m.position.white_pieces, target_square);
-                }
-                else{ m.position.half_move_counter++; }
-                // compute all pieces bitboard and the covered squares
-                m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                // check if move is legal
-                is_illegal = m.position.pieces[6] & m.position.white_covered_squares;
-                if(is_illegal){ clear_last_active_bit(attacks); continue; }
-                // castling rights are lost
-                m.position.can_black_castle_kingside = false;
-                m.position.can_black_castle_queenside = false;
-                // standard updates
-                m.position.white_to_move = true;
-                m.position.en_passant_target_square = 0ULL;
-                // check if the move is a check
-                is_check = m.position.pieces[0] & m.position.black_covered_squares;
-                if(is_check){ flags += 16; }
-                // encode move 
-                m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves[move_index] = m;
-                move_index++;
-                clear_last_active_bit(attacks); // remove considered attack
-            }
-            // remove considered piece
-            clear_last_active_bit(piece);
-        }
-
-        // Queen
-        piece_index = 7;
-        piece = pos.pieces[piece_index]; // retrieve bitboard of queens
-        while(piece){ // consider all the queens
-            _BitScanForward64(&square, piece); // find position of queen and assign it to square
-            // retrieve bitboard of queen moves
-            hash_index_rook = rook_hash_index(pos.all_pieces, square, n_attacks_rook);
-            hash_index_bishop = bishop_hash_index(pos.all_pieces, square, n_attacks_bishop);
-            attacks = rook_covered_squares_bitboards[hash_index_rook] | bishop_covered_squares_bitboards[hash_index_bishop];
-            attacks &= ~pos.black_pieces; // excluse self-capture
-            // loop over all the attacks
-            while(attacks){
-                flags = 0;
-                _BitScanForward64(&target_square, attacks); // find the target square
-                is_capture = bit_get(pos.white_pieces, target_square);
-                captured_piece_index = 15; // no capture 
-                // Generate new position applying the move
-                m.position = pos;
-                // move the piece in white pieces bitboards
-                bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
-                bit_clear(m.position.black_pieces, square); bit_set(m.position.black_pieces, target_square);
-                // if capture, also change bitboards of black pieces and recompute values
-                if(is_capture){
-                    flags += 8; // capture flag
-                    // check what black piece has been captured
-                    for(uint8_t index = 0; index < 6; index++){
-                        if(bit_get(pos.pieces[index], target_square)){
-                            captured_piece_index = index;
-                            break;
-                        }
-                    }
-                    //m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
-                    m.position.half_move_counter = 0;
-                    bit_clear(m.position.pieces[captured_piece_index], target_square);
-                    bit_clear(m.position.white_pieces, target_square);
-                }
-                else{ m.position.half_move_counter++; }
-                // compute all pieces bitboard and the covered squares
-                m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                // check if move is legal
-                is_illegal = m.position.pieces[6] & m.position.white_covered_squares;
-                if(is_illegal){ clear_last_active_bit(attacks); continue; }
-                // standard updates
-                m.position.white_to_move = true;
-                m.position.en_passant_target_square = 0ULL;
-                // check if the move is a check
-                is_check = m.position.pieces[0] & m.position.black_covered_squares;
-                if(is_check){ flags += 16; }
-                // encode move 
-                m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves[move_index] = m;
-                move_index++;
-                clear_last_active_bit(attacks); // remove considered attack
-            }
-            // remove considered piece
-            clear_last_active_bit(piece);
-        }
-
-        // Rook
-        piece_index = 8;
-        piece = pos.pieces[piece_index];
-        while(piece){ // consider all the queens
-            _BitScanForward64(&square, piece); // find position of queen and assign it to square
-            // retrieve bitboard of queen moves
-            hash_index_rook = rook_hash_index(pos.all_pieces, square, n_attacks_rook);
-            attacks = rook_covered_squares_bitboards[hash_index_rook];
-            attacks &= ~pos.black_pieces; // excluse self-capture
-            // loop over all the attacks
-            while(attacks){
-                flags = 0;
-                _BitScanForward64(&target_square, attacks); // find the target square
-                is_capture = bit_get(pos.white_pieces, target_square);
-                captured_piece_index = 15; // no capture 
-                // Generate new position applying the move
-                m.position = pos;
-                // move the piece in white pieces bitboards
-                bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
-                bit_clear(m.position.black_pieces, square); bit_set(m.position.black_pieces, target_square);
-                // if capture, also change bitboards of black pieces and recompute values
-                if(is_capture){
-                    flags += 8; // capture flag
-                    // check what black piece has been captured
-                    for(uint8_t index = 0; index < 6; index++){
-                        if(bit_get(pos.pieces[index], target_square)){
-                            captured_piece_index = index;
-                            break;
-                        }
-                    }
-                    //m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
-                    m.position.half_move_counter = 0;
-                    bit_clear(m.position.pieces[captured_piece_index], target_square);
-                    bit_clear(m.position.white_pieces, target_square);
-                }
-                else{ m.position.half_move_counter++; }
-                // compute all pieces bitboard and the covered squares
-                m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                // check if move is legal
-                is_illegal = m.position.pieces[6] & m.position.white_covered_squares;
-                if(is_illegal){ clear_last_active_bit(attacks); continue; }
-                // castling rights are lost
-                if(square == 7) { m.position.can_black_castle_kingside = false; }
-                else if(square == 0) { m.position.can_black_castle_queenside = false; }
-                // standard updates
-                m.position.white_to_move = true;
-                m.position.en_passant_target_square = 0ULL;
-                // check if the move is a check
-                is_check = m.position.pieces[0] & m.position.black_covered_squares;
-                if(is_check){ flags += 16; }
-                // encode move 
-                m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves[move_index] = m;
-                move_index++;
-                clear_last_active_bit(attacks); // remove considered attack
-            }
-            // remove considered piece
-            clear_last_active_bit(piece);
-        }
-
-        // Bishop
-        piece_index = 9;
-        piece = pos.pieces[piece_index]; // retrieve bitboard of bishops
-        while(piece){ // consider all the bishops
-            _BitScanForward64(&square, piece); // find position of queen and assign it to square
-            // retrieve bitboard of bishop moves
-            hash_index_bishop = bishop_hash_index(pos.all_pieces, square, n_attacks_bishop);
-            attacks = bishop_covered_squares_bitboards[hash_index_bishop];
-            attacks &= ~pos.black_pieces; // excluse self-capture
-            // loop over all the attacks
-            while(attacks){
-                flags = 0;
-                _BitScanForward64(&target_square, attacks); // find the target square
-                is_capture = bit_get(pos.white_pieces, target_square);
-                captured_piece_index = 15; // no capture 
-                // Generate new position applying the move
-                m.position = pos;
-                // move the piece in white pieces bitboards
-                bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
-                bit_clear(m.position.black_pieces, square); bit_set(m.position.black_pieces, target_square);
-                // if capture, also change bitboards of black pieces and recompute values
-                if(is_capture){
-                    flags += 8; // capture flag
-                    // check what black piece has been captured
-                    for(uint8_t index = 0; index < 6; index++){
-                        if(bit_get(pos.pieces[index], target_square)){
-                            captured_piece_index = index;
-                            break;
-                        }
-                    }
-                    //m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
-                    m.position.half_move_counter = 0;
-                    bit_clear(m.position.pieces[captured_piece_index], target_square);
-                    bit_clear(m.position.white_pieces, target_square);
-                }
-                else{ m.position.half_move_counter++; }
-                // compute all pieces bitboard and the covered squares
-                m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                // check if move is legal
-                is_illegal = m.position.pieces[6] & m.position.white_covered_squares;
-                if(is_illegal){ clear_last_active_bit(attacks); continue; }
-                // standard updates
-                m.position.white_to_move = true;
-                m.position.en_passant_target_square = 0ULL;
-                // check if the move is a check
-                is_check = m.position.pieces[0] & m.position.black_covered_squares;
-                if(is_check){ flags += 16; }
-                // encode move 
-                m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves[move_index] = m;
-                move_index++;
-                clear_last_active_bit(attacks); // remove considered attack
-            }
-            // remove considered piece
-            clear_last_active_bit(piece);
-        }
-
-        // Knight
-        piece_index = 10;
-        piece = pos.pieces[piece_index]; // retrieve bitboard of knights
-        while(piece){ // consider all the knights
-            _BitScanForward64(&square, piece); // find position of piece and assign it to square
-            attacks = knight_covered_squares_bitboards[square]; // retrieve attack bitboard
-            attacks &= ~pos.black_pieces; // exclude self-capture
-            while(attacks){
-                flags = 0;
-                _BitScanForward64(&target_square, attacks); // find the target square
-                is_capture = bit_get(pos.white_pieces, target_square);
-                captured_piece_index = 15; // no capture 
-                // Generate new position applying the move
-                m.position = pos;
-                // move the piece in white pieces bitboards
-                bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
-                bit_clear(m.position.black_pieces, square); bit_set(m.position.black_pieces, target_square);
-                // if capture, also change bitboards of black pieces and recompute values
-                if(is_capture){
-                    flags += 8; // capture flag
-                    // check what black piece has been captured
-                    for(uint8_t index = 0; index < 6; index++){
-                        if(bit_get(pos.pieces[index], target_square)){
-                            captured_piece_index = index;
-                            break;
-                        }
-                    }
-                    //m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
-                    m.position.half_move_counter = 0;
-                    bit_clear(m.position.pieces[captured_piece_index], target_square);
-                    bit_clear(m.position.white_pieces, target_square);
-                }
-                else{ m.position.half_move_counter++; }
-                // compute all pieces bitboard and the covered squares
-                m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                // check if move is legal
-                is_illegal = m.position.pieces[6] & m.position.white_covered_squares;
-                if(is_illegal){ clear_last_active_bit(attacks); continue; }
-                // standard updates
-                m.position.white_to_move = true;
-                m.position.en_passant_target_square = 0ULL;
-                // check if the move is a check
-                is_check = m.position.pieces[0] & m.position.black_covered_squares;
-                if(is_check){ flags += 16; }
-                // encode move 
-                m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                all_moves[move_index] = m;
-                move_index++;
-                clear_last_active_bit(attacks); // remove considered attack
-            }
-            // remove considered piece
-            clear_last_active_bit(piece);
-        }
-
-        // Pawns 
-        piece_index = 11;
-        piece = pos.pieces[piece_index];
-        while(piece){
-            _BitScanForward64(&square, piece); // find position of piece and assign it to square
-            // CAPTURES
-            attacks = black_pawn_covered_squares_bitboards[square]; // retrieve attack bitboard
-            attacks &= pos.white_pieces | pos.en_passant_target_square; // only attacked squares occupied by enemy pieces are valid for movement
-            while(attacks){
-                _BitScanForward64(&target_square, attacks); // find the target square
-                is_capture = true; // this is necessarily a capture!
-                flags += 8; // capture flag
-                // check what white piece has been captured
-                for(uint8_t index = 0; index < 6; index++){
-                    if(bit_get(pos.pieces[index], target_square)){
-                        captured_piece_index = index;
-                        break;
-                    }
-                }
-                // in case of promotion, loop over all possible promoted pieces
-                if(target_square / 8 == 7){
-                    for(uint8_t promoted_piece_index = 7; promoted_piece_index < 11; promoted_piece_index++){
-                        flags = 1;
-                        // Generate new position applying the move
-                        m.position = pos;
-                        // move the piece in black pieces bitboards
-                        bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[promoted_piece_index], target_square);
-                        bit_clear(m.position.black_pieces, square); bit_set(m.position.black_pieces, target_square);
-                        // capture the piece 
-                        bit_clear(m.position.pieces[captured_piece_index], target_square);
-                        bit_clear(m.position.white_pieces, target_square);
-                        // update material value
-                        //m.position.black_material_value += PIECES_VALUES[promoted_piece_index] - BLACK_PAWN_VALUE;
-                        //m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
-                        // compute all pieces bitboard and the covered squares
-                        m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                        m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                        m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                        // check if move is legal
-                        is_illegal = m.position.pieces[6] & m.position.white_covered_squares;
-                        if(is_illegal){ continue; }
-                        m.position.half_move_counter = 0;
-                        // standard updates
-                        m.position.white_to_move = true;
-                        m.position.en_passant_target_square = 0ULL;
-                        // check if the move is a check
-                        is_check = m.position.pieces[0] & m.position.black_covered_squares;
-                        if(is_check){ flags += 16; }            
-                        m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, promoted_piece_index, flags);
-                        all_moves[move_index] = m;
-                        move_index++;
-                    }
-                }
-                else{
-                    flags = 1;
-                    // Generate new position applying the move
-                    m.position = pos;
-                    // move the piece in white pieces bitboards
-                    bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
-                    bit_clear(m.position.black_pieces, square); bit_set(m.position.black_pieces, target_square);
-                    // also change bitboards of enemy pieces and recompute values (this is always a capture)
-                    //m.position.white_material_value -= PIECES_VALUES[captured_piece_index];
-                    m.position.half_move_counter = 0;
-                    if((pos.en_passant_target_square & (1ULL << target_square)) == 0){ // NO en passant
-                        bit_clear(m.position.pieces[captured_piece_index], target_square);
-                        bit_clear(m.position.white_pieces, target_square);    
-                    }
-                    else{ // en passant
-                        captured_piece_index = 5;
-                        target_square -= 8;
-                        bit_clear(m.position.pieces[captured_piece_index], target_square);
-                        bit_clear(m.position.white_pieces, target_square);   
-                        target_square += 8;                 
-                    }   
-                    // compute all pieces bitboard and the covered squares
-                    m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                    m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                    m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                    // check if move is legal
-                    is_illegal = m.position.pieces[6] & m.position.white_covered_squares;
-                    if(is_illegal){ clear_last_active_bit(attacks); continue; }
-                    // standard updates
-                    m.position.white_to_move = true;
-                    m.position.en_passant_target_square = 0ULL;
-                    // check if the move is a check
-                    is_check = m.position.pieces[0] & m.position.black_covered_squares;
-                    if(is_check){ flags += 16; }
-                    m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, captured_piece_index, 15/*no promotion*/, flags);
-                    all_moves[move_index] = m;
-                    move_index++;
-                }
-                clear_last_active_bit(attacks); // remove considered attack
-            }
-
-            // PUSH
-            attacks = black_pawn_advance_squares_bitboards[square]; // retrieve attack bitboard
-            attacks &= ~pos.all_pieces; // control that there are no blockers in front
-            if((square/8 == 1) && !bit_get(attacks, square + 8) && bit_get(attacks, square + 16)){
-                attacks = 0ULL;
-            }
-            while(attacks){
-                _BitScanForward64(&target_square, attacks); // find the target square
-                is_capture = false; // this is necessarily NOT a capture!
-                // in case of promotion, loop over all possible promoted pieces
-                if(target_square / 8 == 7){
-                    for(uint8_t promoted_piece_index = 7; promoted_piece_index < 11; promoted_piece_index++){
-                        flags = 1;
-                        // Generate new position applying the move
-                        m.position = pos;
-                        // move the piece in white pieces bitboards
-                        bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[promoted_piece_index], target_square);
-                        bit_clear(m.position.black_pieces, square); bit_set(m.position.black_pieces, target_square);
-                        //m.position.black_material_value += PIECES_VALUES[promoted_piece_index] - BLACK_PAWN_VALUE;
-                        // compute all pieces bitboard and the covered squares
-                        m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                        m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                        m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                        // check if move is legal
-                        is_illegal = m.position.pieces[6] & m.position.white_covered_squares;
-                        if(is_illegal){ clear_last_active_bit(attacks); continue; }
-                        m.position.half_move_counter = 0;
-                        // standard updates
-                        m.position.white_to_move = true;
-                        m.position.en_passant_target_square = 0ULL;
-                        // check if the move is a check
-                        is_check = m.position.pieces[0] & m.position.black_covered_squares;
-                        if(is_check){ flags += 16; }             
-                        // flag that this is a promotion ...
-                        m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, 15/*no capture*/, promoted_piece_index, flags);
-                        all_moves[move_index] = m;
-                        move_index++;
-                    }
-                }
-                // if this is a double push, flag it to manage en-passant target squares
-                else if(target_square / 8 == 3 && square / 8 == 1){
-                    flags = 1;
-                    // Generate new position applying the move
-                    m.position = pos;
-                    // move the piece in white pieces bitboards
-                    bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
-                    bit_clear(m.position.black_pieces, square); bit_set(m.position.black_pieces, target_square);
-                    // compute all pieces bitboard and the covered squares
-                    m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                    m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                    m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                    // check if move is legal
-                    is_illegal = m.position.pieces[6] & m.position.white_covered_squares;
-                    if(is_illegal){ clear_last_active_bit(attacks); continue; }
-                    m.position.half_move_counter = 0;
-                    // update side to move and add en-passant target!
-                    m.position.white_to_move = true;
-                    m.position.en_passant_target_square = 0ULL; 
-                    m.position.en_passant_target_square |= (1ULL << (target_square - 8));
-                    // check if the move is a check
-                    is_check = m.position.pieces[0] & m.position.black_covered_squares;
-                    if(is_check){ flags += 16; }   
-                    // encode move
-                    flags += 2;
-                    m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, 15/*no capture*/, 15/*no promotion*/, flags);
-                    all_moves[move_index] = m;
-                    move_index++;
-                }
-                else{
-                    flags = 1;
-                    // Generate new position applying the move
-                    m.position = pos;
-                    // move the piece in white pieces bitboards
-                    bit_clear(m.position.pieces[piece_index], square); bit_set(m.position.pieces[piece_index], target_square);
-                    bit_clear(m.position.black_pieces, square); bit_set(m.position.black_pieces, target_square);
-                    // compute all pieces bitboard and the covered squares
-                    m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                    m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                    m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                    // check if move is legal
-                    is_illegal = m.position.pieces[6] & m.position.white_covered_squares;
-                    if(is_illegal){ clear_last_active_bit(attacks); continue; }
-                    m.position.half_move_counter = 0;
-                    // standard updates
-                    m.position.white_to_move = true;
-                    m.position.en_passant_target_square = 0ULL;
-                    // check if the move is a check
-                    is_check = m.position.pieces[0] & m.position.black_covered_squares;
-                    if(is_check){ flags += 16; }   
-                    // encode move if legal 
-                    m.move = EncodeMove(static_cast<uint8_t>(square), static_cast<uint8_t>(target_square), piece_index, 15/*no capture*/, 15/*no promotion*/, flags);
-                    all_moves[move_index] = m;
-                    move_index++;
-                }
-                clear_last_active_bit(attacks); // remove considered attack
-            }
-            // remove considered piece
-            clear_last_active_bit(piece);
-        }
-
-        // Castles kingside
-        if(pos.can_black_castle_kingside){ 
-            if(!bit_get(pos.all_pieces, 5) && 
-                !bit_get(pos.all_pieces, 6)){ 
-                if(!bit_get(pos.white_covered_squares, 4) &&
-                    !bit_get(pos.white_covered_squares, 5) &&
-                    !bit_get(pos.white_covered_squares, 6)){ 
-                   if(bit_get(pos.pieces[6], 4) &&
-                        bit_get(pos.pieces[8], 7)){ 
-                        flags = 4;
-                        // Generate new position applying the move
-                        m.position = pos;
-                        // move king and rook in white pieces bitboards
-                        m.position.pieces[6] &= ~(1ULL << 4);
-                        m.position.pieces[6] |= (1ULL << 6);
-                        m.position.pieces[8] &= ~(1ULL << 7);
-                        m.position.pieces[8] |= (1ULL << 5);
-                        m.position.black_pieces &= ~(1ULL << 4);
-                        m.position.black_pieces &= ~(1ULL << 7);
-                        m.position.black_pieces |= (1ULL << 5);
-                        m.position.black_pieces |= (1ULL << 6);
-                        // compute all pieces bitboard and the covered squares
-                        m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                        m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                        m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                        m.position.half_move_counter++;
-                        // standard updates -> loose castling rights
-                        m.position.white_to_move = true;
-                        m.position.can_black_castle_kingside = false;
-                        m.position.can_black_castle_queenside = false;
-                        m.position.en_passant_target_square = 0ULL;
-                        // check if the move is a check
-                        is_check = m.position.pieces[0] & m.position.black_covered_squares;
-                        if(is_check){ flags += 16; }   
-                        m.move = EncodeMove(4, 6, 6/*king*/, 15/*no capture*/, 15/*no promotion*/, flags); 
-                        all_moves[move_index] = m;
-                        move_index++;
-                   } 
-                }
-            }   
-        }
-        // Castles queenside
-        if(pos.can_black_castle_queenside){ 
-            if(!bit_get(pos.all_pieces, 3) && 
-                !bit_get(pos.all_pieces, 2) &&
-                !bit_get(pos.all_pieces, 1)){ 
-                if(!bit_get(pos.white_covered_squares, 4) &&
-                    !bit_get(pos.white_covered_squares, 3) &&
-                    !bit_get(pos.white_covered_squares, 2)){
-                   if(bit_get(pos.pieces[6], 4) &&
-                        bit_get(pos.pieces[8], 0)){ 
-                        flags = 4;
-                        // Generate new position applying the move
-                        m.position = pos;
-                        // move king and rook in white pieces bitboards
-                        m.position.pieces[6] &= ~(1ULL << 4);
-                        m.position.pieces[6] |= (1ULL << 2);
-                        m.position.pieces[8] &= ~1ULL;
-                        m.position.pieces[8] |= (1ULL << 3);
-                        m.position.black_pieces &= ~(1ULL << 4);
-                        m.position.black_pieces &= ~1ULL;
-                        m.position.black_pieces |= (1ULL << 2);
-                        m.position.black_pieces |= (1ULL << 3);
-                        // compute all pieces bitboard and the covered squares
-                        m.position.all_pieces = m.position.white_pieces | m.position.black_pieces;
-                        m.position.white_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, true);
-                        m.position.black_covered_squares = GetCoveredSquares(m.position.pieces, m.position.all_pieces, false);
-                        m.position.half_move_counter++;
-                        // standard updates
-                        m.position.white_to_move = true;
-                        m.position.can_black_castle_kingside = false;
-                        m.position.can_black_castle_queenside = false;
-                        m.position.en_passant_target_square = 0ULL;
-                        // check if the move is a check
-                        is_check = m.position.pieces[0] & m.position.black_covered_squares;
-                        if(is_check){ flags += 16; }   
-                        m.move = EncodeMove(4, 2, 6/*king*/, 15/*no capture*/, 15/*no promotion*/, flags); 
-                        all_moves[move_index] = m;
-                        move_index++;
-                   } 
-                }
-            }   
-        }
-    }
-
-    pos.n_legal_moves = move_index;
 }
