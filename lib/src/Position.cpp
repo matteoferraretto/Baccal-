@@ -461,7 +461,7 @@ void PseudoLegalMoves(Position& pos, Move* moves){
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square
                 // in case of promotion, loop over all possible promoted pieces
-                if(RANK_OF_SQUARE[target_square] == 0){
+                if(WHITE_PAWN_IN_FINAL_RANK[target_square]){
                     for(uint8_t promoted_piece_index = 1; promoted_piece_index < 5; promoted_piece_index++){
                         flags = 16 - promoted_piece_index;
                         moves[move_index] = EncodeMove(square, target_square, flags);
@@ -509,13 +509,13 @@ void PseudoLegalMoves(Position& pos, Move* moves){
             // ... 0 0 0 ...
             // ... 0 0 0 ...
             // (of course the latter is an acceptable bitboard if the pawn starting square is in the 3rd rank)
-            if((RANK_OF_SQUARE[square] == 6) && !bit_get(attacks, square - 8) && bit_get(attacks, square - 16)){
+            if(WHITE_PAWN_IN_STARTING_RANK[square] && !bit_get(attacks, square - 8) && bit_get(attacks, square - 16)){
                 attacks = 0ULL;
             }
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square
                 // in case of promotion, loop over all possible promoted pieces
-                if(RANK_OF_SQUARE[target_square] == 0){
+                if(WHITE_PAWN_IN_FINAL_RANK[target_square]){
                     for(uint8_t promoted_piece_index = 1; promoted_piece_index < 5; promoted_piece_index++){
                         flags = 12 - promoted_piece_index;
                         moves[move_index] = EncodeMove(square, target_square, flags);
@@ -523,7 +523,7 @@ void PseudoLegalMoves(Position& pos, Move* moves){
                     }
                 }
                 // if this is a double push, flag it to manage en-passant target squares later
-                else if(RANK_OF_SQUARE[target_square] == 4 && RANK_OF_SQUARE[square] == 6){
+                else if(RANK_OF_SQUARE[target_square] == 4 && WHITE_PAWN_IN_STARTING_RANK[square]){
                     flags = 1;
                     moves[move_index] = EncodeMove(square, target_square, flags);
                     move_index++;
@@ -543,11 +543,11 @@ void PseudoLegalMoves(Position& pos, Move* moves){
         // here I am nesting if statements, because if one of them fails there's no need to go ahead and check all the other conditions
         // the conditions involving bit_get() require a few bitwise operations, which we can confortably skip in many positions
         if(pos.can_white_castle_kingside){ // 1. you still have right to castle from game history
-            if(!bit_get(pos.all_pieces, 61) && 
-                !bit_get(pos.all_pieces, 62)){ // 2. the in-between squares are empty
+            //if(!bit_get(pos.all_pieces, 61) && !bit_get(pos.all_pieces, 62)){ // 2. the in-between squares are empty
+            if(!(pos.all_pieces & (3ULL << 61))){
                 // 3. king does not pass through a square covered by opponent
-                if(bit_get(pos.pieces[0], 60) &&
-                    bit_get(pos.pieces[2], 63)){ // 4. king and rook are in the correct position
+                //if(bit_get_opt(pos.pieces[0], 60) && bit_get_opt(pos.pieces[2], 63)){ // 4. king and rook are in the correct position
+                if(pos.pieces[2] & (1ULL << 63)){
                     moves[move_index] = EncodeMove(60, 62, 2); 
                     move_index++;
                 } 
@@ -555,11 +555,10 @@ void PseudoLegalMoves(Position& pos, Move* moves){
         }
         // Castles queenside
         if(pos.can_white_castle_queenside){ 
-            if(!bit_get(pos.all_pieces, 59) && 
-                !bit_get(pos.all_pieces, 58) &&
-                !bit_get(pos.all_pieces, 57)){ 
-                if(bit_get(pos.pieces[0], 60) &&
-                    bit_get(pos.pieces[2], 56)){ 
+            //if(!bit_get(pos.all_pieces, 59) && !bit_get(pos.all_pieces, 58) && !bit_get(pos.all_pieces, 57)){ 
+            if(!(pos.all_pieces & (7ULL << 57))){
+                //if(bit_get_opt(pos.pieces[0], 60) && bit_get_opt(pos.pieces[2], 56)){ 
+                if(pos.pieces[2] & (1ULL << 56)){
                     moves[move_index] = EncodeMove(60, 58, 3); 
                     move_index++;
                 } 
@@ -659,7 +658,8 @@ void PseudoLegalMoves(Position& pos, Move* moves){
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square
                 is_capture = bit_get(pos.white_pieces, target_square);
-                is_capture ? flags = 4 : flags = 0;
+                //is_capture ? flags = 4 : flags = 0;
+                flags = (pos.white_pieces & (1ULL << target_square)) ? 4 : 0;  
                 moves[move_index] = EncodeMove(square, target_square, flags);
                 move_index++;
                 clear_last_active_bit(attacks); 
@@ -678,7 +678,7 @@ void PseudoLegalMoves(Position& pos, Move* moves){
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square
                 // in case of promotion, loop over all possible promoted pieces
-                if(RANK_OF_SQUARE[target_square] == 7){
+                if(BLACK_PAWN_IN_FINAL_RANK[target_square]){
                     for(uint8_t promoted_piece_index = 7; promoted_piece_index < 11; promoted_piece_index++){
                         flags = 22 - promoted_piece_index;
                         moves[move_index] = EncodeMove(square, target_square, flags);
@@ -706,33 +706,13 @@ void PseudoLegalMoves(Position& pos, Move* moves){
             // Pawn push
             attacks = black_pawn_advance_squares_bitboards[square]; // retrieve attack bitboard
             attacks &= ~pos.all_pieces; // control that there are no blockers in front
-            // problem: so far, if a piece is in front of the pawn and the pawn is in the starting rank, it can still advance 2 squares!
-            // everything is ok if the attack bitboard looks like this (1-square push and 2-square push both possible)
-            // .............
-            // ... 0 1 0 ...
-            // ... 0 1 0 ...
-            // ... 0 0 0 ...
-            // ... 0 0 0 ...
-            // or like this (single push is possible, double push is not)
-            // .............
-            // ... 0 0 0 ...
-            // ... 0 1 0 ...
-            // ... 0 0 0 ...
-            // ... 0 0 0 ...
-            // but a bitboard like this is not acceptable (2-square push is possible, 1-square push is not):
-            // .............
-            // ... 0 1 0 ...
-            // ... 0 0 0 ...
-            // ... 0 0 0 ...
-            // ... 0 0 0 ...
-            // (of course the latter is an acceptable bitboard if the pawn starting square is in the 3rd rank)
-            if((RANK_OF_SQUARE[square] == 1) && !bit_get(attacks, square + 8) && bit_get(attacks, square + 16)){
+            if(BLACK_PAWN_IN_STARTING_RANK[square] && !bit_get(attacks, square + 8) && bit_get(attacks, square + 16)){
                 attacks = 0ULL;
             }
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square
                 // in case of promotion, loop over all possible promoted pieces
-                if(RANK_OF_SQUARE[target_square] == 7){
+                if(BLACK_PAWN_IN_FINAL_RANK[target_square]){
                     for(uint8_t promoted_piece_index = 7; promoted_piece_index < 11; promoted_piece_index++){
                         flags = 22 - promoted_piece_index;
                         moves[move_index] = EncodeMove(square, target_square, flags);
@@ -740,7 +720,7 @@ void PseudoLegalMoves(Position& pos, Move* moves){
                     }
                 }
                 // if this is a double push, flag it to manage en-passant target squares later
-                else if(RANK_OF_SQUARE[target_square] == 3 && RANK_OF_SQUARE[square] == 1){
+                else if(RANK_OF_SQUARE[target_square] == 3 && BLACK_PAWN_IN_STARTING_RANK[square]){
                     flags = 1;
                     moves[move_index] = EncodeMove(square, target_square, flags);
                     move_index++;
@@ -760,26 +740,27 @@ void PseudoLegalMoves(Position& pos, Move* moves){
         // here I am nesting if statements, because if one of them fails there's no need to go ahead and check all the other conditions
         // the conditions involving bit_get() require a few bitwise operations, which we can confortably skip in many positions
         if(pos.can_black_castle_kingside){ 
-            if(!bit_get(pos.all_pieces, 5) && 
-                !bit_get(pos.all_pieces, 6)){ 
-                if(bit_get(pos.pieces[6], 4) &&
-                    bit_get(pos.pieces[8], 7)){ 
+            //if(!bit_get(pos.all_pieces, 5) && !bit_get(pos.all_pieces, 6)){ 
+            if(!(pos.all_pieces & 96ULL)){
+                //if(bit_get_opt(pos.pieces[6], 4) && bit_get_opt(pos.pieces[8], 7)){ 
+                //if(pos.pieces[6] & 16ULL){
+                if(pos.pieces[8] & 128ULL){
                     moves[move_index] = EncodeMove(4, 6, 2);
                     move_index++;
-                } 
+                }
             }   
         }
 
         // Castles queenside
         if(pos.can_black_castle_queenside){ 
-            if(!bit_get(pos.all_pieces, 3) && 
-                !bit_get(pos.all_pieces, 2) &&
-                !bit_get(pos.all_pieces, 1)){ 
-                if(bit_get(pos.pieces[6], 4) &&
-                    bit_get(pos.pieces[8], 0)){ 
+            //if(!bit_get(pos.all_pieces, 3) && !bit_get(pos.all_pieces, 2) && !bit_get(pos.all_pieces, 1)){ 
+            if(!(pos.all_pieces & 14ULL)){
+                //if(bit_get_opt(pos.pieces[6], 4) && bit_get_opt(pos.pieces[8], 0)){ 
+                if(pos.pieces[8] & 1ULL){
+                //if(pos.pieces[6] & 16ULL){
                     moves[move_index] = EncodeMove(4, 2, 3); 
                     move_index++;
-                } 
+                }
             }   
         }
     }
@@ -832,12 +813,10 @@ void MakeMove(Position& pos, const Move& move, StateMemory& state){
         state.moved_piece_index = moved_piece_index;
         state.captured_piece_index = captured_piece_index;
         state.promoted_piece_index = promoted_piece_index;
-        // remove the piece from the starting square
-        bit_clear_opt(pos.pieces[moved_piece_index], from);
-        bit_clear_opt(pos.white_pieces, from);
-        // spawn the moved piece on the target square
-        bit_set_opt(pos.pieces[moved_piece_index], to);
-        bit_set_opt(pos.white_pieces, to);
+        // move the piece
+        //bit_clear_opt(pos.pieces[moved_piece_index], from); bit_set_opt(pos.pieces[moved_piece_index], to);
+        pos.pieces[moved_piece_index] ^= (1ULL << from) | (1ULL << to);
+        pos.white_pieces ^= (1ULL << from) | (1ULL << to);
         // remove captured piece, if any
         if(captured_piece_index != 12){
             // if en passant, piece is not in the target square
@@ -937,11 +916,8 @@ void MakeMove(Position& pos, const Move& move, StateMemory& state){
         state.captured_piece_index = captured_piece_index;
         state.promoted_piece_index = promoted_piece_index;
         // remove the piece from the starting square
-        bit_clear_opt(pos.pieces[moved_piece_index], from);
-        bit_clear_opt(pos.black_pieces, from);
-        // spawn the moved piece on the target square
-        bit_set_opt(pos.pieces[moved_piece_index], to);
-        bit_set_opt(pos.black_pieces, to);
+        pos.pieces[moved_piece_index] ^= (1ULL << from) | (1ULL << to);
+        pos.black_pieces ^= (1ULL << from) | (1ULL << to);
         // remove captured piece, if any
         if(captured_piece_index != 12){
             // if en passant, piece is not in the target square
@@ -984,7 +960,7 @@ void MakeMove(Position& pos, const Move& move, StateMemory& state){
             pos.can_black_castle_kingside = false;
         }
         // if you move the rook on a8
-        if(moved_piece_index == 8 && from == 0){
+        else if(moved_piece_index == 8 && from == 0){
             pos.can_black_castle_queenside = false;
         }
         // Reset half move counter in case of capture or pawn move
@@ -1009,11 +985,13 @@ void UnmakeMove(Position& pos, const Move& move, const StateMemory& state){
     // reposition the moved piece
     bit_clear_opt(pos.pieces[state.moved_piece_index], to);
     bit_set_opt(pos.pieces[state.moved_piece_index], from);
+    //pos.pieces[state.moved_piece_index] ^= (1ULL << to) | (1ULL << from);
 
     // black made the pseudomove
     if(pos.white_to_move){
-        bit_clear_opt(pos.black_pieces, to);
-        bit_set_opt(pos.black_pieces, from);
+        //bit_clear_opt(pos.black_pieces, to);
+        //bit_set_opt(pos.black_pieces, from);
+        pos.black_pieces ^= (1ULL << from) | (1ULL << to);
         // reposition the captured piece
         if(state.captured_piece_index != 12){
             // if capture is en passant, respawn the white pawn in the correct position
@@ -1035,16 +1013,16 @@ void UnmakeMove(Position& pos, const Move& move, const StateMemory& state){
         }
         // in case of castling, reposition the rook correctly
         if(flags == 2){ // kingside
-            bit_clear_opt(pos.pieces[8], 5);
-            bit_set_opt(pos.pieces[8], 7);
-            bit_clear_opt(pos.black_pieces, 5);
-            bit_set_opt(pos.black_pieces, 7);
+            pos.pieces[8] ^= (1ULL << 5) | (1ULL << 7);
+            //bit_clear_opt(pos.black_pieces, 5);
+            //bit_set_opt(pos.black_pieces, 7);
+            pos.black_pieces ^= (1ULL << 5) | (1ULL << 7);
         }
         else if(flags == 3){ // queenside
-            bit_clear_opt(pos.pieces[8], 3);
-            bit_set_opt(pos.pieces[8], 0);
-            bit_clear_opt(pos.black_pieces, 3);
-            bit_set_opt(pos.black_pieces, 0);
+            pos.pieces[8] ^= (1ULL << 3) | 1ULL;
+            //bit_clear_opt(pos.black_pieces, 3);
+            //bit_set_opt(pos.black_pieces, 0);
+            pos.black_pieces ^= (1ULL << 3) | 1ULL;
         }
         // restore group bitboards
         pos.all_pieces = pos.white_pieces | pos.black_pieces;
@@ -1064,8 +1042,9 @@ void UnmakeMove(Position& pos, const Move& move, const StateMemory& state){
 
     // if white made the pseudomove 
     else{
-        bit_clear_opt(pos.white_pieces, to);
-        bit_set_opt(pos.white_pieces, from);
+        //bit_clear_opt(pos.white_pieces, to);
+        //bit_set_opt(pos.white_pieces, from);
+        pos.white_pieces ^= (1ULL << from) | (1ULL << to);
         // reposition the captured piece
         if(state.captured_piece_index != 12){
             // if the capture was en-passant, the captured pawn does not respawn in the target square of the move
@@ -1085,16 +1064,16 @@ void UnmakeMove(Position& pos, const Move& move, const StateMemory& state){
         }
         // in case of castling, reposition the rook correctly
         if(flags == 2){ // kingside
-            bit_clear_opt(pos.pieces[2], 61);
-            bit_set_opt(pos.pieces[2], 63);
-            bit_clear_opt(pos.white_pieces, 61);
-            bit_set_opt(pos.white_pieces, 63);
+            pos.pieces[2] ^= (1ULL << 61) | (1ULL << 63);
+            pos.white_pieces ^= (1ULL << 61) | (1ULL << 63);
+            //bit_clear_opt(pos.white_pieces, 61);
+            //bit_set_opt(pos.white_pieces, 63);
         }
         else if(flags == 3){// queenside
-            bit_clear_opt(pos.pieces[2], 59);
-            bit_set_opt(pos.pieces[2], 56);
-            bit_clear_opt(pos.white_pieces, 59);
-            bit_set_opt(pos.white_pieces, 56);
+            pos.pieces[2] ^= (1ULL << 59) | (1ULL << 56);
+            //bit_clear_opt(pos.white_pieces, 59);
+            //bit_set_opt(pos.white_pieces, 56);
+            pos.white_pieces ^= (1ULL << 59) | (1ULL << 56);
         }
         // restore group bitboards
         pos.all_pieces = pos.white_pieces | pos.black_pieces;
