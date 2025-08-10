@@ -837,13 +837,17 @@ void MakeMove(Position& pos, const Move& move, StateMemory& state){
         // Handle castling
         if(flags == 2){// kingside castle
             // transfer the rook
-            bit_clear_opt(pos.pieces[2], 63); bit_set_opt(pos.pieces[2], 61);
-            bit_clear_opt(pos.white_pieces, 63); bit_set_opt(pos.white_pieces, 61);
+            pos.pieces[2] ^= (1ULL << 63) | (1ULL << 61);
+            pos.white_pieces ^= (1ULL << 63) | (1ULL << 61);
+            //bit_clear_opt(pos.pieces[2], 63); bit_set_opt(pos.pieces[2], 61);
+            //bit_clear_opt(pos.white_pieces, 63); bit_set_opt(pos.white_pieces, 61);
         }
         else if(flags == 3){// queenside castle
             // transfer the rook
-            bit_clear_opt(pos.pieces[2], 56); bit_set_opt(pos.pieces[2], 59);
-            bit_clear_opt(pos.white_pieces, 56); bit_set_opt(pos.white_pieces, 59);
+            pos.pieces[2] ^= (1ULL << 56) | (1ULL << 59);
+            pos.white_pieces ^= (1ULL << 56) | (1ULL << 59);
+            //bit_clear_opt(pos.pieces[2], 56); bit_set_opt(pos.pieces[2], 59);
+            //bit_clear_opt(pos.white_pieces, 56); bit_set_opt(pos.white_pieces, 59);
         }
 
         // CASTLING RIGHTS
@@ -938,13 +942,17 @@ void MakeMove(Position& pos, const Move& move, StateMemory& state){
         // Handle castling
         if(flags == 2){// kingside castle
             // transfer the rook
-            bit_clear_opt(pos.pieces[8], 7); bit_set_opt(pos.pieces[8], 5);
-            bit_clear_opt(pos.black_pieces, 7); bit_set_opt(pos.black_pieces, 5);
+            pos.pieces[8] ^= (1ULL << 7) | (1ULL << 5);
+            pos.black_pieces ^= (1ULL << 7) | (1ULL << 5);
+            //bit_clear_opt(pos.pieces[8], 7); bit_set_opt(pos.pieces[8], 5);
+            //bit_clear_opt(pos.black_pieces, 7); bit_set_opt(pos.black_pieces, 5);
         }
         else if(flags == 3){// queenside castle
             // transfer the rook
-            bit_clear_opt(pos.pieces[8], 0); bit_set_opt(pos.pieces[8], 3);
-            bit_clear_opt(pos.black_pieces, 0); bit_set_opt(pos.black_pieces, 3);
+            pos.pieces[8] ^= (1ULL << 3) | 1ULL;
+            pos.black_pieces ^= (1ULL << 3) | 1ULL;
+            //bit_clear_opt(pos.pieces[8], 0); bit_set_opt(pos.pieces[8], 3);
+            //bit_clear_opt(pos.black_pieces, 0); bit_set_opt(pos.black_pieces, 3);
         }
         // CASTLING RIGHTS
         // save current castling rights 
