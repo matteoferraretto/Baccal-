@@ -246,7 +246,7 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, int& n_explore
     // Loop again to recursively iterate the function 
     for(int move_index = 0; move_index < n_pseudolegal_moves; move_index++){
         // pick the best move in the range [move_index + 1, n_moves] and bring it to the current index
-        //PickBestMove(scored_moves, n_pseudolegal_moves, move_index);
+        PickBestMove(scored_moves, n_pseudolegal_moves, move_index);
         move = scored_moves[move_index].move;
         // white to move
         if(pos.white_to_move){
