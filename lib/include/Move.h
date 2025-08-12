@@ -22,6 +22,11 @@
 //      flags = 15 -> capture and promotion to queen
 typedef uint16_t Move;
 
+struct ScoredMove{
+    Move move;
+    int score;
+};
+
 struct StateMemory{
     uint64_t en_passant_target_square;
     uint8_t moved_piece_index = 0;
@@ -105,10 +110,9 @@ inline void PrintMove(const Move& move){
 //      bonus for promotion = 2000 
 //      bonus for promotion to queen = 18000 --> promo bandwidth [2200 ; 20900]
 //      bonus for capture = 20000 --> captures bandwidth [10100 (eat pawn with king) ; 29900 (eat king with pawn)]
-/*
 inline int ScoreMove(Move& move){
-    int score = 0;
-    uint8_t piece = MovePiece(move);
+    int score;
+    /*uint8_t piece = MovePiece(move);
     uint8_t captured_piece = MoveCaptured(move);
     uint8_t promoted_piece = MovePromotion(move);
     uint8_t flags = MoveFlags(move);
@@ -124,6 +128,10 @@ inline int ScoreMove(Move& move){
     // check
     if(is_check){
         score += BONUS_FOR_CHECKS + abs(PIECES_VALUES[piece]);
-    }
+    }*/
+
+    int flags = move >> 12;
+    score = flags;
+
     return score;
-}*/
+}

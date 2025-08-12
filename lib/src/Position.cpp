@@ -222,48 +222,48 @@ void PrintBoard(Position pos){
 int PositionScore(Position& pos){
     // we assume that material value is pre-calculated! It should be done when a position is generated
     // this is the starting point for the position score
-/*    int score = pos.white_material_value + pos.black_material_value;
-    
-    // loop over the pieces to add extra value based on the position of the piece
+    int score = 0;
     unsigned long square;
     uint64_t piece;
+    
+    // loop over the pieces to add extra value based on the position of the piece
+    
     // white king
-    piece = pos.pieces[0];
+    /*piece = pos.pieces[0];
     if(piece){
         _BitScanForward64(&square, piece);
-        if(pos.black_material_value < -2000){ // very rough logic to distinguish middlegame fron endgame
-            score += kingPST_Middlegame[square];
-        }
-        else{
-            score += kingPST_Endgame[square];
-        }
-    }
+        score += WHITE_KING_PST_MIDDLEGAME[square];
+    }*/
     // white queen
     piece = pos.pieces[1];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        score += queenPST[square];
+        //score += QUEEN_PST[square];
+        score += WHITE_QUEEN_VALUE;
         clear_last_active_bit(piece);   
     }
     // white rook
     piece = pos.pieces[2];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        score += rookPST[square];
+        //score += WHITE_ROOK_PST[square];
+        score += WHITE_ROOK_VALUE;
         clear_last_active_bit(piece);   
     }
     // white bishop
     piece = pos.pieces[3];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        score += bishopPST[square];
+        //score += BISHOP_PST[square];
+        score += WHITE_BISHOP_VALUE;
         clear_last_active_bit(piece);   
     }
     // white knight
     piece = pos.pieces[4];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        score += knightPST[square];
+        //score += KNIGHT_PST[square];
+        score += WHITE_KNIGHT_VALUE;
         clear_last_active_bit(piece);   
         // bonus for outpost squares ...
     }
@@ -271,51 +271,51 @@ int PositionScore(Position& pos){
     piece = pos.pieces[5];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        score += white_pawnPST[square];
+        //score += WHITE_PAWN_PST[square];
+        score += WHITE_PAWN_VALUE;
         clear_last_active_bit(piece);   
         // bonus for passed pawns ...
-        if(mask_white_passed_pawn[square] & pos.pieces[11]){ continue; }
+        /*if(mask_white_passed_pawn[square] & pos.pieces[11]){ continue; }
         else{
             score += BONUS_FOR_PASSED_PAWNS;
-        }
+        }*/
     }
     // black king
-    piece = pos.pieces[6];
+    /*piece = pos.pieces[6];
     if(piece){
         _BitScanForward64(&square, piece);
-        if(pos.white_material_value > 2000){ // very rough logic to distinguish middlegame fron endgame
-            score -= kingPST_Middlegame[56 - square + 2*(square%8)];
-        }
-        else{
-            score -= kingPST_Endgame[56 - square + 2*(square%8)];
-        }
-    }
+        score -= BLACK_KING_PST_MIDDLEGAME[square];
+    }*/
     // black queen
     piece = pos.pieces[7];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        score -= queenPST[56 - square + 2*(square%8)];
+        //score -= QUEEN_PST[square];
+        score += BLACK_QUEEN_VALUE;
         clear_last_active_bit(piece);   
     }
     // black rook
     piece = pos.pieces[8];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        score -= rookPST[56 - square + 2*(square%8)];
+        //score -= BLACK_ROOK_PST[square];
+        score += BLACK_ROOK_VALUE;
         clear_last_active_bit(piece);   
     }
     // black bishop
     piece = pos.pieces[9];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        score -= bishopPST[56 - square + 2*(square%8)];
+        //score -= BISHOP_PST[square];
+        score += BLACK_BISHOP_VALUE;
         clear_last_active_bit(piece);   
     }
     // black knight
     piece = pos.pieces[10];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        score -= knightPST[56 - square + 2*(square%8)];
+        //score -= KNIGHT_PST[square];
+        score += BLACK_KNIGHT_VALUE;
         clear_last_active_bit(piece);   
         // bonus for outpost ...
     }
@@ -323,21 +323,22 @@ int PositionScore(Position& pos){
     piece = pos.pieces[11];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        score -= black_pawnPST[square];
+        //score -= BLACK_PAWN_PST[square];
+        score += BLACK_PAWN_VALUE;
         clear_last_active_bit(piece);
         // bonus for passed pawns: the black pawn looks forward and if no white pawns are found, it is a passer
-        if(mask_black_passed_pawn[square] & pos.pieces[5]){ continue; }
+        /*if(mask_black_passed_pawn[square] & pos.pieces[5]){ continue; }
         else{
             score -= BONUS_FOR_PASSED_PAWNS;
-        }
+        }*/
     }
 
     // malus for doubled pawns (or bonus for opponent's doubled pawns):
-    score += (
+    /*score += (
         count_doubled_pawns(pos.pieces[11]) - count_doubled_pawns(pos.pieces[5])
-    ) * MALUS_FOR_DOUBLED_PAWNS; 
-*/
-    return 0;
+    ) * MALUS_FOR_DOUBLED_PAWNS; */
+
+    return score;
 }
 
 void PseudoLegalMoves(Position& pos, Move* moves){
@@ -764,8 +765,13 @@ void PseudoLegalMoves(Position& pos, Move* moves){
             }   
         }
     }
-    pos.n_legal_moves = move_index;
+    pos.n_pseudolegal_moves = move_index;
 }
+
+const uint64_t WHITE_ROOK_KINGSIDE_CASTLE_MASK = (1ULL << 61) | (1ULL << 63);
+const uint64_t WHITE_ROOK_QUEENSIDE_CASTLE_MASK = (1ULL << 56) | (1ULL << 59);
+const uint64_t BLACK_ROOK_KINGSIDE_CASTLE_MASK = (1ULL << 7) | (1ULL << 5);
+const uint64_t BLACK_ROOK_QUEENSIDE_CASTLE_MASK = (1ULL << 3) | 1ULL;
 
 void MakeMove(Position& pos, const Move& move, StateMemory& state){
     uint8_t from, to, flags;
@@ -837,17 +843,13 @@ void MakeMove(Position& pos, const Move& move, StateMemory& state){
         // Handle castling
         if(flags == 2){// kingside castle
             // transfer the rook
-            pos.pieces[2] ^= (1ULL << 63) | (1ULL << 61);
-            pos.white_pieces ^= (1ULL << 63) | (1ULL << 61);
-            //bit_clear_opt(pos.pieces[2], 63); bit_set_opt(pos.pieces[2], 61);
-            //bit_clear_opt(pos.white_pieces, 63); bit_set_opt(pos.white_pieces, 61);
+            pos.pieces[2] ^= WHITE_ROOK_KINGSIDE_CASTLE_MASK;
+            pos.white_pieces ^= WHITE_ROOK_KINGSIDE_CASTLE_MASK;
         }
         else if(flags == 3){// queenside castle
             // transfer the rook
-            pos.pieces[2] ^= (1ULL << 56) | (1ULL << 59);
-            pos.white_pieces ^= (1ULL << 56) | (1ULL << 59);
-            //bit_clear_opt(pos.pieces[2], 56); bit_set_opt(pos.pieces[2], 59);
-            //bit_clear_opt(pos.white_pieces, 56); bit_set_opt(pos.white_pieces, 59);
+            pos.pieces[2] ^= WHITE_ROOK_QUEENSIDE_CASTLE_MASK;
+            pos.white_pieces ^= WHITE_ROOK_QUEENSIDE_CASTLE_MASK;
         }
 
         // CASTLING RIGHTS
@@ -942,17 +944,13 @@ void MakeMove(Position& pos, const Move& move, StateMemory& state){
         // Handle castling
         if(flags == 2){// kingside castle
             // transfer the rook
-            pos.pieces[8] ^= (1ULL << 7) | (1ULL << 5);
-            pos.black_pieces ^= (1ULL << 7) | (1ULL << 5);
-            //bit_clear_opt(pos.pieces[8], 7); bit_set_opt(pos.pieces[8], 5);
-            //bit_clear_opt(pos.black_pieces, 7); bit_set_opt(pos.black_pieces, 5);
+            pos.pieces[8] ^= BLACK_ROOK_KINGSIDE_CASTLE_MASK;
+            pos.black_pieces ^= BLACK_ROOK_KINGSIDE_CASTLE_MASK;
         }
         else if(flags == 3){// queenside castle
             // transfer the rook
-            pos.pieces[8] ^= (1ULL << 3) | 1ULL;
-            pos.black_pieces ^= (1ULL << 3) | 1ULL;
-            //bit_clear_opt(pos.pieces[8], 0); bit_set_opt(pos.pieces[8], 3);
-            //bit_clear_opt(pos.black_pieces, 0); bit_set_opt(pos.black_pieces, 3);
+            pos.pieces[8] ^= BLACK_ROOK_QUEENSIDE_CASTLE_MASK;
+            pos.black_pieces ^= BLACK_ROOK_QUEENSIDE_CASTLE_MASK;
         }
         // CASTLING RIGHTS
         // save current castling rights 
@@ -993,12 +991,9 @@ void UnmakeMove(Position& pos, const Move& move, const StateMemory& state){
     // reposition the moved piece
     bit_clear_opt(pos.pieces[state.moved_piece_index], to);
     bit_set_opt(pos.pieces[state.moved_piece_index], from);
-    //pos.pieces[state.moved_piece_index] ^= (1ULL << to) | (1ULL << from);
 
     // black made the pseudomove
     if(pos.white_to_move){
-        //bit_clear_opt(pos.black_pieces, to);
-        //bit_set_opt(pos.black_pieces, from);
         pos.black_pieces ^= (1ULL << from) | (1ULL << to);
         // reposition the captured piece
         if(state.captured_piece_index != 12){
@@ -1012,7 +1007,6 @@ void UnmakeMove(Position& pos, const Move& move, const StateMemory& state){
                 bit_set_opt(pos.pieces[state.captured_piece_index], to);
                 bit_set_opt(pos.white_pieces, to);
             }
-            //pos.pieces[state.captured_piece_index] = state.captured_piece;
         }
         // remove promoted piece and restore the pawn 
         if(state.promoted_piece_index != 12){
@@ -1021,16 +1015,12 @@ void UnmakeMove(Position& pos, const Move& move, const StateMemory& state){
         }
         // in case of castling, reposition the rook correctly
         if(flags == 2){ // kingside
-            pos.pieces[8] ^= (1ULL << 5) | (1ULL << 7);
-            //bit_clear_opt(pos.black_pieces, 5);
-            //bit_set_opt(pos.black_pieces, 7);
-            pos.black_pieces ^= (1ULL << 5) | (1ULL << 7);
+            pos.pieces[8] ^= BLACK_ROOK_KINGSIDE_CASTLE_MASK;
+            pos.black_pieces ^= BLACK_ROOK_KINGSIDE_CASTLE_MASK;
         }
         else if(flags == 3){ // queenside
-            pos.pieces[8] ^= (1ULL << 3) | 1ULL;
-            //bit_clear_opt(pos.black_pieces, 3);
-            //bit_set_opt(pos.black_pieces, 0);
-            pos.black_pieces ^= (1ULL << 3) | 1ULL;
+            pos.pieces[8] ^= BLACK_ROOK_QUEENSIDE_CASTLE_MASK;
+            pos.black_pieces ^= BLACK_ROOK_QUEENSIDE_CASTLE_MASK;
         }
         // restore group bitboards
         pos.all_pieces = pos.white_pieces | pos.black_pieces;
@@ -1050,8 +1040,6 @@ void UnmakeMove(Position& pos, const Move& move, const StateMemory& state){
 
     // if white made the pseudomove 
     else{
-        //bit_clear_opt(pos.white_pieces, to);
-        //bit_set_opt(pos.white_pieces, from);
         pos.white_pieces ^= (1ULL << from) | (1ULL << to);
         // reposition the captured piece
         if(state.captured_piece_index != 12){
@@ -1072,16 +1060,12 @@ void UnmakeMove(Position& pos, const Move& move, const StateMemory& state){
         }
         // in case of castling, reposition the rook correctly
         if(flags == 2){ // kingside
-            pos.pieces[2] ^= (1ULL << 61) | (1ULL << 63);
-            pos.white_pieces ^= (1ULL << 61) | (1ULL << 63);
-            //bit_clear_opt(pos.white_pieces, 61);
-            //bit_set_opt(pos.white_pieces, 63);
+            pos.pieces[2] ^= WHITE_ROOK_KINGSIDE_CASTLE_MASK;
+            pos.white_pieces ^= WHITE_ROOK_KINGSIDE_CASTLE_MASK;
         }
         else if(flags == 3){// queenside
-            pos.pieces[2] ^= (1ULL << 59) | (1ULL << 56);
-            //bit_clear_opt(pos.white_pieces, 59);
-            //bit_set_opt(pos.white_pieces, 56);
-            pos.white_pieces ^= (1ULL << 59) | (1ULL << 56);
+            pos.pieces[2] ^= WHITE_ROOK_QUEENSIDE_CASTLE_MASK;
+            pos.white_pieces ^= WHITE_ROOK_QUEENSIDE_CASTLE_MASK;
         }
         // restore group bitboards
         pos.all_pieces = pos.white_pieces | pos.black_pieces;
@@ -1100,11 +1084,59 @@ void UnmakeMove(Position& pos, const Move& move, const StateMemory& state){
     }
 }
 
+bool SquareIsAttacked(Position& pos, const unsigned long int square){
+    uint64_t attacks; 
+    MaskAndMagic mm;
+    // if white to move: white is the attacker
+    if(pos.white_to_move){
+        // 1. check attacks from opponent's king 
+        attacks = king_covered_squares_bitboards[square];
+        if(attacks & pos.pieces[0]){ return true; }
+        // 2: check attacks from  knight
+        attacks = knight_covered_squares_bitboards[square];
+        if(attacks & pos.pieces[4]){ return true; }
+        // 3: check attacks from  pawns
+        attacks = black_pawn_covered_squares_bitboards[square];
+        if(attacks & pos.pieces[5]){ return true; }
+        // 4: check attacks from diagonal directions
+        mm = bishop_mm[square];
+        attacks = bishop_covered_squares_bb[square][((pos.all_pieces & mm.mask) * mm.magic) >> shift_bishop];
+        if(attacks & (pos.pieces[1] | pos.pieces[3])){ return true; }
+        // 5: check attacks from horizontal or vertical directions
+        mm = rook_mm[square];
+        attacks = rook_covered_squares_bb[square][((pos.all_pieces & mm.mask) * mm.magic) >> shift_rook];
+        if(attacks & (pos.pieces[1] | pos.pieces[2])){ return true; }
+    }
+    // else black is the attacker
+    else{
+        // 1. check attacks from opponent's king 
+        attacks = king_covered_squares_bitboards[square];
+        if(attacks & pos.pieces[6]){ return true; }
+        // 2: check attacks from  knight
+        attacks = knight_covered_squares_bitboards[square];
+        if(attacks & pos.pieces[10]){ return true; }
+        // 3: check attacks from  pawns
+        attacks = white_pawn_covered_squares_bitboards[square];
+        if(attacks & pos.pieces[11]){ return true; }
+        // 4: check attacks from diagonal directions
+        mm = bishop_mm[square];
+        attacks = bishop_covered_squares_bb[square][((pos.all_pieces & mm.mask) * mm.magic) >> shift_bishop];
+        if(attacks & (pos.pieces[7] | pos.pieces[9])){ return true; }
+        // 5: check attacks from horizontal or vertical directions
+        mm = rook_mm[square];
+        attacks = rook_covered_squares_bb[square][((pos.all_pieces & mm.mask) * mm.magic) >> shift_rook];
+        if(attacks & (pos.pieces[7] | pos.pieces[8])){ return true; }
+    }
+    // if survived till here...
+    return false;
+}
+
+
 bool IsLegal(Position& pos, const Move& move){ 
     uint64_t attacks;
     MaskAndMagic mm;
     unsigned long king_square;
-    uint8_t flags = (move >> 12);
+    uint8_t flags = (move >> 12); 
     // if white to move and black's king is in check, pos is illegal
     if(pos.white_to_move){
         // step 1: get black's king position
@@ -1128,16 +1160,62 @@ bool IsLegal(Position& pos, const Move& move){
         if(attacks & (pos.pieces[1] | pos.pieces[2])){ return false; }
         // if black just castled (so now is white to move), control that the black king was not passing through a square covered by white
         if(flags == 2){
-            pos.white_covered_squares = GetCoveredSquares(pos.pieces, pos.all_pieces, true);
+            /*pos.white_covered_squares = GetCoveredSquares(pos.pieces, pos.all_pieces, true);
             if(pos.white_covered_squares & BLACK_KINGSIDE_CASTLE_MASK){
                 return false;
-            }
+            }*/
+            if(63624ULL & pos.pieces[0]){ return false; }
+            if(16309248ULL & pos.pieces[4]){ return false; }
+            if(63488ULL & pos.pieces[5]){ return false; }
+            mm = bishop_mm[6];
+            attacks = bishop_covered_squares_bb[6][((pos.all_pieces & mm.mask) * mm.magic) >> shift_bishop];
+            if(attacks & (pos.pieces[1] | pos.pieces[3])){ return false; }
+            mm = rook_mm[6];
+            attacks = rook_covered_squares_bb[6][((pos.all_pieces & mm.mask) * mm.magic) >> shift_rook];
+            if(attacks & (pos.pieces[1] | pos.pieces[2])){ return false; }
+
+            mm = bishop_mm[5];
+            attacks = bishop_covered_squares_bb[5][((pos.all_pieces & mm.mask) * mm.magic) >> shift_bishop];
+            if(attacks & (pos.pieces[1] | pos.pieces[3])){ return false; }
+            mm = rook_mm[5];
+            attacks = rook_covered_squares_bb[5][((pos.all_pieces & mm.mask) * mm.magic) >> shift_rook];
+            if(attacks & (pos.pieces[1] | pos.pieces[2])){ return false; }
+
+            mm = bishop_mm[4];
+            attacks = bishop_covered_squares_bb[4][((pos.all_pieces & mm.mask) * mm.magic) >> shift_bishop];
+            if(attacks & (pos.pieces[1] | pos.pieces[3])){ return false; }
+            mm = rook_mm[4];
+            attacks = rook_covered_squares_bb[4][((pos.all_pieces & mm.mask) * mm.magic) >> shift_rook];
+            if(attacks & (pos.pieces[1] | pos.pieces[2])){ return false; }
         }
         else if(flags == 3){
-            pos.white_covered_squares = GetCoveredSquares(pos.pieces, pos.all_pieces, true);
+            /*pos.white_covered_squares = GetCoveredSquares(pos.pieces, pos.all_pieces, true);
             if(pos.white_covered_squares & BLACK_QUEENSIDE_CASTLE_MASK){
                 return false;
-            }
+            }*/
+            if(15906ULL & pos.pieces[0]){ return false; }
+            if(4093696ULL & pos.pieces[4]){ return false; }
+            if(15872ULL & pos.pieces[5]){ return false; }
+            mm = bishop_mm[2];
+            attacks = bishop_covered_squares_bb[2][((pos.all_pieces & mm.mask) * mm.magic) >> shift_bishop];
+            if(attacks & (pos.pieces[1] | pos.pieces[3])){ return false; }
+            mm = rook_mm[2];
+            attacks = rook_covered_squares_bb[2][((pos.all_pieces & mm.mask) * mm.magic) >> shift_rook];
+            if(attacks & (pos.pieces[1] | pos.pieces[2])){ return false; }
+
+            mm = bishop_mm[3];
+            attacks = bishop_covered_squares_bb[3][((pos.all_pieces & mm.mask) * mm.magic) >> shift_bishop];
+            if(attacks & (pos.pieces[1] | pos.pieces[3])){ return false; }
+            mm = rook_mm[3];
+            attacks = rook_covered_squares_bb[3][((pos.all_pieces & mm.mask) * mm.magic) >> shift_rook];
+            if(attacks & (pos.pieces[1] | pos.pieces[2])){ return false; }
+
+            mm = bishop_mm[4];
+            attacks = bishop_covered_squares_bb[4][((pos.all_pieces & mm.mask) * mm.magic) >> shift_bishop];
+            if(attacks & (pos.pieces[1] | pos.pieces[3])){ return false; }
+            mm = rook_mm[4];
+            attacks = rook_covered_squares_bb[4][((pos.all_pieces & mm.mask) * mm.magic) >> shift_rook];
+            if(attacks & (pos.pieces[1] | pos.pieces[2])){ return false; }
         }
         // if all the previous legality checks are passed, return true
         return true;
@@ -1165,7 +1243,6 @@ bool IsLegal(Position& pos, const Move& move){
         if(attacks & (pos.pieces[7] | pos.pieces[8])){ return false; }
         if(flags == 2){
             pos.black_covered_squares = GetCoveredSquares(pos.pieces, pos.all_pieces, false);
-            //if(pos.pieces[0] & pos.black_covered_squares){ return false; }
             if(pos.black_covered_squares & WHITE_KINGSIDE_CASTLE_MASK){
                 return false;
             }

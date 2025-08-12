@@ -34,7 +34,7 @@ struct Position
     uint64_t all_pieces = 0ULL;
     uint64_t white_covered_squares = 0ULL;
     uint64_t black_covered_squares = 0ULL;
-    uint8_t n_legal_moves = 0;
+    uint8_t n_pseudolegal_moves = 0;
 };
 
 Position PositionFromFen(std::string fen);
@@ -51,6 +51,8 @@ int PositionScore(Position& pos);
 void PseudoLegalMoves(Position& pos, Move* moves);
 
 void MakeMove(Position& pos, const Move& move, StateMemory& state);
+
+bool SquareIsAttacked(Position& pos, const unsigned long int square);
 
 bool IsLegal(Position& pos, const Move& move);
 

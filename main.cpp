@@ -18,17 +18,19 @@ int main(){
     TTInit();
     PreComputeBitboards(true); // true = read from file
 
-/*    std::string pos_fen;
+    std::string pos_fen;
     unsigned int max_depth;
     std::cout << "Insert a valid FEN string \n";
     std::getline( std::cin, pos_fen );
     Position pos = PositionFromFen(pos_fen);
     PrintBoard(pos);
     std::cout << "Insert max depth of search \n";
-    std::cin >> max_depth; */
+    std::cin >> max_depth;
 
     // start clock 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
+    Move best_move = IterativeDeepening(pos, 1, max_depth, 1);
 
 /*    MoveNew pseudolegal_moves[256];
     for(int move_index = 0; move_index < 256; move_index++){
@@ -41,7 +43,6 @@ int main(){
 
 //    IterativeDeepening(pos, 2, max_depth, 2);
     //PerftTesting();
-    PerftNewTesting();
     
 /*    int perft = 0, total = 0;
 
