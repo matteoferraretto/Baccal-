@@ -109,87 +109,80 @@ void PerftTesting(){
 }
 
 
-int QuiescenceSearch(Position& pos, int alpha, int beta, int& n_explored_positions){
-    int best_evaluation = PositionScore(pos);
-    
-    // manage 50-moves rule
+int QuiescenceSearch(Position& pos, int alpha, int beta, int quiesce_ply){
     if(pos.half_move_counter >= 50){
-        n_explored_positions++; 
         return 0;
     }
 
-    if (pos.white_to_move) {
-        if (best_evaluation >= beta)
-            return beta;  // fail-high cutoff
-        if (best_evaluation > alpha)
-            alpha = best_evaluation;
-    } else {
-        if (best_evaluation <= alpha)
-            return alpha; // fail-low cutoff
-        if (best_evaluation < beta)
-            beta = best_evaluation;
-    }
-
+    if(quiesce_ply > MAX_QUIESCE_DEPTH)
+        return PositionScore(pos);
+    
     // else generate all the new positions applying all the legal moves 
     // then recursively call this function and update best_evaluation if needed
-    int eval;
-    Move move;
+    int eval, best_evaluation;
     uint8_t flags;
+    Move move;
     StateMemory state;
     Move moves[MAX_NUMBER_OF_MOVES];
     PseudoLegalMoves(pos, moves);
+    uint8_t n_pseudolegal_moves = pos.n_pseudolegal_moves;
 
+    ScoredMove scored_moves[MAX_NUMBER_OF_MOVES];
+    for(uint8_t move_index = 0; move_index < n_pseudolegal_moves; move_index++){
+        scored_moves[move_index].move = moves[move_index];
+        scored_moves[move_index].score = ScoreMove(moves[move_index]);
+    }
+
+    bool found_aggressive_move = false;
     // manage stalemate and checkmate: no legal moves in the current position
-    //best_evaluation = pos.white_to_move ? negative_infinity : positive_infinity;
+    best_evaluation = pos.white_to_move ? negative_infinity : positive_infinity;
 
     // ---------------------------------------------------------
     // ------ MIN - MAX SEARCH WITH ALPHA - BETA PRUNING -------
     // ---------------------------------------------------------
     int original_alpha = alpha, original_beta = beta;
     // Loop again to recursively iterate the function 
-    for(int move_index = 0; move_index < pos.n_pseudolegal_moves; move_index++){
+    for(int move_index = 0; move_index < n_pseudolegal_moves; move_index++){
         // pick the best move in the range [move_index + 1, n_moves] and bring it to the current index
-        move = moves[move_index];
-        flags = move << 12;
-        // don't consider the move if it's not an aggressive move (capture or promotion)
-        if(flags < 8 && flags != 5 && flags != 4){ continue; }
+        //PickBestMove(scored_moves, n_pseudolegal_moves, move_index);
+        move = scored_moves[move_index].move;
+        flags = move >> 12;
+        // skip quiet moves: only consider aggressive moves
+        if(flags < 8 && flags != 4 && flags != 5) continue;
         // white to move
         if(pos.white_to_move){
             MakeMove(pos, move, state);
             if(IsLegal(pos, move)){
-                eval = QuiescenceSearch(pos, alpha, beta, n_explored_positions);
+                found_aggressive_move = true;
+                eval = QuiescenceSearch(pos, alpha, beta, quiesce_ply + 1);
                 best_evaluation = std::max(best_evaluation, eval);
+                if(best_evaluation >= 100000){ UnmakeMove(pos, move, state); break; }
+                alpha = std::max(alpha, eval); // best evaluation for white encountered so far down the tree
+                if(beta <= alpha){ UnmakeMove(pos, move, state); break; } 
             }
             UnmakeMove(pos, move, state);
-            if(best_evaluation >= 100000){ break; }
-            alpha = std::max(alpha, eval); // best evaluation for white encountered so far down the tree
-            if(beta <= alpha){ break; } 
         }
         // black to move
         else{
             MakeMove(pos, move, state);
             if(IsLegal(pos, move)){
-                eval = QuiescenceSearch(pos, alpha, beta, n_explored_positions);
+                found_aggressive_move = true;
+                eval = QuiescenceSearch(pos, alpha, beta, quiesce_ply + 1);
                 best_evaluation = std::min(best_evaluation, eval);
+                if(best_evaluation <= -100000){ UnmakeMove(pos, move, state); break; }
+                beta = std::min(beta, eval);
+                if(beta <= alpha){ UnmakeMove(pos, move, state); break; }
             }
             UnmakeMove(pos, move, state);
-            if(best_evaluation <= -100000){ break; }
-            beta = std::min(beta, eval);
-            if(beta <= alpha){ break; }
         }
     }
 
-    if (pos.white_to_move) {
-        if (best_evaluation >= beta)
-            return beta;  // fail-high cutoff
-        if (best_evaluation > alpha)
-            alpha = best_evaluation;
-    } else {
-        if (best_evaluation <= alpha)
-            return alpha; // fail-low cutoff
-        if (best_evaluation < beta)
-            beta = best_evaluation;
+    // NO INTERESTING MOVES: OK, JUST RETURN THE POSITION SCORE
+    if(!found_aggressive_move){
+        return PositionScore(pos);
     }
+
+    return best_evaluation;
 }
 
 
@@ -225,7 +218,7 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, int& n_explore
     // limit case: at anti_depth = 0 just return the material value of the input position
     if(depth == 0){
         n_explored_positions++; 
-        return PositionScore(pos);
+        return QuiescenceSearch(pos, alpha, beta, 0);
     }
     // else generate all the new positions applying all the legal moves 
     // then recursively call this function and update best_evaluation if needed
@@ -292,11 +285,13 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, int& n_explore
             pos.white_to_move = false; // make a null move 
             // if it's attacked, CHECKMATE FOR BLACK
             if(SquareIsAttacked(pos, king_square)){
+                n_explored_positions++;
                 pos.white_to_move = true;
                 return (-100000-depth);
             }
             // if it's not attacked, STALEMATE!
             else{ 
+                n_explored_positions++;
                 pos.white_to_move = true;
                 return 0;
             }
@@ -308,11 +303,13 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, int& n_explore
             pos.white_to_move = true; // make a null move 
             // if it's attacked, CHECKMATE FOR WHITE
             if(SquareIsAttacked(pos, king_square)){
+                n_explored_positions++;
                 pos.white_to_move = false;
                 return (100000 + depth);
             }
             // if it's not attacked, STALEMATE!
             else{
+                n_explored_positions++;
                 pos.white_to_move = false;
                 return 0; 
             }
@@ -390,8 +387,10 @@ MoveAndPosition BestMove(Position pos, int depth){
 
 
 Move IterativeDeepening(Position& pos, int min_depth, int max_depth, int depth_step){
-    int eval;
+    int eval, best_eval;
+    best_eval = pos.white_to_move ? negative_infinity : positive_infinity;
     Move move;
+    Move best_move = 0;
     Move moves[MAX_NUMBER_OF_MOVES];
     int scores[MAX_NUMBER_OF_MOVES];
     StateMemory state;
@@ -435,17 +434,36 @@ Move IterativeDeepening(Position& pos, int min_depth, int max_depth, int depth_s
                 }
             }
             move = moves[idx];
+
+            // initialize the best move, if not initialized yet
+            if(best_move == 0) best_move = move;
+
+            // make the move and evaluate it
             MakeMove(pos, move, state);
             eval = BestEvaluation(pos, depth - 1, negative_infinity, positive_infinity, n_explored_positions);
             std::cout << "move: "; PrintMove(move);
             std::cout << "\t eval: " << eval << "\n"; 
             UnmakeMove(pos, move, state);
-            // update move score based on eval at current iteration
-            if(pos.white_to_move)
-                scores[idx] = eval;
-            else
-                scores[idx] = -eval;
+
+            // update best move if possible and the moves' score
+            if(pos.white_to_move){
+                scores[idx] = eval; // update move score
+                if(eval > best_eval){
+                    best_move = move; 
+                    best_eval = eval;
+                }
+            }
+            else{
+                scores[idx] = - eval;
+                if(eval < best_eval){
+                    best_move = move;
+                    best_eval = eval;
+                }
+            }
+
         }
+
+        std::cout << "Best move is "; PrintMove(best_move);
 
     }
 

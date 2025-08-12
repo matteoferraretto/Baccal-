@@ -32,7 +32,7 @@ void PerftTesting();
 // NULL MOVE LOGIC
 //bool SafeNullMoveSearch(Position& pos);
 int BestEvaluation(Position& pos, int depth, int alpha, int beta, int& n_explored_positions);
-int QuiescenceSearch(Position& pos, int alpha, int beta, int& n_explored_positions);
+int QuiescenceSearch(Position& pos, int alpha, int beta, int quiesce_ply);
 //MoveAndPosition BestMove(Position pos, int depth);
 
 // ITERATIVE DEEPENING
