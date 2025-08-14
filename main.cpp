@@ -7,10 +7,9 @@
 #include <Bitboards.h>
 #include <Move.h>
 #include <Baccala.h>
-#include <chrono>
 #include <TranspositionTable.h>
-#include <bitset>
 #include <fstream>
+
 
 int main(){
 
@@ -31,18 +30,6 @@ int main(){
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     Move best_move = IterativeDeepening(pos, 1, max_depth, 1);
-
-/*    MoveNew pseudolegal_moves[256];
-    for(int move_index = 0; move_index < 256; move_index++){
-        pseudolegal_moves[move_index] = 0;
-    }
-    MoveNew move;
-    StateMemory state;
-
-    PseudoLegalMoves(pos, pseudolegal_moves); */
-
-//    IterativeDeepening(pos, 2, max_depth, 2);
-    //PerftTesting();
     
 /*    int perft = 0, total = 0;
 
@@ -63,21 +50,7 @@ int main(){
 
     std::cout << "\nPerft = " << total << "\n"; */
 
-/*    MoveAndPosition legal_moves[256];
-    LegalMoves(pos, legal_moves);
-    size_t n_moves = pos.n_legal_moves;
-    for(int i=0; i<n_moves; i++){
-        MoveAndPosition m = legal_moves[i];
-        std::cout << "\t "; PrintMove(m.move);
-        std::cout << "\t " << Perft(m.position, max_depth-1) << "\n";
-        MoveAndPosition new_legal_moves[256];
-        LegalMoves(m.position, new_legal_moves);
-
-        for(int j=0; j<m.position.n_legal_moves; j++){
-            std::cout << "\t\t";
-            PrintMove(new_legal_moves[j].move);
-        }
-    } */
+    //PerftTesting();
 
     // stop clock 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();

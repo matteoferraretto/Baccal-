@@ -274,4 +274,4 @@ const int BONUS_FOR_CAPTURE = 20000;
 // constants relevant to Zobrist hasing
 const unsigned int MAX_CAPACITY_TT = 25000;
 
-const int MAX_QUIESCE_DEPTH = 3;
+const int MAX_QUIESCE_DEPTH = 4;

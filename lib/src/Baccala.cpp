@@ -6,6 +6,16 @@
 #include <TranspositionTable.h>
 #include <algorithm>
 #include <iostream>
+#include <chrono>
+
+std::chrono::steady_clock::time_point start_time;
+constexpr int THINK_TIME_MS = 5 * 60 * 1000; // minutes
+
+inline bool time_up(std::chrono::steady_clock::time_point start_time) {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - start_time
+    ).count() >= THINK_TIME_MS;
+}
 
 
 void ScoreAllMoves(ScoredMove* moves, uint8_t n_moves){
@@ -191,20 +201,20 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, int& n_explore
     // ----- RETRIEVE SCORE FROM TRANSPOSITION TABLE --------
     // ------------------------------------------------------
     // compute Zobrist key for the current position
-    //uint64_t zobrist_key = ZobristHashing(pos);
+    uint64_t zobrist_key = ZobristHashing(pos);
     // check if the move is already present in the transposition table:
     // if yes return a pointer to its memory address; if no return nullptr
-    //TTEntry* entry = TTProbe(zobrist_key);
+    TTEntry* entry = TTProbe(zobrist_key);
     // if the position is store and it has been analyzed better than what we are about to do here
     // then just return the already found score
-    /*if(entry && entry->depth >= depth){
+    if(entry && entry->depth >= depth){
         if (entry->flag == EXACT)
             return entry->score;
         else if (entry->flag == LOWERBOUND && entry->score >= beta)
             return entry->score;
         else if (entry->flag == UPPERBOUND && entry->score <= alpha)
             return entry->score;
-    }*/
+    }
 
     // -----------------------------------------------------------------------
     // -- MANAGE EARLY EXIT CASES: DEPTH=0; DRAWS; STALEMATE; CHECKMATE ETC --
@@ -320,14 +330,14 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, int& n_explore
     // --------------------------------------------------------
     // ------ STORE POSITION IN THE TRANSPOSITION TABLE -------
     // --------------------------------------------------------
-    /*NodeFlag flag;
+    NodeFlag flag;
     if (best_evaluation <= original_alpha)
         flag = UPPERBOUND;
     else if (best_evaluation >= original_beta)
         flag = LOWERBOUND;
     else
         flag = EXACT;
-    TTStore(depth, zobrist_key, best_evaluation, flag);*/
+    TTStore(depth, zobrist_key, best_evaluation, flag);
 
     return best_evaluation;
 }
@@ -387,10 +397,13 @@ MoveAndPosition BestMove(Position pos, int depth){
 
 
 Move IterativeDeepening(Position& pos, int min_depth, int max_depth, int depth_step){
-    int eval, best_eval;
-    best_eval = pos.white_to_move ? negative_infinity : positive_infinity;
+    // start the clock
+    std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+
+    int eval, best_eval_this_depth;
+    int best_eval = pos.white_to_move ? negative_infinity : positive_infinity;
     Move move;
-    Move best_move = 0;
+    Move best_move = 0, best_move_this_depth = 0;
     Move moves[MAX_NUMBER_OF_MOVES];
     int scores[MAX_NUMBER_OF_MOVES];
     StateMemory state;
@@ -418,13 +431,22 @@ Move IterativeDeepening(Position& pos, int min_depth, int max_depth, int depth_s
 
     // ITERATIVE DEEPENING LOOP
     for(int depth = min_depth; depth <= max_depth; depth++){
+
+        // Reset stuff
+        best_eval_this_depth = pos.white_to_move ? negative_infinity : positive_infinity;
+        best_move_this_depth = 0;
         int n_explored_positions = 0;
-        StateMemory state;
 
         std::cout << "\n------------------------------------\nIterative Deepening at depth " << depth << "\n";
 
         // Loop over legal moves
         for(int idx = 0; idx < n_legal_moves; idx++){
+
+            // time out 
+            if(time_up(start_time)){
+                std::cout << "Time out. Best move is "; PrintMove(best_move);
+                return best_move;
+            }
 
             // pick the best move down the list (from the current index)
             for(int j = idx + 1; j < n_legal_moves; j++){
@@ -434,23 +456,31 @@ Move IterativeDeepening(Position& pos, int min_depth, int max_depth, int depth_s
                 }
             }
             move = moves[idx];
+            std::cout << "move: "; PrintMove(move);
+
+            // if move leads to forced loss, do not consider it!
+            if(scores[idx] < - 100000){ std::cout << "\t eval: forced loss\n"; continue; }
+            else if(scores[idx] > 100000){ std::cout << "\t eval: forced win in " << scores[idx] - depth + 1 << " moves.\n"; break; }
 
             // initialize the best move, if not initialized yet
-            if(best_move == 0) best_move = move;
+            if(best_move_this_depth == 0) best_move_this_depth = move;
 
             // make the move and evaluate it
             MakeMove(pos, move, state);
             eval = BestEvaluation(pos, depth - 1, negative_infinity, positive_infinity, n_explored_positions);
-            std::cout << "move: "; PrintMove(move);
             std::cout << "\t eval: " << eval << "\n"; 
             UnmakeMove(pos, move, state);
 
             // update best move if possible and the moves' score
             if(pos.white_to_move){
                 scores[idx] = eval; // update move score
-                if(eval > best_eval){
-                    best_move = move; 
-                    best_eval = eval;
+                if(eval > best_eval_this_depth){
+                    best_move_this_depth = move; 
+                    best_eval_this_depth = eval;
+                }
+                if(best_eval_this_depth > best_eval){
+                    best_move = best_move_this_depth;
+                    best_eval = best_eval_this_depth;
                 }
             }
             else{
@@ -459,13 +489,20 @@ Move IterativeDeepening(Position& pos, int min_depth, int max_depth, int depth_s
                     best_move = move;
                     best_eval = eval;
                 }
+                if(best_eval_this_depth < best_eval){
+                    best_move = best_move_this_depth;
+                    best_eval = best_eval_this_depth;
+                }
             }
 
         }
+
+        best_eval = best_eval_this_depth;
+        best_move = best_move_this_depth;
 
         std::cout << "Best move is "; PrintMove(best_move);
 
     }
 
-    return moves[0];
+    return best_move;
 }
