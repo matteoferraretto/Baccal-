@@ -608,6 +608,6 @@ void get_passed_pawn_masks(){
 }
 
 size_t count_doubled_pawns(uint64_t pawn_bitboard){
-    uint64_t bb = pawn_bitboard & (pawn_bitboard >> 8);
+    uint64_t bb = pawn_bitboard & ((pawn_bitboard >> 8) | (pawn_bitboard >> 16));
     return pop_count(bb);
 }

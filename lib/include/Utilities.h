@@ -22,10 +22,10 @@ const std::string sebastian_lague_fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q2
 // pieces values
 const int WHITE_ROOK_VALUE = 500;
 const int BLACK_ROOK_VALUE = -500;
-const int WHITE_BISHOP_VALUE = 300;
-const int BLACK_BISHOP_VALUE = -300;
-const int WHITE_KNIGHT_VALUE = 300;
-const int BLACK_KNIGHT_VALUE = -300;
+const int WHITE_BISHOP_VALUE = 330;
+const int BLACK_BISHOP_VALUE = -330;
+const int WHITE_KNIGHT_VALUE = 320;
+const int BLACK_KNIGHT_VALUE = -320;
 const int WHITE_QUEEN_VALUE = 900;
 const int BLACK_QUEEN_VALUE = -900;
 const int WHITE_KING_VALUE = 100000;
@@ -33,7 +33,7 @@ const int BLACK_KING_VALUE = -100000;
 const int WHITE_PAWN_VALUE = +100;
 const int BLACK_PAWN_VALUE = -100;
 const int PIECES_VALUES[12] = {
-    10000, 900, 500, 300, 300, 100, -10000, -900, -500, -300, -300, -100
+    10000, 900, 500, 330, 320, 100, -10000, -900, -500, -330, -320, -100
 };
 
 // geometry of the board
@@ -262,16 +262,9 @@ const int kingPST_Endgame[64] = {
 };
 
 // malus for every pair of doubled pawns (2 pairs of doubled pawns = - 1 pawn)
-const int MALUS_FOR_DOUBLED_PAWNS = 50; 
-const int BONUS_FOR_PASSED_PAWNS = 50;
-
-// constants relevant for move heuristic scoring
-const int BONUS_FOR_CHECKS = 1000;
-const int BONUS_FOR_PROMOTION = 2000;
-const int BONUS_FOR_QUEEN_PROMOTION = 18000;
-const int BONUS_FOR_CAPTURE = 20000;
+const int MALUS_FOR_DOUBLED_PAWNS = 25; 
+const int BONUS_FOR_PASSED_PAWNS = 25;
 
 // constants relevant to Zobrist hasing
 const unsigned int MAX_CAPACITY_TT = 25000;
-
-const int MAX_QUIESCE_DEPTH = 4;
+const int MAX_QUIESCE_DEPTH = 12; // <-- keep this value large: this is meant to be a safety measure to avoid lengthy calculations early on in the search

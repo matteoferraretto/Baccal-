@@ -27,7 +27,7 @@ struct TTEntry {
 
 // Transposition Table (TT)
 // it contains a table and methods to clear, fill or access the table
-const int TT_SIZE = 1 << 21; // 2^18 \approx 250 000 ---> we can do better!!
+const int TT_SIZE = 1 << 24; // 2^18 \approx 250 000 ---> we can do better!!
 
 extern TTEntry transposition_table[TT_SIZE];
 

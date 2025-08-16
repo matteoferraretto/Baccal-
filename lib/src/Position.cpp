@@ -238,7 +238,7 @@ int PositionScore(Position& pos){
     piece = pos.pieces[1];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        //score += QUEEN_PST[square];
+        score += QUEEN_PST[square];
         score += WHITE_QUEEN_VALUE;
         clear_last_active_bit(piece);   
     }
@@ -246,7 +246,7 @@ int PositionScore(Position& pos){
     piece = pos.pieces[2];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        //score += WHITE_ROOK_PST[square];
+        score += WHITE_ROOK_PST[square];
         score += WHITE_ROOK_VALUE;
         clear_last_active_bit(piece);   
     }
@@ -254,7 +254,7 @@ int PositionScore(Position& pos){
     piece = pos.pieces[3];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        //score += BISHOP_PST[square];
+        score += BISHOP_PST[square];
         score += WHITE_BISHOP_VALUE;
         clear_last_active_bit(piece);   
     }
@@ -262,7 +262,7 @@ int PositionScore(Position& pos){
     piece = pos.pieces[4];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        //score += KNIGHT_PST[square];
+        score += KNIGHT_PST[square];
         score += WHITE_KNIGHT_VALUE;
         clear_last_active_bit(piece);   
         // bonus for outpost squares ...
@@ -271,14 +271,14 @@ int PositionScore(Position& pos){
     piece = pos.pieces[5];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        //score += WHITE_PAWN_PST[square];
+        score += WHITE_PAWN_PST[square];
         score += WHITE_PAWN_VALUE;
         clear_last_active_bit(piece);   
         // bonus for passed pawns ...
-        /*if(mask_white_passed_pawn[square] & pos.pieces[11]){ continue; }
+        if(mask_white_passed_pawn[square] & pos.pieces[11]){ continue; }
         else{
             score += BONUS_FOR_PASSED_PAWNS;
-        }*/
+        }
     }
     // black king
     /*piece = pos.pieces[6];
@@ -290,7 +290,7 @@ int PositionScore(Position& pos){
     piece = pos.pieces[7];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        //score -= QUEEN_PST[square];
+        score -= QUEEN_PST[square];
         score += BLACK_QUEEN_VALUE;
         clear_last_active_bit(piece);   
     }
@@ -298,7 +298,7 @@ int PositionScore(Position& pos){
     piece = pos.pieces[8];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        //score -= BLACK_ROOK_PST[square];
+        score -= BLACK_ROOK_PST[square];
         score += BLACK_ROOK_VALUE;
         clear_last_active_bit(piece);   
     }
@@ -306,7 +306,7 @@ int PositionScore(Position& pos){
     piece = pos.pieces[9];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        //score -= BISHOP_PST[square];
+        score -= BISHOP_PST[square];
         score += BLACK_BISHOP_VALUE;
         clear_last_active_bit(piece);   
     }
@@ -314,7 +314,7 @@ int PositionScore(Position& pos){
     piece = pos.pieces[10];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        //score -= KNIGHT_PST[square];
+        score -= KNIGHT_PST[square];
         score += BLACK_KNIGHT_VALUE;
         clear_last_active_bit(piece);   
         // bonus for outpost ...
@@ -323,20 +323,20 @@ int PositionScore(Position& pos){
     piece = pos.pieces[11];
     while(piece){ // loop until all the white queens are considered
         _BitScanForward64(&square, piece);
-        //score -= BLACK_PAWN_PST[square];
+        score -= BLACK_PAWN_PST[square];
         score += BLACK_PAWN_VALUE;
         clear_last_active_bit(piece);
         // bonus for passed pawns: the black pawn looks forward and if no white pawns are found, it is a passer
-        /*if(mask_black_passed_pawn[square] & pos.pieces[5]){ continue; }
+        if(mask_black_passed_pawn[square] & pos.pieces[5]){ continue; }
         else{
             score -= BONUS_FOR_PASSED_PAWNS;
-        }*/
+        }
     }
 
     // malus for doubled pawns (or bonus for opponent's doubled pawns):
-    /*score += (
+    score += (
         count_doubled_pawns(pos.pieces[11]) - count_doubled_pawns(pos.pieces[5])
-    ) * MALUS_FOR_DOUBLED_PAWNS; */
+    ) * MALUS_FOR_DOUBLED_PAWNS; 
 
     return score;
 }
@@ -645,9 +645,8 @@ void PseudoLegalMoves(Position& pos, Move* moves){
             attacks &= not_your_pieces; // excluse self-capture
             while(attacks){
                 _BitScanForward64(&target_square, attacks); // find the target square
-                //is_capture = bit_get(pos.white_pieces, target_square);
-                //is_capture ? flags = 4 : flags = 0;
-                flags = (pos.white_pieces & (1ULL << target_square)) ? 4 : 0;
+                is_capture = bit_get(pos.white_pieces, target_square);
+                is_capture ? flags = 4 : flags = 0;
                 moves[move_index] = EncodeMove(square, target_square, flags);
                 move_index++;
                 clear_last_active_bit(attacks); 

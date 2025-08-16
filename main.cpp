@@ -29,6 +29,10 @@ int main(){
     // start clock 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
+    /*std::cout << "Poistion score: " << PositionScore(pos);
+    std::cout << "\n\t doubled pawns for white: " << count_doubled_pawns(pos.pieces[5]);
+    std::cout << "\n\t doubled pawns for black: " << count_doubled_pawns(pos.pieces[11]) << "\n";*/
+
     Move best_move = IterativeDeepening(pos, 1, max_depth, 1);
     
 /*    int perft = 0, total = 0;
