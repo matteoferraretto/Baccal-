@@ -2,48 +2,58 @@
 #include <cstdint>
 #include <Utilities.h>
 
+/*
 // change one --> change the others
 const int n_bits_rook = 12; // bits used for magic hashing with rooks
 const int n_bits_bishop = 9; // bits used for magic hashing with bishops
-constexpr int n_attacks_rook = 4096; // 2^n_bits_rook
-constexpr int n_attacks_bishop = 512; // 2^n_bits_bishop
-constexpr int shift_rook = 52; // 64 - n_bits_rook
-constexpr int shift_bishop = 55; // 64 - n_bits_bishop
+constexpr int n_attacks_rook = 1 << n_bits_rook; // 2^n_bits_rook
+constexpr int n_attacks_bishop = 1 << n_bits_bishop; // 2^n_bits_bishop
+constexpr int shift_rook = 64 - n_bits_rook; // 64 - n_bits_rook
+constexpr int shift_bishop = 64 - n_bits_bishop; // 64 - n_bits_bishop
+*/
+const uint8_t N_BITS_ROOK = 12;
+const uint8_t N_BITS_BISHOP = 9;
+constexpr uint16_t N_ATTACKS_ROOK = 1 << N_BITS_ROOK;
+constexpr uint16_t N_ATTACKS_BISHOP = 1 << N_BITS_BISHOP;
+constexpr uint8_t SHIFT_ROOK = 64 - N_BITS_ROOK;
+constexpr uint8_t SHIFT_BISHOP = 64 - N_BITS_BISHOP;
+
+
+// magic numbers 
+typedef uint64_t Magic;
 
 struct MaskAndMagic{
-    uint64_t mask;
-    uint64_t magic;
+    Bitboard mask = 0ULL;
+    Magic magic = 0ULL;
 };
 
 // arrays that store all the possible movements of the non-sliding pieces
 // this is used to avoid on-the-fly calculation during the min-max process
-extern uint64_t knight_covered_squares_bitboards[64]; 
-extern uint64_t king_covered_squares_bitboards[64];
-extern uint64_t white_pawn_covered_squares_bitboards[64];
-extern uint64_t black_pawn_covered_squares_bitboards[64]; // when pawns are in first or last raw the array contains garbage
-extern uint64_t white_pawn_advance_squares_bitboards[64];
-extern uint64_t black_pawn_advance_squares_bitboards[64];
+extern Bitboard knight_covered_squares_bitboards[64]; 
+extern Bitboard king_covered_squares_bitboards[64];
+extern Bitboard white_pawn_covered_squares_bitboards[64];
+extern Bitboard black_pawn_covered_squares_bitboards[64]; // when pawns are in first or last raw the array contains garbage
+extern Bitboard white_pawn_advance_squares_bitboards[64];
+extern Bitboard black_pawn_advance_squares_bitboards[64];
 
-// masks of relevant masks of sliding pieces
-extern uint64_t rook_masks[64];
-extern uint64_t rook_magics[64];
+// relevant masks of sliding pieces
+extern Bitboard rook_masks[64];
+extern Magic rook_magics[64];
 extern MaskAndMagic rook_mm[64];
-extern uint64_t *rook_covered_squares_bitboards;
-extern uint64_t rook_covered_squares_bb[64][4096];
+extern Bitboard rook_covered_squares_bb[64][N_ATTACKS_ROOK];
 
-extern uint64_t bishop_masks[64];
-extern uint64_t bishop_magics[64];
+extern Bitboard bishop_masks[64];
+extern Magic bishop_magics[64];
 extern MaskAndMagic bishop_mm[64];
-extern uint64_t *bishop_covered_squares_bitboards;
-extern uint64_t bishop_covered_squares_bb[64][512];
+extern Bitboard bishop_covered_squares_bb[64][N_ATTACKS_BISHOP];
 
 // functions that generate covered square bitboards for non-sliding pieces when the piece is in the square (i, j)
-uint64_t knight_covered_squares(int i, int j);
-uint64_t king_covered_squares(int i, int j);
-uint64_t white_pawn_covered_squares(int i, int j);
-uint64_t white_pawn_advance_squares(int i, int j);
-uint64_t black_pawn_covered_squares(int i, int j);
-uint64_t black_pawn_advance_squares(int i, int j);
+Bitboard KnightCoveredSquares(int i, int j);
+Bitboard KingCoveredSquares(int i, int j);
+Bitboard WhitePawnCoveredSquares(int i, int j);
+Bitboard WhitePawnAdvanceSquares(int i, int j);
+Bitboard BlackPawnCoveredSquares(int i, int j);
+Bitboard BlackPawnAdvanceSquares(int i, int j);
 
 
 // -------------- LOGIC FOR SLIDING PIECES ------------------------
@@ -59,8 +69,8 @@ uint64_t black_pawn_advance_squares(int i, int j);
 // . x x x x x x .
 // notice that the edges are excluded, because if a blocker is on the edge, the rook can still cover the edge site
 // the only pieces that can meaningfully block the sliding are NOT at the edge of the sliding 
-uint64_t rook_relevant_blockers_mask(int i, int j);
-uint64_t bishop_relevant_blockers_mask(int i, int j);
+Bitboard RookRelevantBlockersMask(int i, int j);
+Bitboard BishopRelevantBlockersMask(int i, int j);
 // NAIF HASHING: we simply take the mask of all pieces, apply the relevant mask and use the resulting number as a hash
 // rook mask for a1  all pieces bitboard
 // . . . . . . . .   . . . . x . . .        . . . . . . . .
@@ -106,33 +116,35 @@ uint64_t bishop_relevant_blockers_mask(int i, int j);
 // . . . . . . . .      . . . . . . . .
 // . . . x x . . .      . . . x . . . .
 // The magic number is simply generated via trial and error with random numbers.
-uint64_t rook_covered_squares_from_blockers(uint64_t blockers, int i, int j);
-uint64_t bishop_covered_squares_from_blockers(uint64_t blockers, int i, int j);
+
+Bitboard RookCoveredSquaresFromBlockers(Bitboard blockers, int i, int j);
+Bitboard BishopCoveredSquaresFromBlockers(Bitboard blockers, int i, int j);
 //
-uint64_t rook_blockers_from_integer(uint64_t b, int i, int j);
-uint64_t bishop_blockers_from_integer(uint64_t b, int i, int j);
+Bitboard RookBlockersFromInteger(Bitboard b, int i, int j);
+Bitboard BishopBlockersFromInteger(Bitboard b, int i, int j);
 //
-void find_rook_magic(unsigned int n_bits, uint64_t *attacks, uint64_t magics[64]);
-void find_bishop_magic(unsigned int n_bits, uint64_t *attacks, uint64_t magics[64]);
+void FindRookMagic();
+void FindBishopMagic();
+
 // function that returns hash index for a given config. of blockers on a gien square
-inline uint64_t rook_hash_index(const uint64_t& blockers, const int& square, const int& n_attacks){
+inline uint64_t RookHashIndex(const Bitboard& blockers, const unsigned long& square){
     MaskAndMagic mm = rook_mm[square];
-    uint64_t hash_index = ((blockers & mm.mask) * mm.magic) >> shift_rook;
-    return (square * n_attacks + hash_index);
+    uint64_t hash_index = ((blockers & mm.mask) * mm.magic) >> SHIFT_ROOK;
+    return hash_index;
 }
-inline uint64_t bishop_hash_index(const uint64_t& blockers, const int& square, const int& n_attacks){
-    uint64_t hash_index = ((blockers & bishop_masks[square]) * bishop_magics[square]) >> shift_bishop;
-    return (square * n_attacks + hash_index);
+inline uint64_t BishopHashIndex(const Bitboard& blockers, const unsigned long& square){
+    MaskAndMagic mm = bishop_mm[square];
+    uint64_t hash_index = ((blockers & mm.mask) * mm.magic) >> SHIFT_BISHOP;
+    return hash_index;
 }
 
 // Functions to run at the engine start that pre-calculates covered squares
 void PreComputeBitboards(bool retrieve_from_file);
 
-// clean-up
-void CleanBitboards();
 
 // generate the bitboard of covered squares from the pieces
-uint64_t GetCoveredSquares(uint64_t pieces[12], uint64_t& all_pieces, bool by_white);
+Bitboard GetCoveredSquares(Bitboard pieces[12], Bitboard& all_pieces, bool by_white);
+
 
 // Bitboards to detect passed pawns and outposts
 // . . . . . . . .
@@ -152,20 +164,20 @@ uint64_t GetCoveredSquares(uint64_t pieces[12], uint64_t& all_pieces, bool by_wh
 // . . . x x x . . 
 // . . . x x x . .
 // . . . . . . . .
-constexpr uint64_t file_A = 0x0101010101010101ULL;
-constexpr uint64_t files_bitboards[8] = {
+constexpr Bitboard file_A = 0x0101010101010101ULL;
+constexpr Bitboard files_bitboards[8] = {
     file_A, file_A << 1, file_A << 2, file_A << 3, file_A << 4, file_A << 5, file_A << 6, file_A << 7
 };
 
-constexpr uint64_t rank_1 = 0xFF;
-constexpr uint64_t ranks_bitboards[8] = {
+constexpr Bitboard rank_1 = 0xFF;
+constexpr Bitboard ranks_bitboards[8] = {
     rank_1, rank_1 << (8*1), rank_1 << (8*2), rank_1 << (8*3), rank_1 << (8*4), rank_1 << (8*5), rank_1 << (8*6), rank_1 << (8*7)
 };
 
-extern uint64_t mask_white_passed_pawn[64];
-extern uint64_t mask_black_passed_pawn[64];
+extern Bitboard mask_white_passed_pawn[64];
+extern Bitboard mask_black_passed_pawn[64];
 
-void get_passed_pawn_masks();
+void GetPassedPawnMasks();
 
 // Detect doubled pawns to penalize this situation
 // pawn bitboard b ---->    b &= b >> 8   -----> count the bits = n. doubled pawns
@@ -177,4 +189,4 @@ void get_passed_pawn_masks();
 // . x . . x . x .        . . . . x . . .
 // . . . . x . . .        . . . . . . . .
 // . . . . . . . .        . . . . . . . .
-size_t count_doubled_pawns(uint64_t pawn_bitboard);
+size_t count_doubled_pawns(Bitboard pawn_bb);

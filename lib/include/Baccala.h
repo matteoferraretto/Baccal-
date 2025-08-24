@@ -1,23 +1,17 @@
 #pragma once
 #include <Position.h>
 
-// Assign a heuristic score to all the moves
-//void ScoreAllMoves(MoveAndPosition* moves, uint8_t n_moves);
+extern uint64_t N_EXPLORED_NODES;
 
-// PICK MOVE
-// In the alpha-beta pruning, instead of sorting the moves, we just pick the move with highest score 
-// and we swap it to move it to the current index.
-// In the min-max search, we loop over the unsorted moves 
-// if we are currently considering the i-th move, we swap legal_moves[i] with legal_moves[best_idx],
-// where best_idx is the index of the move with highest score considering only moves from index i to n_moves.
-void PickBestMove(ScoredMove* moves, int n_moves, int i);
+// Initialize history heuristics
+void HistoryInit();
 
 // PERFT: performance testing
 // this is a standard test to check performance of move generation
 // Perft(pos, depth) returns the number of nodes at the horizon obtained from a given position at a given depth
 // this is also useful for debugging
 // see results at https://www.chessprogramming.org/Perft_Results
-unsigned long long int Perft(Position& pos, int depth, StateMemory state);
+unsigned long long int Perft(Position& pos, int depth);
 void PerftTesting();
 
 // MIN - MAX SEARCH with ALPHA - BETA PRUNING
@@ -29,11 +23,21 @@ void PerftTesting();
 // We explore the future and obtain an evaluation for M
 // exploring the future, we also update alpha and beta
 // 
-// NULL MOVE LOGIC
+// During the search we encounter 3 types of nodes:
+//  - EXACT NODES -> alpha < eval < beta: 
+//          the move is better than any other move seen so far for the side to move and cannot be refuted by the opponent 
+//          we use it to update alpha or beta
+//  - FAIL HIGH NODES -> if white moves and eval > beta; or if black moves and eval < alpha
+//          this means that the current move is very good for the side to move, but the opponent can avoid this line!
+//          we can prune this branch because the opponent will never allow this line.
+//  - FAIL LOW NODES: let best_eval be the eval of the best move for the side to move
+//          if white moves and best_eval < alpha or if black moves and best_eval > beta
+//          At this node, the side to move has no interesting options because all the moves lead to an evaluation which is worse than what we have found elsewhere
+
 //bool SafeNullMoveSearch(Position& pos);
-int BestEvaluation(Position& pos, int depth, int alpha, int beta, int& n_explored_positions, int& n_transpositions);
+int BestEvaluation(Position& pos, int depth, int alpha, int beta, bool previous_null);
+const int MAX_QUIESCE_DEPTH = 0;
 int QuiescenceSearch(Position& pos, int alpha, int beta, int quiesce_ply);
-//MoveAndPosition BestMove(Position pos, int depth);
 
 // ITERATIVE DEEPENING
 Move IterativeDeepening(Position& pos, int min_depth, int max_depth, int depth_step);

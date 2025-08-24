@@ -5,8 +5,10 @@ TTEntry transposition_table[TT_SIZE];
 void TTInit(){
     for(int i = 0; i < TT_SIZE; i++){
         transposition_table[i].depth = -1;
+        transposition_table[i].hash = 0ULL;
         transposition_table[i].flag = EXACT;
         transposition_table[i].score = 0;
+        transposition_table[i].best_idx = -1;
     }
 }
 
@@ -20,12 +22,13 @@ TTEntry* TTProbe(uint64_t zobrist_key){
     return nullptr;
 }
 
-void TTStore(int depth, uint64_t hash, int score, NodeFlag flag/*, Move best_move*/){
+void TTStore(int depth, uint64_t hash, int score, NodeFlag flag, int best_idx){
     TTEntry& entry = transposition_table[hash % TT_SIZE];
-    if(entry.hash != hash || depth > entry.depth){
-        entry = {depth, hash, score, flag/*, best_move*/};
+    if(entry.hash != hash || depth >= entry.depth){
+        entry = {depth, hash, score, flag, best_idx};
     }
 }
+
 
 ZobristTable zobrist_table;
 
@@ -44,14 +47,22 @@ void InitializeZobrist(){
     }
 }
 
+uint8_t CastlingHashing(const Position& pos) {
+    uint8_t castling_hash = 
+        static_cast<uint8_t>(pos.can_white_castle_kingside) | 
+        (static_cast<uint8_t>(pos.can_white_castle_queenside) << 1) | 
+        (static_cast<uint8_t>(pos.can_black_castle_kingside) << 2) |
+        (static_cast<uint8_t>(pos.can_black_castle_queenside) << 3);
+    return castling_hash;
+}
+
 uint64_t ZobristHashing(Position& pos) {
     // initialize value of 0
     uint64_t hash = 0;
-    uint8_t castling_hash = 0;
     uint64_t piece;
     unsigned long square;
     // encode squares and pieces
-    for(int piece_index = 0; piece_index < 12; piece_index++){
+    for(int piece_index = WHITE_KING; piece_index <= BLACK_PAWN; piece_index++){
         piece = pos.pieces[piece_index];
         while(piece){
             _BitScanForward64(&square, piece);
@@ -62,10 +73,7 @@ uint64_t ZobristHashing(Position& pos) {
     // encode side to move
     if(pos.white_to_move){ hash ^= zobrist_table.white_to_move; }
     // encode castling rights 
-    castling_hash = pos.can_white_castle_kingside | 
-        (pos.can_white_castle_queenside << 1) | 
-        (pos.can_black_castle_kingside << 2) |
-        (pos.can_black_castle_queenside << 3); // 0, ... , 15 (labels combinations of castling rights)
+    uint8_t castling_hash = CastlingHashing(pos);
     hash ^= zobrist_table.castling_rights[castling_hash];
     // encode en-passant target
     if(pos.en_passant_target_square){ 

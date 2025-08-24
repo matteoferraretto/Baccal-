@@ -22,7 +22,7 @@ struct Position
     uint64_t pieces[12] = {
         0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL
     }; // K Q R B N P k q r b n p
-    bool white_to_move;
+    bool white_to_move = false;
     bool can_white_castle_kingside = false;
     bool can_white_castle_queenside = false;
     bool can_black_castle_kingside = false;
@@ -34,7 +34,32 @@ struct Position
     uint64_t all_pieces = 0ULL;
     uint64_t white_covered_squares = 0ULL;
     uint64_t black_covered_squares = 0ULL;
+    uint64_t zobrist_key = 0ULL;
     uint8_t n_pseudolegal_moves = 0;
+
+    bool operator==(const Position& other) const {
+        if (white_to_move != other.white_to_move) return false;
+        if (can_white_castle_kingside != other.can_white_castle_kingside) return false;
+        if (can_white_castle_queenside != other.can_white_castle_queenside) return false;
+        if (can_black_castle_kingside != other.can_black_castle_kingside) return false;
+        if (can_black_castle_queenside != other.can_black_castle_queenside) return false;
+        if (en_passant_target_square != other.en_passant_target_square) return false;
+        if (half_move_counter != other.half_move_counter) return false;
+        if (zobrist_key != other.zobrist_key) return false;
+
+        if (white_pieces != other.white_pieces) return false;
+        if (black_pieces != other.black_pieces) return false;
+        if (all_pieces   != other.all_pieces) return false;
+
+        for (int i = 0; i < 12; i++) {
+            if (pieces[i] != other.pieces[i]) return false;
+        }
+        return true;
+    }
+
+    bool operator!=(const Position& other) const {
+        return !(*this == other);
+    }
 };
 
 Position PositionFromFen(std::string fen);
@@ -50,7 +75,11 @@ int PositionScore(Position& pos);
 //  - ignore if the move leaves the king in danger (whence PSEUDOlegal)
 void PseudoLegalMoves(Position& pos, Move* moves);
 
+// Fast generation of aggressive moves only, useful for quiescence search
+void AggressiveMoves(Position& pos, Move* moves);
+
 void MakeMove(Position& pos, const Move& move, StateMemory& state);
+void MakeMoveTest(Position& pos, const Move& move, StateMemory& state);
 
 bool SquareIsAttacked(Position& pos, const unsigned long int square);
 
@@ -58,23 +87,16 @@ bool IsLegal(Position& pos, const Move& move);
 
 void UnmakeMove(Position& pos, const Move& move, const StateMemory& state);
 
-// Consider all the moves, filter out illegal moves that leave the king in check and generate the new position
-// This function is optimized for the engine purposes:
-// if we check the legality of a move first and then use it to update the position, we are forced to generate 
-// the new bitboards of covered squares twice and check the king's position twice! With this approach we do it only ONCE
-// We can later write another function for user purposes that only filters out illegal moves
-//std::vector<Position> MakeLegalMoves(const Position& pos, const std::vector<Move>& move);
-
-
 // SORTING MOVES HEURISTICS
 // ---------------------------------------------------- bonus
-// 1. Promotion to queen with capture                   10 706
-// 2. Promotion to queen                                10 705
-// 3. Captures with MVV - LVA heuristics (see below)    9904 -> [4, 10 704]
-// 4. Underpromotion with capture                       3
-// 5. Underpromotion                                    2
-// 6. Castling (good for king safety)                   1
-// 7. Quiet moves                                       0
+// 1. Promotion to queen with capture                   10 707
+// 2. Promotion to queen                                10 706
+// 3. Captures with MVV - LVA heuristics (see below)    9905 -> [5, 10 705]
+// 4. Underpromotion with capture                       4
+// 5. Underpromotion                                    3
+// 6. Killer moves                                      2
+// 7. Castling (good for king safety)                   1
+// 8. Quiet moves                                       0
 // -------------------------------------------------------
 // Sorting captures with
 //    MVV - LVA: Most Valuable Victim - Least Valuable Attacker
@@ -88,37 +110,28 @@ void UnmakeMove(Position& pos, const Move& move, const StateMemory& state);
 //      king takes pawn:     score = bonus for capture - 9900 
 //
 // it is not important that the score is uniform or representative of how a move is good relative to anothre, it is just a sorting tool!
-//
+// -------------------------------------------------------
+// KILLER MOVES
+// These are QUIET moves that generate a beta-cutoff 
+// the idea is to try them before other quiet moves at a given search depth 
+// the killer moves might lead to other cutoffs in other positions!
 // 
+
 const int BONUS_KING_SAFETY = 1;
-const int BONUS_UNDERPROMO = 2;
-const int BONUS_UNDERPROMO_WITH_CAPTURE = 3;
-const int BONUS_CAPTURE = 9904;
-const int BONUS_QUEEN_PROMO = 10705;
-const int BONUS_QUEEN_PROMO_WITH_CAPTURE = 10706;
+const int BONUS_KILLER_MOVE = 2;
+const int BONUS_UNDERPROMO = 3;
+const int BONUS_UNDERPROMO_WITH_CAPTURE = 4;
+const int BONUS_CAPTURE = 9905;
+const int BONUS_QUEEN_PROMO = 10706;
+const int BONUS_QUEEN_PROMO_WITH_CAPTURE = 10707;
+const int BONUS_TT_BEST_MOVE = 11000;
 
 inline int ScoreMove(const Position& pos, const Move& move){
     int score = 0;
-    /*uint8_t piece = MovePiece(move);
-    uint8_t captured_piece = MoveCaptured(move);
-    uint8_t promoted_piece = MovePromotion(move);
-    uint8_t flags = MoveFlags(move);
-    bool is_check = MoveIsCheck(move);
-    // capture 
-    if(captured_piece != 15){
-        score += BONUS_FOR_CAPTURE + abs(PIECES_VALUES[captured_piece]) - abs(PIECES_VALUES[piece]);
-    }
-    // promotion
-    if(promoted_piece != 15){
-        score += BONUS_FOR_PROMOTION + abs(PIECES_VALUES[promoted_piece]);
-    }
-    // check
-    if(is_check){
-        score += BONUS_FOR_CHECKS + abs(PIECES_VALUES[piece]);
-    }*/
 
-    uint8_t flags;
-    flags = move >> 12;
+    uint64_t from = static_cast<uint64_t>(move & 0b0000000000111111);
+    uint64_t to = static_cast<uint64_t>((move >> 6) & 0b0000000000111111);
+    uint16_t flags = (move >> 12);
 
     // quiet move -> no bonus
     if(flags == 0 || flags == 1){
@@ -130,20 +143,19 @@ inline int ScoreMove(const Position& pos, const Move& move){
     else if(flags == 11){
         score += BONUS_QUEEN_PROMO;
     }
+    // capture: MVV - LVA
     else if(flags == 4){
-        uint8_t from = move & 0b00111111;
-        uint8_t to = (move >> 6) & 0b00111111;
         score += BONUS_CAPTURE;
         if(pos.white_to_move){
             // check what piece is on the target square:
-            for(uint8_t piece_index = 6; piece_index < 12; piece_index++){
+            for(int piece_index = 6; piece_index < 12; piece_index++){
                 if(pos.pieces[piece_index] & (1ULL << to)){
                     score -= PIECES_VALUES[piece_index]; // subtract a negative number --> add that number
                     break;
                 }
             }
             // check what piece is on the starting square:
-            for(uint8_t piece_index = 0; piece_index < 6; piece_index++){
+            for(int piece_index = 0; piece_index < 6; piece_index++){
                 if(pos.pieces[piece_index] & (1ULL << from)){
                     score -= PIECES_VALUES[piece_index]; // subtract a positive number
                     break;
@@ -152,14 +164,14 @@ inline int ScoreMove(const Position& pos, const Move& move){
         }
         else{
             // check what piece is on the target square:
-            for(uint8_t piece_index = 1; piece_index < 6; piece_index++){
+            for(int piece_index = 1; piece_index < 6; piece_index++){
                 if(pos.pieces[piece_index] & (1ULL << to)){
                     score += PIECES_VALUES[piece_index]; 
                     break;
                 }
             }
             // check what piece is on the starting square:
-            for(uint8_t piece_index = 6; piece_index < 12; piece_index++){
+            for(int piece_index = 6; piece_index < 12; piece_index++){
                 if(pos.pieces[piece_index] & (1ULL << from)){
                     score += PIECES_VALUES[piece_index]; // add a negative number --> subtract the abs
                     break;
@@ -167,6 +179,7 @@ inline int ScoreMove(const Position& pos, const Move& move){
             }
         }
     }
+    // en passant capture -> victim is pawn, attacker is pawn -> ranked as a pawn-pawn capture
     else if(flags == 1){
         score += BONUS_CAPTURE;
     }
@@ -182,3 +195,13 @@ inline int ScoreMove(const Position& pos, const Move& move){
     
     return score;
 }
+
+// Null moves
+void MakeNullMove(Position& pos, StateMemory& state);
+void UnmakeNullMove(Position& pos, StateMemory& state);
+// is the side to move in check?
+bool InCheck(const Position& pos);
+// are there only pawns remaining in the position? -> used to detect probability of zwugzwang 
+bool OnlyPawnsRemaining(const Position& pos);
+//
+//bool OkToMakeNullMove(const Position& pos, bool previous_null);

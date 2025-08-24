@@ -22,7 +22,7 @@ struct TTEntry {
     uint64_t hash;
     int score;
     NodeFlag flag;
-    //Move best_move;
+    int best_idx;
 };
 
 // Transposition Table (TT)
@@ -40,7 +40,7 @@ TTEntry* TTProbe(uint64_t zobrist_key);
 // store entry in the table ONLY in 2 cases:
 // - if the table at that index is empty
 // - if the depth of the entry that we are storing is greater than the depth of the entry that we attempt to overwrite
-void TTStore(int depth, uint64_t hash, int score, NodeFlag flag/*, Move best_move*/);
+void TTStore(int depth, uint64_t hash, int score, NodeFlag flag/*, Move best_move*/, int best_idx);
 
 // Zobrist hashing is a method to map a position to a (almost unique) number:
 //                   Zobrist hashing
@@ -73,6 +73,15 @@ struct ZobristTable {
 extern ZobristTable zobrist_table;
 
 void InitializeZobrist();
+
+// this is a utility function that maps the castling rights to a number in the range [0, 15]
+// the rule is simply to look at booleans as 8-bits integers like this:
+//  - white O-O    0 0 0 0 0 0 0 1
+//  - white O-O-O  0 0 0 0 0 0 1 0
+//  - black O-O    0 0 0 0 0 1 0 0
+//  - black O-O-O  0 0 0 0 1 0 0 0
+// so we have a 4 bit number [0-15] representing all the combinations of castling rights 
+uint8_t CastlingHashing(const Position& pos);
 
 // careful: this function is called inside the search loop: it has to be as fast as possible
 uint64_t ZobristHashing(Position& pos);

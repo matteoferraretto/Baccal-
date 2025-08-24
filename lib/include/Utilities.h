@@ -4,15 +4,217 @@
 #include <cstdint>
 #include <bitset>
 
+// piece type
+enum piece_type{
+    WHITE_KING,
+    WHITE_QUEEN,
+    WHITE_ROOK,
+    WHITE_BISHOP,
+    WHITE_KNIGHT,
+    WHITE_PAWN,
+    BLACK_KING,
+    BLACK_QUEEN,
+    BLACK_ROOK,
+    BLACK_BISHOP,
+    BLACK_KNIGHT,
+    BLACK_PAWN,
+    NO_PIECE
+};
+
+// bitwise operations
+typedef uint8_t Square; // 0, ... , 63 <-- 8 bits
+typedef uint64_t Bitboard;
+
+inline void bit_set(Bitboard& bitboard, const std::size_t& square){
+    bitboard |= (1ULL << square);
+}
+
+inline void bit_clear(Bitboard& bitboard, const std::size_t& square){
+    bitboard &= ~(1ULL << square);
+}
+
+inline bool bit_get(const Bitboard& bitboard, const std::size_t& square){
+    return (bitboard >> square) & 1;
+}
+
+inline void clear_last_active_bit(Bitboard& bitboard){
+    bitboard &= bitboard - 1ULL;
+} 
+
+size_t pop_count(Bitboard& bitboard); // count the number of 1 in the binary representation of bitboard
+
+
+// Utilities 
+void PrintBitboard(Bitboard bitboard);
+std::string SquareToAlphabet(Square& square);
+//std::string PieceToAlphabet(uint8_t& piece);
+Bitboard AlphabetToBitboard(std::basic_string<char>& square_string);
+
+
+// PIECE SQUARE TABLES (PST)
+const int WHITE_KNIGHT_PST[64] = {
+    270, 280, 290, 290, 290, 290, 280, 270,
+    280, 300, 320, 325, 325, 320, 300, 280,
+    290, 325, 330, 335, 335, 330, 325, 290,
+    290, 320, 335, 340, 340, 335, 320, 290,
+    290, 325, 335, 340, 340, 335, 325, 290,
+    290, 320, 330, 335, 335, 330, 320, 290,
+    280, 300, 320, 320, 320, 320, 300, 280,
+    270, 280, 290, 290, 290, 290, 280, 270
+};
+const int BLACK_KNIGHT_PST[64] = {
+    270, 280, 290, 290, 290, 290, 280, 270,
+    280, 300, 320, 320, 320, 320, 300, 280,
+    290, 320, 330, 335, 335, 330, 320, 290,
+    290, 325, 335, 340, 340, 335, 325, 290,
+    290, 320, 335, 340, 340, 335, 320, 290,
+    290, 325, 330, 335, 335, 330, 325, 290,
+    280, 300, 320, 325, 325, 320, 300, 280,
+    270, 280, 290, 290, 290, 290, 280, 270
+};
+const int WHITE_PAWN_PST[64] = {
+     0,  0,  0,   0,   0,   0,   0,   0,
+    150, 150, 150, 150, 150, 150, 150, 150,
+    110, 110, 120, 130, 130, 120, 110, 110,
+    105, 105, 110, 125, 125, 110, 105, 105,
+    100, 100, 100, 120, 120, 100, 100, 100,
+    105,  95,  90, 100, 100,  90,  95, 105,
+    105, 110, 110,  80,  80, 110, 110, 105,
+      0,   0,   0,   0,   0,   0,   0,   0
+};
+const int BLACK_PAWN_PST[64] = {
+      0,   0,   0,   0,   0,   0,   0,   0,
+    105, 110, 110,  80,  80, 110, 110, 105,  
+    105,  95,  90, 100, 100,  90,  95, 105,   
+    100, 100, 100, 120, 120, 100, 100, 100,
+    105, 105, 110, 125, 125, 110, 105, 105,
+    110, 110, 120, 130, 130, 120, 110, 110,
+    150, 150, 150, 150, 150, 150, 150, 150,
+      0,   0,   0,   0,   0,   0,   0,   0
+};
+const int BISHOP_PST[64] = {
+    310, 320, 320, 320, 320, 320, 320, 310,
+    320, 335, 330, 330, 330, 330, 335, 320,
+    320, 340, 340, 340, 340, 340, 340, 320,
+    320, 335, 335, 340, 340, 335, 335, 320,
+    320, 335, 335, 340, 340, 335, 335, 320,
+    320, 340, 340, 340, 340, 340, 340, 320,
+    320, 335, 330, 330, 330, 330, 335, 320,
+    310, 320, 320, 320, 320, 320, 320, 310
+};
+const int WHITE_ROOK_PST[64] = {
+    500, 500, 500, 505, 505, 500, 500, 500,
+    510, 520, 520, 520, 520, 520, 520, 510,
+    495, 500, 500, 500, 500, 500, 500, 495,
+    495, 500, 500, 500, 500, 500, 500, 495,
+    495, 500, 500, 500, 500, 500, 500, 495,
+    495, 500, 500, 500, 500, 500, 500, 495,
+    495, 500, 500, 500, 500, 500, 500, 495,
+    500, 500, 505, 510, 510, 505, 500, 500
+};
+const int BLACK_ROOK_PST[64] = {
+    500, 500, 505, 510, 510, 505, 500, 500,
+    495, 500, 500, 500, 500, 500, 500, 495,
+    495, 500, 500, 500, 500, 500, 500, 495,
+    495, 500, 500, 500, 500, 500, 500, 495,
+    495, 500, 500, 500, 500, 500, 500, 495,
+    495, 500, 500, 500, 500, 500, 500, 495,
+    510, 520, 520, 520, 520, 520, 520, 510,
+    500, 500, 500, 505, 505, 500, 500, 500
+};
+const int QUEEN_PST[64] = {
+    880, 890, 890, 895, 895, 890, 890, 880,
+    890, 900, 900, 900, 900, 900, 900, 890,
+    890, 900, 905, 905, 905, 905, 900, 890,
+    895, 900, 905, 905, 905, 905, 900, 895,
+    895, 900, 905, 905, 905, 905, 900, 895,
+    890, 900, 905, 905, 905, 905, 900, 890,
+    890, 900, 900, 900, 900, 900, 900, 890,
+    880, 890, 890, 895, 895, 890, 890, 880
+};
+const int WHITE_KING_PST_MIDDLEGAME[64] = {
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -20, -30, -30, -40, -40, -30, -30, -20,
+    -10, -20, -20, -20, -20, -20, -20, -10,
+     20,  20,   0,   0,   0,   0,  20,  20,
+     20,  30,  10,   0,   0,  10,  30,  20
+};
+const int BLACK_KING_PST_MIDDLEGAME[64] = {
+    20,  30,  10,   0,   0,  10,  30,  20,
+    20,  20,   0,   0,   0,   0,  20,  20,
+    -10, -20, -20, -20, -20, -20, -20, -10,
+    -20, -30, -30, -40, -40, -30, -30, -20,
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -30, -40, -40, -50, -50, -40, -40, -30
+};
+const int KING_PST_ENDGAME[64] = {
+    -50,-40,-30,-20,-20,-30,-40,-50,
+    -30,-20,-10,  0,  0,-10,-20,-30,
+    -30,-10, 20, 30, 30, 20,-10,-30,
+    -30,-10, 30, 40, 40, 30,-10,-30,
+    -30,-10, 30, 40, 40, 30,-10,-30,
+    -30,-10, 20, 30, 30, 20,-10,-30,
+    -30,-30,  0,  0,  0,  0,-30,-30,
+    -50,-30,-30,-30,-30,-30,-30,-50
+};
+
+// malus for every pair of doubled pawns (2 pairs of doubled pawns = - 1 pawn)
+const int MALUS_FOR_DOUBLED_PAWNS = 25; 
+const int BONUS_FOR_PASSED_PAWNS = 25;
+const int BONUS_FOR_OUTPOST = 25;
+
+
+// relevant constants
+const int negative_infinity = std::numeric_limits<int>::min();
+const int positive_infinity = std::numeric_limits<int>::max();
+
+
 // random generator of 64-bit unsigned integers
 uint64_t rand64();
 
 // integer power
-int IntPow(int x, unsigned int p);
+//int IntPow(int x, unsigned int p);
 
 // write / read bitboard array to / from file
-void write_to_file(uint64_t* arr, size_t size, std::string file_name);
-void read_from_file(uint64_t* arr, size_t size, std::string file_name);
+template <size_t N, size_t M>
+inline void write_to_file(const uint64_t (&arr)[N][M], std::string file_name){
+    std::ofstream fout(file_name);
+    if(!fout){
+        std::cout << "Unable to write data on file. \n";
+        return;
+    }
+    for(size_t i = 0; i < N; i++){
+        for(size_t j = 0; j < M; j++){
+            fout << arr[i][j] << "\n";
+        }
+    }
+    fout.close();
+}
+
+template <size_t N, size_t M>
+inline void read_from_file(uint64_t (&arr)[N][M], std::string file_name){
+    std::ifstream fin(file_name);
+    if(!fin){
+        std::cout << "Unable to read data from file. \n";
+        return;
+    }
+    size_t i = 0, j = 0; 
+    uint64_t x;
+    while(fin >> x && i < N){
+        arr[i][j] = x; 
+        j++;
+        if(j == M){ j = 0; i++; }
+    }
+    fin.close();
+}
+
+void write_to_file(const uint64_t *arr, size_t N, std::string file_name);
+void read_from_file(uint64_t *arr, size_t N, std::string file_name);
 
 // relevant positions
 const std::string starting_position_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0";
@@ -100,38 +302,10 @@ const int n_squares_for_bishop_blockers[64] = {
     6, 5, 5, 5, 5, 5, 5, 6
 };
 
-const uint64_t BLACK_QUEENSIDE_CASTLE_MASK = (7ULL << 2);
-const uint64_t BLACK_KINGSIDE_CASTLE_MASK = (7ULL << 4);
-const uint64_t WHITE_QUEENSIDE_CASTLE_MASK = (7ULL << 58);
-const uint64_t WHITE_KINGSIDE_CASTLE_MASK = (7ULL << 60);
-
-// bit-wise operations for bitboards
-void bit_set(uint64_t& bitboard, int i, int j);
-void bit_set(uint64_t& bitboard, unsigned long& square);
-inline void bit_set_opt(uint64_t& bitboard, const uint8_t& square){
-    bitboard |= (1ULL << square);
-}
-
-void bit_clear(uint64_t& bitboard, int i, int j);
-void bit_clear(uint64_t& bitboard, unsigned long& square);
-inline void bit_clear_opt(uint64_t& bitboard, const uint8_t& square){
-    bitboard &= ~(1ULL << square);
-}
-
-bool bit_get(uint64_t bitboard, int i, int j);
-bool bit_get(const uint64_t& bitboard, const unsigned long& square);
-inline bool bit_get_opt(const uint64_t& bitboard, const uint8_t& square){
-    return (bitboard >> square) & 1;
-}
-
-// set to 0 the last bit which is 1
-inline void clear_last_active_bit(uint64_t& bitboard){
-    bitboard &= bitboard - 1;
-} 
-
-size_t pop_count(uint64_t& bitboard); // count the number of 1 in the binary representation of bitboard
-
-void PrintBitboard(uint64_t bitboard);
+const Bitboard LACK_QUEENSIDE_CASTLE_MASK = (7ULL << 2);
+const Bitboard BLACK_KINGSIDE_CASTLE_MASK = (7ULL << 4);
+const Bitboard WHITE_QUEENSIDE_CASTLE_MASK = (7ULL << 58);
+const Bitboard WHITE_KINGSIDE_CASTLE_MASK = (7ULL << 60);
 
 // pawn promotions
 const char pieces_white_pawn_becomes[4] = {'Q', 'R', 'B', 'N'};
@@ -150,121 +324,8 @@ const int black_pawn_deltas[2][2] = {
     {1, 1}, {1, -1}
 };
 
-// Transform a square index to alphabetic notation
-std::string SquareToAlphabet(uint8_t& square);
-std::string PieceToAlphabet(uint8_t& piece);
-uint64_t AlphabetToBitboard(std::basic_string<char>& square_string);
 
-// relevant constants
-const int negative_infinity = std::numeric_limits<int>::min();
-const int positive_infinity = std::numeric_limits<int>::max();
-
-// Pieces Square Tables
-const int KNIGHT_PST[64] = {
-    -50, -40, -30, -30, -30, -30, -40, -50,
-    -40, -20,   0,   5,   5,   0, -20, -40,
-    -30,   5,  10,  15,  15,  10,   5, -30,
-    -30,   0,  15,  20,  20,  15,   0, -30,
-    -30,   5,  15,  20,  20,  15,   5, -30,
-    -30,   0,  10,  15,  15,  10,   0, -30,
-    -40, -20,   0,   0,   0,   0, -20, -40,
-    -50, -40, -30, -30, -30, -30, -40, -50
-};
-const int WHITE_PAWN_PST[64] = {
-      0,   0,   0,   0,   0,   0,   0,   0,
-     50,  50,  50,  50,  50,  50,  50,  50,
-     10,  10,  20,  30,  30,  20,  10,  10,
-      5,   5,  10,  25,  25,  10,   5,   5,
-      0,   0,   0,  20,  20,   0,   0,   0,
-      5,  -5, -10,   0,   0, -10,  -5,   5,
-      5,  10,  10, -20, -20,  10,  10,   5,
-      0,   0,   0,   0,   0,   0,   0,   0
-};
-const int BLACK_PAWN_PST[64] = {
-      0,   0,   0,   0,   0,   0,   0,   0,
-      5,  10,  10, -20, -20,  10,  10,   5,  
-      5,  -5, -10,   0,   0, -10,  -5,   5,   
-      0,   0,   0,  20,  20,   0,   0,   0,
-      5,   5,  10,  25,  25,  10,   5,   5,
-      10,  10,  20, 30,  30,  20,  10,  10,
-      50,  50,  50, 50,  50,  50,  50,  50,
-      0,   0,   0,   0,   0,   0,   0,   0
-};
-const int BISHOP_PST[64] = {
-    -20, -10, -10, -10, -10, -10, -10, -20,
-    -10,   5,   0,   0,   0,   0,   5, -10,
-    -10,  10,  10,  10,  10,  10,  10, -10,
-    -10,   5,   5,  10,  10,   5,   0, -10,
-    -10,   5,   5,  10,  10,   5,   5, -10,
-    -10,  10,  10,  10,  10,  10,  10, -10,
-    -10,   5,   0,   0,   0,   0,   5, -10,
-    -20, -10, -10, -10, -10, -10, -10, -20
-};
-const int WHITE_ROOK_PST[64] = {
-     0,   0,   0,   5,   5,   0,   0,  0,
-    10,   20,  20,  20,  20,  20,  20, 10,
-    -5,   0,   0,   0,   0,   0,   0,  -5,
-    -5,   0,   0,   0,   0,   0,   0,  -5,
-    -5,   0,   0,   0,   0,   0,   0,  -5,
-    -5,   0,   0,   0,   0,   0,   0,  -5,
-    -5,   0,   0,   0,   0,   0,   0,  -5,
-     0,   0,   0,   0,   0,   0,   0,   0
-};
-const int BLACK_ROOK_PST[64] = {
-     0,   0,   0,   0,   0,   0,   0,   0,
-    -5,   0,   0,   0,   0,   0,   0,  -5,
-    -5,   0,   0,   0,   0,   0,   0,  -5,
-    -5,   0,   0,   0,   0,   0,   0,  -5,
-    -5,   0,   0,   0,   0,   0,   0,  -5,
-    -5,   0,   0,   0,   0,   0,   0,  -5,
-    10,   20,  20,  20,  20,  20,  20, 10,
-     0,   0,   0,   5,   5,   0,   0,  0
-};
-const int QUEEN_PST[64] = {
-    -20, -10, -10,  -5,  -5, -10, -10, -20,
-    -10,   0,   0,   0,   0,   0,   0, -10,
-    -10,   0,   5,   5,   5,   5,   0, -10,
-     -5,   0,   5,   5,   5,   5,   0,  -5,
-     -5,   0,   5,   5,   5,   5,   0,  -5,
-    -10,   0,   5,   5,   5,   5,   0, -10,
-    -10,   0,   0,   0,   0,   0,   0, -10,
-    -20, -10, -10,  -5,  -5, -10, -10, -20
-};
-const int WHITE_KING_PST_MIDDLEGAME[64] = {
-    -30, -40, -40, -50, -50, -40, -40, -30,
-    -30, -40, -40, -50, -50, -40, -40, -30,
-    -30, -40, -40, -50, -50, -40, -40, -30,
-    -30, -40, -40, -50, -50, -40, -40, -30,
-    -20, -30, -30, -40, -40, -30, -30, -20,
-    -10, -20, -20, -20, -20, -20, -20, -10,
-     20,  20,   0,   0,   0,   0,  20,  20,
-     20,  30,  10,   0,   0,  10,  30,  20
-};
-const int BLACK_KING_PST_MIDDLEGAME[64] = {
-    20,  30,  10,   0,   0,  10,  30,  20,
-    20,  20,   0,   0,   0,   0,  20,  20,
-    -10, -20, -20, -20, -20, -20, -20, -10,
-    -20, -30, -30, -40, -40, -30, -30, -20,
-    -30, -40, -40, -50, -50, -40, -40, -30,
-    -30, -40, -40, -50, -50, -40, -40, -30,
-    -30, -40, -40, -50, -50, -40, -40, -30,
-    -30, -40, -40, -50, -50, -40, -40, -30
-};
-const int kingPST_Endgame[64] = {
-    -50, -40, -30, -20, -20, -30, -40, -50,
-    -30, -20, -10,   0,   0, -10, -20, -30,
-    -30, -10,  20,  30,  30,  20, -10, -30,
-    -30, -10,  30,  40,  40,  30, -10, -30,
-    -30, -10,  30,  40,  40,  30, -10, -30,
-    -30, -10,  20,  30,  30,  20, -10, -30,
-    -30, -30,   0,   0,   0,   0, -30, -30,
-    -50, -30, -30, -30, -30, -30, -30, -50
-};
-
-// malus for every pair of doubled pawns (2 pairs of doubled pawns = - 1 pawn)
-const int MALUS_FOR_DOUBLED_PAWNS = 25; 
-const int BONUS_FOR_PASSED_PAWNS = 25;
 
 // constants relevant to Zobrist hasing
-const unsigned int MAX_CAPACITY_TT = 25000;
-const int MAX_QUIESCE_DEPTH = 12; // <-- keep this value large: this is meant to be a safety measure to avoid lengthy calculations early on in the search
+//const unsigned int MAX_CAPACITY_TT = 25000;
+//const int MAX_QUIESCE_DEPTH = 12; // <-- keep this value large: this is meant to be a safety measure to avoid lengthy calculations early on in the search

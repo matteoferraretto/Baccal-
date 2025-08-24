@@ -2,121 +2,87 @@
 #include <random>
 #include <cassert>
 #include <fstream>
+#include <cstring>
+
+
+size_t pop_count(Bitboard& bitboard){
+    std::bitset<64> b(bitboard);
+    return b.count();
+}
+
+void PrintBitboard(Bitboard bitboard){
+    bool bit = 0;
+    // loop through the bits
+    for(Square square = 0; square < 64; square++){
+        bit = bit_get(bitboard, square); 
+        std::cout << bit << " ";
+        if(square % 8 == 7){ std::cout << "\n"; }
+    }
+}
+
+std::string SquareToAlphabet(Square& square){
+    int i = square / 8;
+    int j = square % 8; 
+    std::string ranks = "87654321";
+    std::string files = "abcdefgh"; 
+    return std::string() + files[j] + ranks[i];
+}
+
+/*std::string PieceToAlphabet(uint8_t& piece){
+    assert(piece < 12);
+    std::string piece_str;
+    piece_str = "KQRBNPkqrbnp"[piece];
+    return piece_str;
+}*/
+
+Bitboard AlphabetToBitboard(std::basic_string<char>& square_string){
+    char file = square_string.at(0);
+    char rank = square_string.at(1);
+    Bitboard bb = 0;
+    uint8_t i = 7 - ((uint8_t)(rank) - 49);
+    uint8_t j = ((uint8_t)file) - 97;
+    Square square = 8*i + j;
+    bit_set(bb, square);
+    return bb; 
+}
+
 
 std::mt19937_64 rng(20250704); // Fixed seed for reproducibility
 uint64_t rand64(){
     return rng();
 }; 
 
+/*
 int IntPow(int x, unsigned int p){
     if (p == 0) return 1;
     if (p == 1) return x; 
     int tmp = IntPow(x, p/2);
     if (p%2 == 0) return tmp * tmp;
     else return x * tmp * tmp;
-}
-
-void write_to_file(uint64_t* arr, size_t size, std::string file_name){
+}*/
+void write_to_file(const uint64_t *arr, size_t N, std::string file_name){
     std::ofstream fout(file_name);
     if(!fout){
         std::cout << "Unable to write data on file. \n";
         return;
     }
-    for(int i = 0; i < size; i++){
+    for(size_t i = 0; i < N; i++){
         fout << arr[i] << "\n";
     }
     fout.close();
 }
 
-void read_from_file(uint64_t* arr, size_t size, std::string file_name){
+void read_from_file(uint64_t *arr, size_t N, std::string file_name){
     std::ifstream fin(file_name);
     if(!fin){
         std::cout << "Unable to read data from file. \n";
         return;
     }
-    int i=0; uint64_t x;
-    while(fin >> x && i < size){
-        arr[i] = x; i++;
+    size_t i = 0; 
+    uint64_t x;
+    while(fin >> x && i < N){
+        arr[i] = x; 
+        i++;
     }
     fin.close();
-}
-
-
-void bit_set(uint64_t& bitboard, int i, int j){
-    bitboard |= (1ULL << (8*i+j));
-    return;
-}
-void bit_set(uint64_t& bitboard, unsigned long& square){
-    bitboard |= (1ULL << square);
-}
-/*void bit_set_opt(uint64_t& bitboard, const uint8_t& square){
-    bitboard |= (1ULL << square);
-}*/
-
-void bit_clear(uint64_t bitboard, int i, int j){
-    bitboard &= ~(1ULL << (8*i+j));
-}
-void bit_clear(uint64_t& bitboard, unsigned long& square){
-    bitboard &= ~(1ULL << square);
-}
-/*void bit_clear_opt(uint64_t& bitboard, const uint8_t& square){
-    bitboard &= ~(1ULL << square);
-}*/
-
-bool bit_get(uint64_t bitboard, int i, int j){
-    return (bitboard >> (8*i+j)) & 1;
-}
-bool bit_get(const uint64_t& bitboard, const unsigned long& square){
-    return (bitboard >> square) & 1;
-}
-/*bool bit_get_opt(const uint64_t& bitboard, const uint8_t& square){
-    return (bitboard >> square) & 1;
-}*/
-
-size_t pop_count(uint64_t& bitboard){
-    std::bitset<64> b(bitboard);
-    return b.count();
-}
-
-void PrintBitboard(uint64_t bitboard){
-    int i, j;
-    bool bit;
-    std::cout << "\n";
-    // loop through the bits
-    for(int n=0; n<64; n++){
-        i = n/8; j = n%8; // extract row (i) and column (j) indexes
-        bit = (bitboard >> n) & 1;  // get the n-th bit
-        std::cout << bit << " ";
-        if(j == 7){ std::cout << "\n"; }
-    }
-    return;
-}
-
-
-std::string SquareToAlphabet(uint8_t& square){
-    assert(square < 64);
-    uint8_t i, j; 
-    std::string rank, file;
-    i = square/8; j = square%8;
-    rank = "87654321"[i];
-    file = "abcdefgh"[j]; 
-    return file + rank;
-}
-
-std::string PieceToAlphabet(uint8_t& piece){
-    assert(piece < 12);
-    std::string piece_str;
-    piece_str = "KQRBNPkqrbnp"[piece];
-    return piece_str;
-}
-
-uint64_t AlphabetToBitboard(std::basic_string<char>& square_string){
-    char file = square_string.at(0);
-    char rank = square_string.at(1);
-    int i, j; 
-    uint64_t bitboard = 0;
-    i = 7 - ((int)(rank) - 49);
-    j = (int)file - 97;
-    bit_set(bitboard, i, j);
-    return bitboard; 
 }
