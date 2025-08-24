@@ -1449,21 +1449,24 @@ void MakeNullMove(Position& pos, StateMemory& state){
     // increment half-moves ...? 
     pos.half_move_counter++;
     // if en passant was available, it is no longer available, but we need to restore it later!
-    state.en_passant_target_square = pos.en_passant_target_square;
-    pos.en_passant_target_square = 0ULL;
-    unsigned long ep_square;
-    _BitScanForward64(&ep_square, state.en_passant_target_square);
-    pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
+    if(pos.en_passant_target_square){
+        state.en_passant_target_square = pos.en_passant_target_square;
+        pos.en_passant_target_square = 0ULL;
+        unsigned long ep_square;
+        _BitScanForward64(&ep_square, state.en_passant_target_square);
+        pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
+    }
     // castling rights are not touched
-    //
 }
 
 void UnmakeNullMove(Position& pos, StateMemory& state){
     // restore the en-passant target
-    pos.en_passant_target_square = state.en_passant_target_square;
-    unsigned long ep_square;
-    _BitScanForward64(&ep_square, state.en_passant_target_square);
-    pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
+    if(state.en_passant_target_square){
+        pos.en_passant_target_square = state.en_passant_target_square;
+        unsigned long ep_square;
+        _BitScanForward64(&ep_square, state.en_passant_target_square);
+        pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
+    }
     // 
     pos.half_move_counter--;
     pos.white_to_move = !pos.white_to_move;

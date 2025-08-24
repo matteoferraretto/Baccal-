@@ -214,8 +214,6 @@ int QuiescenceSearch(Position& pos, int alpha, int beta, int quiesce_ply){
 
 
 int BestEvaluation(Position& pos, int depth, int alpha, int beta, bool previous_null){
-    N_EXPLORED_NODES++;
-
     // ------------------------------------------------------
     // ----- RETRIEVE SCORE FROM TRANSPOSITION TABLE --------
     // ------------------------------------------------------
@@ -242,6 +240,8 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, bool previous_
             tt_best_idx = entry->best_idx;
         }
     }
+
+    N_EXPLORED_NODES++;
 
     // -----------------------------------------------------------------------
     // -- MANAGE EARLY EXIT CASES: DEPTH=0; DRAWS; STALEMATE; CHECKMATE ETC --
@@ -510,6 +510,7 @@ Move IterativeDeepening(Position& pos, int min_depth, int max_depth, int depth_s
         // Reset stuff
         best_eval_this_depth = pos.white_to_move ? negative_infinity : positive_infinity;
         best_move_this_depth = 0;
+        N_EXPLORED_NODES = 0;
 
         std::cout << "\n------------------------------------\nIterative Deepening at depth " << depth << "\n";
 
@@ -581,6 +582,7 @@ Move IterativeDeepening(Position& pos, int min_depth, int max_depth, int depth_s
         best_move = best_move_this_depth;
 
         std::cout << "Best move is "; PrintMove(best_move);
+        std::cout << "Explored " << N_EXPLORED_NODES << " nodes\n";
 
         // win detected
         if(win_detected)
