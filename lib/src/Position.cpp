@@ -468,6 +468,7 @@ void PseudoLegalMoves(Position& pos, Move* moves){
                 }
                 // if this is a double push, flag it to manage en-passant target squares later
                 else if(RANK_OF_SQUARE[target_square] == 4 && WHITE_PAWN_IN_STARTING_RANK[square]){
+                    // flag only if capture is actually possible
                     moves[move_index] = EncodeMove(square, target_square, 1);
                     move_index++;
                 }
@@ -710,7 +711,7 @@ void MakeMove(Position& pos, const Move& move, StateMemory& state){
     Bitboard from_bb = (1ULL << from);
     Bitboard to_bb = (1ULL << to); 
     unsigned long ep_square;
-    //state.zobrist_key = pos.zobrist_key;
+    uint64_t attacks = 0ULL;
 
     // WHITE TO MOVE
     if(pos.white_to_move){
@@ -739,7 +740,11 @@ void MakeMove(Position& pos, const Move& move, StateMemory& state){
         // if there's an active e.p. target square, un-hash it
         if(pos.en_passant_target_square){ // un-hash
             _BitScanForward64(&ep_square, pos.en_passant_target_square);
-            pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
+            // imagine a fictitious pawn in the e.p. target and compute its attacks
+            attacks = black_pawn_covered_squares_bitboards[ep_square];
+            // if there's a white pawn there, hash!
+            if(attacks & pos.pieces[WHITE_PAWN])
+                pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
         }
         // save current target square in memory
         state.en_passant_target_square = pos.en_passant_target_square;
@@ -747,8 +752,11 @@ void MakeMove(Position& pos, const Move& move, StateMemory& state){
         if(flags == DOUBLE_PAWN_PUSH){
             // update e.p. target
             pos.en_passant_target_square = 1ULL << (to + 8);
-            // hash the new target
-            pos.zobrist_key ^= zobrist_table.en_passant_file[to % 8]; // to % 8 = (to + 8) % 8
+            // pretend there's a white pawn on the e.p. target
+            attacks = white_pawn_covered_squares_bitboards[to + 8];
+            // if a black pawn can jumpt to the e.p. target, hash
+            if(attacks & pos.pieces[BLACK_PAWN])
+                pos.zobrist_key ^= zobrist_table.en_passant_file[to % 8]; // to % 8 = (to + 8) % 8
         }
         else{
             pos.en_passant_target_square = 0ULL;
@@ -887,13 +895,19 @@ void MakeMove(Position& pos, const Move& move, StateMemory& state){
         // if there's an active e.p. square, un-hash it (any move will delete this target)
         if(pos.en_passant_target_square){ // un-hash
             _BitScanForward64(&ep_square, pos.en_passant_target_square);
-            pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
+            // imagine a fictitious pawn in the e.p. target and compute its attacks
+            attacks = white_pawn_covered_squares_bitboards[ep_square];
+            // if there's a black pawn there, hash!
+            if(attacks & pos.pieces[BLACK_PAWN]) 
+                pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
         }
         state.en_passant_target_square = pos.en_passant_target_square;
         // if double pawn push, update target
         if(flags == DOUBLE_PAWN_PUSH){
             pos.en_passant_target_square = 1ULL << (to - 8);
-            pos.zobrist_key ^= zobrist_table.en_passant_file[to % 8]; // (to - 8) % 8 = to % 8
+            attacks = black_pawn_covered_squares_bitboards[to - 8];
+            if(attacks & pos.pieces[WHITE_PAWN]) 
+                pos.zobrist_key ^= zobrist_table.en_passant_file[to % 8]; // (to - 8) % 8 = to % 8
         }
         else{ // any other move will simply remove any target
             pos.en_passant_target_square = 0ULL;
@@ -1008,148 +1022,17 @@ void MakeMove(Position& pos, const Move& move, StateMemory& state){
 } 
 
 
-void MakeMoveTest(Position& pos, const Move& move, StateMemory& state){
-// RETRIEVE INFO FROM THE MOVE
-    int from = static_cast<uint64_t>(move & 0b0000000000111111);
-    int to = static_cast<uint64_t>((move >> 6) & 0b0000000000111111);
-    int flags = (move >> 12);
-    // starting square and ending square bitboards
-    Bitboard from_bb = (1ULL << from);
-    Bitboard to_bb = (1ULL << to); 
-
-// RETRIEVE MOVED, CAPTURED AND PROMOTED PIECES
-// + MAKE THE MOVE
-    for(int idx = WHITE_KING; idx < NO_PIECE; idx++){
-        // moved piece
-        if(pos.pieces[idx] & from_bb){
-            // save
-            state.moved_piece_index = idx; 
-            // update piece bb
-            pos.pieces[idx] ^= from_bb | to_bb;
-            pos.white_to_move ? pos.white_pieces ^= from_bb | to_bb : pos.black_pieces ^= from_bb | to_bb;
-            // unhash old square + hash new square
-            pos.zobrist_key ^= zobrist_table.pieces_and_squares[idx][from];
-            pos.zobrist_key ^= zobrist_table.pieces_and_squares[idx][to];
-            // if this piece has moved, it can't be the captured piece
-            continue;
-        }
-        // captured piece (no e.p.)
-        if(pos.pieces[idx] & to_bb){
-            // save
-            state.captured_piece_index = idx;
-            // update piece bb
-            bit_clear(pos.pieces[idx], to);
-            pos.white_to_move ? bit_clear(pos.black_pieces, to) : bit_clear(pos.white_pieces, to);
-            // unhash piece from "to"
-            pos.zobrist_key ^= zobrist_table.pieces_and_squares[idx][to];
-        }
-    }
-    // captured piece (e.p.)
-    if(flags == EN_PASSANT){
-        if(pos.white_to_move){
-            // save
-            state.captured_piece_index = BLACK_PAWN;
-            // clean piece bb (piece is in to + 8)
-            bit_clear(pos.pieces[BLACK_PAWN], to + 8);
-            bit_clear(pos.black_pieces, to + 8);
-            // unhash the pawn
-            pos.zobrist_key ^= zobrist_table.pieces_and_squares[BLACK_PAWN][to + 8];
-        } else {
-            // save
-            state.captured_piece_index = WHITE_PAWN;
-            // clean piece bb (piece is in to - 8)
-            bit_clear(pos.pieces[WHITE_PAWN], to - 8);
-            bit_clear(pos.white_pieces, to - 8);
-            // unhash the pawn
-            pos.zobrist_key ^= zobrist_table.pieces_and_squares[WHITE_PAWN][to - 8];
-        }
-    }
-    // promoted piece is encoded in the move flags
-    else if(flags == PROMOTION_QUEEN || flags == PROMOTION_QUEEN_CAPTURE)
-        state.promoted_piece_index = pos.white_to_move ? WHITE_QUEEN : BLACK_QUEEN; 
-    else if(flags == PROMOTION_ROOK || flags == PROMOTION_ROOK_CAPTURE)
-        state.promoted_piece_index = pos.white_to_move ? WHITE_ROOK : BLACK_ROOK; 
-    else if(flags == PROMOTION_BISHOP || flags == PROMOTION_BISHOP_CAPTURE)
-        state.promoted_piece_index = pos.white_to_move ? WHITE_BISHOP : BLACK_BISHOP;
-    else if(flags == PROMOTION_KNIGHT || flags == PROMOTION_KNIGHT_CAPTURE)
-        state.promoted_piece_index = pos.white_to_move ? WHITE_KNIGHT : BLACK_KNIGHT;
-    // spawn the new piece
-    if(state.promoted_piece_index != NO_PIECE){
-        bit_set(pos.pieces[state.promoted_piece_index], to);
-        // unhash the pawn + hash the new piece
-        pos.zobrist_key ^= zobrist_table.pieces_and_squares[state.moved_piece_index][to];
-        pos.zobrist_key ^= zobrist_table.pieces_and_squares[state.promoted_piece_index][to];
-    }    
-
-// CASTLING 
-//  1. IF MOVE IS CASTLING, COMPLETE THE MOVE
-    uint8_t old_castling_rights = CastlingHashing(pos);
-    uint8_t new_castling_rights = old_castling_rights;
-    // kingside castling
-    if(flags == O_O){
-        if(pos.white_to_move){
-            // transfer the rook
-            pos.pieces[WHITE_ROOK] ^= WHITE_ROOK_KINGSIDE_CASTLE_MASK;
-            pos.white_pieces ^= WHITE_ROOK_KINGSIDE_CASTLE_MASK;
-            pos.zobrist_key ^= zobrist_table.pieces_and_squares[WHITE_ROOK][63];
-            pos.zobrist_key ^= zobrist_table.pieces_and_squares[WHITE_ROOK][61];
-            // white loses castling rights
-            new_castling_rights = old_castling_rights & 0b00001100;
-        } else{
-            // transfer the rook
-            pos.pieces[BLACK_ROOK] ^= BLACK_ROOK_KINGSIDE_CASTLE_MASK;
-            pos.white_pieces ^= BLACK_ROOK_KINGSIDE_CASTLE_MASK;
-            pos.zobrist_key ^= zobrist_table.pieces_and_squares[BLACK_ROOK][7];
-            pos.zobrist_key ^= zobrist_table.pieces_and_squares[BLACK_ROOK][5];
-            // black loses castling rights
-            new_castling_rights = old_castling_rights & 0b00000011;
-        }
-    }
-    // queenside castling
-    else if(flags == O_O_O){
-        if(pos.white_to_move){
-            pos.pieces[WHITE_ROOK] ^= WHITE_ROOK_QUEENSIDE_CASTLE_MASK;
-            pos.white_pieces ^= WHITE_ROOK_QUEENSIDE_CASTLE_MASK;
-            pos.zobrist_key ^= zobrist_table.pieces_and_squares[WHITE_ROOK][56];
-            pos.zobrist_key ^= zobrist_table.pieces_and_squares[WHITE_ROOK][59];
-            new_castling_rights = old_castling_rights & 0b00001100;
-        } else {
-            pos.pieces[BLACK_ROOK] ^= BLACK_ROOK_QUEENSIDE_CASTLE_MASK;
-            pos.white_pieces ^= BLACK_ROOK_QUEENSIDE_CASTLE_MASK;
-            pos.zobrist_key ^= zobrist_table.pieces_and_squares[BLACK_ROOK][3];
-            pos.zobrist_key ^= zobrist_table.pieces_and_squares[BLACK_ROOK][0];
-            new_castling_rights = old_castling_rights & 0b00000011;
-        }
-    }
-    // WORK IN PROGRESS ...
-    //else if(state.moved_piece_index == WHITE_KING)
-    //    new_castling_rights = old_castling_rights & 0b00001100;
-    //else if(state.moved_piece_index == BLACK_KING)
-    //   new_castling_rights = old_castling_rights & 0b00000011; 
-}
-
-
 void UnmakeMove(Position& pos, const Move& move, const StateMemory& state){
     uint64_t from = static_cast<uint64_t>(move & 0b0000000000111111);
     uint64_t to = static_cast<uint64_t>((move >> 6) & 0b0000000000111111);
-    uint16_t flags = (move >> 12);
+    int flags = (move >> 12);
     unsigned long ep_square;
+    Bitboard attacks;
     // reposition the moved piece
     bit_clear(pos.pieces[state.moved_piece_index], to);
     bit_set(pos.pieces[state.moved_piece_index], from);
     pos.zobrist_key ^= zobrist_table.pieces_and_squares[state.moved_piece_index][from];
     pos.zobrist_key ^= zobrist_table.pieces_and_squares[state.moved_piece_index][to];
-    // un-hash e.p. target square if present
-    if(pos.en_passant_target_square){ // un-hash
-        _BitScanForward64(&ep_square, pos.en_passant_target_square);
-        pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
-    }
-    // hash back previously existing e.p. target square if present
-    if(state.en_passant_target_square){ // un-hash
-        _BitScanForward64(&ep_square, state.en_passant_target_square);
-        pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
-    }
-    //pos.zobrist_key = state.zobrist_key;
 
     // black made the pseudomove
     if(pos.white_to_move){
@@ -1157,7 +1040,7 @@ void UnmakeMove(Position& pos, const Move& move, const StateMemory& state){
         // reposition the captured piece
         if(state.captured_piece_index != NO_PIECE){
             // if capture is en passant, respawn the white pawn in the correct position
-            if(flags == 5){
+            if(flags == EN_PASSANT){
                 bit_set(pos.pieces[WHITE_PAWN], to - 8);
                 bit_set(pos.white_pieces, to - 8);
                 pos.zobrist_key ^= zobrist_table.pieces_and_squares[WHITE_PAWN][to - 8];
@@ -1171,27 +1054,43 @@ void UnmakeMove(Position& pos, const Move& move, const StateMemory& state){
         }
 
         // remove promoted piece and restore the pawn 
-        if(state.promoted_piece_index != 12){
+        if(state.promoted_piece_index != NO_PIECE){
             bit_clear(pos.pieces[state.promoted_piece_index], to);
             bit_set(pos.pieces[BLACK_PAWN], from);
             pos.zobrist_key ^= zobrist_table.pieces_and_squares[state.promoted_piece_index][to];
             pos.zobrist_key ^= zobrist_table.pieces_and_squares[BLACK_PAWN][to];
         }
         // in case of castling, reposition the rook correctly
-        if(flags == 2){ // kingside
+        if(flags == O_O){ // kingside
             pos.pieces[BLACK_ROOK] ^= BLACK_ROOK_KINGSIDE_CASTLE_MASK;
             pos.black_pieces ^= BLACK_ROOK_KINGSIDE_CASTLE_MASK;
             pos.zobrist_key ^= zobrist_table.pieces_and_squares[BLACK_ROOK][5];
             pos.zobrist_key ^= zobrist_table.pieces_and_squares[BLACK_ROOK][7];
         }
-        else if(flags == 3){ // queenside
+        else if(flags == O_O_O){ // queenside
             pos.pieces[BLACK_ROOK] ^= BLACK_ROOK_QUEENSIDE_CASTLE_MASK;
             pos.black_pieces ^= BLACK_ROOK_QUEENSIDE_CASTLE_MASK;
             pos.zobrist_key ^= zobrist_table.pieces_and_squares[BLACK_ROOK][0];
             pos.zobrist_key ^= zobrist_table.pieces_and_squares[BLACK_ROOK][3];
         }
-        // restore en-passant target square
+
+        // EN - PASSANT TARGET SQUARE
+        // un-hash e.p. target square if present
+        if(pos.en_passant_target_square){ // un-hash
+            _BitScanForward64(&ep_square, pos.en_passant_target_square);
+            attacks = black_pawn_covered_squares_bitboards[ep_square];
+            if(attacks & pos.pieces[WHITE_PAWN])
+                pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
+        }
+        // hash back previously existing e.p. target square if present
+        if(state.en_passant_target_square){ // un-hash
+            _BitScanForward64(&ep_square, state.en_passant_target_square);
+            attacks = white_pawn_covered_squares_bitboards[ep_square];
+            if(attacks & pos.pieces[BLACK_PAWN])
+                pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
+        }
         pos.en_passant_target_square = state.en_passant_target_square;
+
         // restore group bitboards
         pos.all_pieces = pos.white_pieces | pos.black_pieces;
         // restore previous castling rights
@@ -1202,7 +1101,7 @@ void UnmakeMove(Position& pos, const Move& move, const StateMemory& state){
         pos.can_black_castle_queenside = state.can_black_castle_queenside;
         pos.zobrist_key ^= zobrist_table.castling_rights[CastlingHashing(pos)]; // hash again
         // restore half-move counter
-        if(state.captured_piece_index != 12 || state.moved_piece_index == BLACK_PAWN){
+        if(state.captured_piece_index != NO_PIECE || state.moved_piece_index == BLACK_PAWN){
             pos.half_move_counter = state.half_move_counter;
         }
         else{ pos.half_move_counter--; }
@@ -1217,7 +1116,7 @@ void UnmakeMove(Position& pos, const Move& move, const StateMemory& state){
         // reposition the captured piece
         if(state.captured_piece_index != NO_PIECE){
             // if the capture was en-passant, the captured pawn does not respawn in the target square of the move
-            if(flags == 5){
+            if(flags == EN_PASSANT){
                 bit_set(pos.pieces[BLACK_PAWN], to + 8);
                 bit_set(pos.black_pieces, to + 8);
                 pos.zobrist_key ^= zobrist_table.pieces_and_squares[BLACK_PAWN][to + 8];
@@ -1230,27 +1129,42 @@ void UnmakeMove(Position& pos, const Move& move, const StateMemory& state){
         }
 
         // remove promoted piece and restore the pawn 
-        if(state.promoted_piece_index != 12){
+        if(state.promoted_piece_index != NO_PIECE){
             bit_clear(pos.pieces[state.promoted_piece_index], to);
             bit_set(pos.pieces[WHITE_PAWN], from);
             pos.zobrist_key ^= zobrist_table.pieces_and_squares[state.promoted_piece_index][to];
             pos.zobrist_key ^= zobrist_table.pieces_and_squares[WHITE_PAWN][to];
         }
         // in case of castling, reposition the rook correctly
-        if(flags == 2){ // kingside
+        if(flags == O_O){ // kingside
             pos.pieces[WHITE_ROOK] ^= WHITE_ROOK_KINGSIDE_CASTLE_MASK;
             pos.white_pieces ^= WHITE_ROOK_KINGSIDE_CASTLE_MASK;
             pos.zobrist_key ^= zobrist_table.pieces_and_squares[WHITE_ROOK][61];
             pos.zobrist_key ^= zobrist_table.pieces_and_squares[WHITE_ROOK][63];
         }
-        else if(flags == 3){// queenside
+        else if(flags == O_O_O){// queenside
             pos.pieces[WHITE_ROOK] ^= WHITE_ROOK_QUEENSIDE_CASTLE_MASK;
             pos.white_pieces ^= WHITE_ROOK_QUEENSIDE_CASTLE_MASK;
             pos.zobrist_key ^= zobrist_table.pieces_and_squares[WHITE_ROOK][56];
             pos.zobrist_key ^= zobrist_table.pieces_and_squares[WHITE_ROOK][59];
         }
+
         // restore en-passant target
+        if(pos.en_passant_target_square){ // un-hash
+            _BitScanForward64(&ep_square, pos.en_passant_target_square);
+            attacks = white_pawn_covered_squares_bitboards[ep_square];
+            if(attacks & pos.pieces[BLACK_PAWN])
+                pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
+        }
+        // hash back previously existing e.p. target square if present
+        if(state.en_passant_target_square){ // un-hash
+            _BitScanForward64(&ep_square, state.en_passant_target_square);
+            attacks = black_pawn_covered_squares_bitboards[ep_square];
+            if(attacks & pos.pieces[WHITE_PAWN])
+                pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
+        }
         pos.en_passant_target_square = state.en_passant_target_square;
+
         // restore group bitboards
         pos.all_pieces = pos.white_pieces | pos.black_pieces;
         // restore previous castling rights
@@ -1261,7 +1175,7 @@ void UnmakeMove(Position& pos, const Move& move, const StateMemory& state){
         pos.can_black_castle_queenside = state.can_black_castle_queenside;
         pos.zobrist_key ^= zobrist_table.castling_rights[CastlingHashing(pos)]; // hash
         // restore half-move counter
-        if(state.captured_piece_index != 12 || state.moved_piece_index == WHITE_PAWN){
+        if(state.captured_piece_index != NO_PIECE || state.moved_piece_index == WHITE_PAWN){
             pos.half_move_counter = state.half_move_counter;
         }
         else{ pos.half_move_counter--; }
@@ -1443,20 +1357,30 @@ bool IsLegal(Position& pos, const Move& move){
 
 // NULL MOVE GENERATION
 void MakeNullMove(Position& pos, StateMemory& state){
-    // change side to move
-    pos.white_to_move = !pos.white_to_move;
-    pos.zobrist_key ^= zobrist_table.white_to_move;
-    // increment half-moves ...? 
-    pos.half_move_counter++;
     // if en passant was available, it is no longer available, but we need to restore it later!
     if(pos.en_passant_target_square){
         state.en_passant_target_square = pos.en_passant_target_square;
-        pos.en_passant_target_square = 0ULL;
         unsigned long ep_square;
+        Bitboard attacks = 0ULL;
         _BitScanForward64(&ep_square, state.en_passant_target_square);
-        pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
+        if(pos.white_to_move){
+            attacks = black_pawn_covered_squares_bitboards[ep_square];
+            if(attacks & pos.pieces[WHITE_PAWN])
+                pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
+        } else {
+            attacks = white_pawn_covered_squares_bitboards[ep_square];
+            if(attacks & pos.pieces[BLACK_PAWN])
+                pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
+        }
+        pos.en_passant_target_square = 0ULL;
     }
     // castling rights are not touched
+    // change side to move
+    pos.white_to_move = !pos.white_to_move;
+    pos.zobrist_key ^= zobrist_table.white_to_move;
+    // reset half-move clock: treat this as irreversible move 
+    state.half_move_counter = pos.half_move_counter;
+    pos.half_move_counter = 0;
 }
 
 void UnmakeNullMove(Position& pos, StateMemory& state){
@@ -1464,11 +1388,21 @@ void UnmakeNullMove(Position& pos, StateMemory& state){
     if(state.en_passant_target_square){
         pos.en_passant_target_square = state.en_passant_target_square;
         unsigned long ep_square;
-        _BitScanForward64(&ep_square, state.en_passant_target_square);
-        pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
+        Bitboard attacks = 0ULL;
+        _BitScanForward64(&ep_square, state.en_passant_target_square); 
+        // if black made the null move, restore possibility for black to capture e.p.
+        if(pos.white_to_move){
+            attacks = white_pawn_covered_squares_bitboards[ep_square];
+            if(attacks & pos.pieces[BLACK_PAWN])
+                pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
+        } else {
+            attacks = black_pawn_covered_squares_bitboards[ep_square];
+            if(attacks & pos.pieces[WHITE_PAWN])
+                pos.zobrist_key ^= zobrist_table.en_passant_file[ep_square % 8];
+        }
     }
     // 
-    pos.half_move_counter--;
+    pos.half_move_counter = state.half_move_counter;
     pos.white_to_move = !pos.white_to_move;
     pos.zobrist_key ^= zobrist_table.white_to_move;
 }
@@ -1513,11 +1447,6 @@ bool OnlyPawnsRemaining(const Position& pos){
     if(pos.pieces[BLACK_KNIGHT]) return false;
     return true;
 }
-
-/*
-bool OkToMakeNullMove(const Position& pos, bool previous_null){
-    return !(InCheck(pos) || OnlyPawnsRemaining(pos) || previous_null); 
-}*/
 
 
 void AggressiveMoves(Position& pos, Move* moves){
@@ -1748,4 +1677,44 @@ void AggressiveMoves(Position& pos, Move* moves){
 
     }
     //pos.n_pseudolegal_moves = move_index;
+}
+
+
+bool InsufficientMaterial(const Position& pos){
+    // if there's a queen, a rook or a pawn, false
+    if(pos.pieces[WHITE_QUEEN]) return false;
+    if(pos.pieces[WHITE_ROOK]) return false;
+    if(pos.pieces[WHITE_PAWN]) return false;
+    if(pos.pieces[BLACK_QUEEN]) return false;
+    if(pos.pieces[BLACK_ROOK]) return false;
+    if(pos.pieces[BLACK_PAWN]) return false;
+    // if no queens, no rooks and no pawns are present:
+    // - count remaining pieces
+    Bitboard bb = pos.pieces[WHITE_BISHOP] | 
+                pos.pieces[WHITE_KNIGHT] |
+                pos.pieces[BLACK_BISHOP] | 
+                pos.pieces[BLACK_KNIGHT];
+    size_t n_pieces = pop_count(bb);
+    //      if 0 or 1 knight or 1 bishop -> draw
+    if(n_pieces < 2) return true;
+    //      if more than 2 pieces -> game on
+    if(n_pieces > 2) return false;
+    //      if 2 pieces: 2 white knights or 2 black knights -> draw
+    bb = pos.pieces[WHITE_KNIGHT];
+    if(pop_count(bb) == 2) return true;
+    bb = pos.pieces[BLACK_KNIGHT];
+    if(pop_count(bb) == 2) return true;
+    //      if 2 pieces: bishop vs bishop on same color squares -> draw
+    bb = pos.pieces[WHITE_BISHOP];
+    if(pop_count(bb) == 1){        
+        bb = pos.pieces[BLACK_BISHOP];
+        if(pop_count(bb) == 1){
+            unsigned long white_bishop_square, black_bishop_square;
+            _BitScanForward64(&white_bishop_square, pos.pieces[WHITE_BISHOP]);
+            _BitScanForward64(&black_bishop_square, pos.pieces[BLACK_BISHOP]);
+            if((white_bishop_square % 2) == (black_bishop_square % 2)) // squares with same parity = same color squares
+                return true;
+        }
+    }
+    return false;
 }

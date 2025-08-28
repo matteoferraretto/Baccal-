@@ -2,6 +2,8 @@
 #include <Position.h>
 
 extern uint64_t N_EXPLORED_NODES;
+extern uint64_t N_CUTOFFS;
+extern int PLY;
 
 // Initialize history heuristics
 void HistoryInit();
@@ -33,11 +35,20 @@ void PerftTesting();
 //  - FAIL LOW NODES: let best_eval be the eval of the best move for the side to move
 //          if white moves and best_eval < alpha or if black moves and best_eval > beta
 //          At this node, the side to move has no interesting options because all the moves lead to an evaluation which is worse than what we have found elsewhere
-
-//bool SafeNullMoveSearch(Position& pos);
 int BestEvaluation(Position& pos, int depth, int alpha, int beta, bool previous_null);
-const int MAX_QUIESCE_DEPTH = 0;
+
+// QUIESCENCE SEARCH: at the leaf nodes, extend the search for aggressive moves to fully consider tactics
+const int MAX_QUIESCE_DEPTH = 12;
 int QuiescenceSearch(Position& pos, int alpha, int beta, int quiesce_ply);
 
 // ITERATIVE DEEPENING
 Move IterativeDeepening(Position& pos, int min_depth, int max_depth, int depth_step);
+
+// LATE MOVE REDUCTION (LMR): after a given depth, research a bunch of moves at full depth, while the late moves are searched at reduced depth
+const int MIN_DEPTH_LMR = 6;
+const int N_MOVES_FULL_DEPTH = 4;
+const int DEPTH_REDUCTION_LMR = 1;
+extern bool LMR_ACTIVE;
+
+// facility to print the PV (Principal Variation)
+void PrintPV(Position& pos);

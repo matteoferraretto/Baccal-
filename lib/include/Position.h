@@ -79,7 +79,6 @@ void PseudoLegalMoves(Position& pos, Move* moves);
 void AggressiveMoves(Position& pos, Move* moves);
 
 void MakeMove(Position& pos, const Move& move, StateMemory& state);
-void MakeMoveTest(Position& pos, const Move& move, StateMemory& state);
 
 bool SquareIsAttacked(Position& pos, const unsigned long int square);
 
@@ -203,5 +202,5 @@ void UnmakeNullMove(Position& pos, StateMemory& state);
 bool InCheck(const Position& pos);
 // are there only pawns remaining in the position? -> used to detect probability of zwugzwang 
 bool OnlyPawnsRemaining(const Position& pos);
-//
-//bool OkToMakeNullMove(const Position& pos, bool previous_null);
+// verify draw for insufficient check-mating material
+bool InsufficientMaterial(const Position& pos);

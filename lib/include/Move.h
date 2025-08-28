@@ -51,8 +51,6 @@ struct StateMemory{
     bool can_white_castle_queenside = false;
     bool can_black_castle_kingside = false;
     bool can_black_castle_queenside = false;
-    // delete it
-    // uint64_t zobrist_key = 0ULL;
 };
 
 // theoretical maximum number of moves in a given position (this is an overestimate, however we consider eating the king as a move, so this might be reasonable)
@@ -86,5 +84,5 @@ inline void PrintMove(const Move& move){
     else if(flags == 14 || flags == 10){ move_str += "R"; }
     else if(flags == 13 || flags == 9){ move_str += "B"; }
     else if(flags == 12 || flags == 8){ move_str += "N"; }
-    std::cout << move_str << "\n";
+    std::cout << move_str;
 }

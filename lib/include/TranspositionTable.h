@@ -22,12 +22,15 @@ struct TTEntry {
     uint64_t hash;
     int score;
     NodeFlag flag;
-    int best_idx;
+    Move best_move;
+    //int best_idx;
 };
 
 // Transposition Table (TT)
 // it contains a table and methods to clear, fill or access the table
-const int TT_SIZE = 1 << 24; // 2^18 \approx 250 000 ---> we can do better!!
+const uint64_t TT_SIZE = 1 << 24; // 2^24
+extern uint64_t TT_HITS; // counter of hits
+extern uint64_t TT_ENTRIES;
 
 extern TTEntry transposition_table[TT_SIZE];
 
@@ -40,7 +43,7 @@ TTEntry* TTProbe(uint64_t zobrist_key);
 // store entry in the table ONLY in 2 cases:
 // - if the table at that index is empty
 // - if the depth of the entry that we are storing is greater than the depth of the entry that we attempt to overwrite
-void TTStore(int depth, uint64_t hash, int score, NodeFlag flag/*, Move best_move*/, int best_idx);
+void TTStore(int depth, uint64_t hash, int score, NodeFlag flag, Move best_move);
 
 // Zobrist hashing is a method to map a position to a (almost unique) number:
 //                   Zobrist hashing
@@ -85,3 +88,24 @@ uint8_t CastlingHashing(const Position& pos);
 
 // careful: this function is called inside the search loop: it has to be as fast as possible
 uint64_t ZobristHashing(Position& pos);
+
+
+// STACK OF REPETITIONS
+// in order to account for draw by repetition, we need to store all the positions visited on a path in the tree-search.
+// max depth of search: 
+const int SIZE_REPETITION_STACK = 128; 
+extern uint64_t repetition_stack[SIZE_REPETITION_STACK];
+
+void PrintRepetitionStack();
+void ResetRepetitionStack();
+
+// check if pos is repeated 2 more times in the stack.
+// ply is distance from root node (ply = 0)
+// root node    ...     irreversible node   ...     leaf node
+// (ply = 0)    ...                                   (ply)
+//     _         _              _                       _
+// we only need to look for repetitions in the range between the irreversible node and the leaf node
+// positions before the irreversible node are necessarily different from the current one
+// N.B. null moves are considered irreversible nodes. 
+//      We never compare positions reached BEFORE null_move and AFTER null_move.
+bool ThreeRepetitions(const Position& pos, int ply);

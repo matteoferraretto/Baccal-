@@ -38,8 +38,8 @@ int main(){
 
     Move best_move = IterativeDeepening(pos, 1, max_depth, 1);
     
-    //unsigned long long int perft = 0, total = 0;
-/*    Move pseudolegal_moves[256] = { };
+    /*unsigned long long int perft = 0, total = 0;
+    Move pseudolegal_moves[256] = { };
     Move move = 0;
     Position old_pos;
 
@@ -50,7 +50,6 @@ int main(){
         move = pseudolegal_moves[move_index];
         if(move == 0) break;
         PrintMove(move);
-        std::cout << "Zobrist before move: " << pos.zobrist_key << "\n";
         old_pos = pos;
         MakeMove(pos, move, state);
         if(!IsLegal(pos, move)){
@@ -59,19 +58,15 @@ int main(){
             continue; 
         }
         //std::cout << "move " << move_index + 1 << "\n";
-        //PrintMove(move);
-        std::cout << "Zobrist from scratch: " << ZobristHashing(pos) << "; Zobrist incremental: " << pos.zobrist_key << "\n";
-        //perft = Perft(pos, max_depth - 1);
+        perft = Perft(pos, max_depth - 1);
         UnmakeMove(pos, move, state);
         std::cout << "pos check: " << (old_pos == pos) << "\n";
-        //total += perft;
-        //std::cout << "Perft = " << perft << "\n";
+        total += perft;
+        std::cout << "Perft = " << perft << "\n";
     }
 
-    //std::cout << "\nPerft = " << total << "\n"; 
-
-    //std::cout << "Considering starting pos \n";*/
-
+    std::cout << "\nPerft = " << total << "\n"; 
+*/
     //PerftTesting();
 
     //std::cout << "Is check? " << InCheck(pos) << "\n";
@@ -79,8 +74,7 @@ int main(){
 
     // stop clock 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    std::cout << "Time is: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " [ms] \n";
-    std::cout << "Nodes: " << N_EXPLORED_NODES << "\n";
+    std::cout << "Elapsed time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " [ms] \n";
 
     return 0;
 }

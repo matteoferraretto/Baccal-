@@ -1,4 +1,6 @@
 #include <TranspositionTable.h>
+#include <Bitboards.h>
+#include <algorithm>
 
 TTEntry transposition_table[TT_SIZE];
 
@@ -8,7 +10,7 @@ void TTInit(){
         transposition_table[i].hash = 0ULL;
         transposition_table[i].flag = EXACT;
         transposition_table[i].score = 0;
-        transposition_table[i].best_idx = -1;
+        transposition_table[i].best_move = 0;
     }
 }
 
@@ -22,10 +24,12 @@ TTEntry* TTProbe(uint64_t zobrist_key){
     return nullptr;
 }
 
-void TTStore(int depth, uint64_t hash, int score, NodeFlag flag, int best_idx){
+void TTStore(int depth, uint64_t hash, int score, NodeFlag flag, Move best_move){
     TTEntry& entry = transposition_table[hash % TT_SIZE];
-    if(entry.hash != hash || depth >= entry.depth){
-        entry = {depth, hash, score, flag, best_idx};
+    if(depth >= entry.depth){
+        TT_ENTRIES++;
+        if(entry.hash == hash) TT_ENTRIES--;
+        entry = {depth, hash, score, flag, best_move};
     }
 }
 
@@ -77,8 +81,49 @@ uint64_t ZobristHashing(Position& pos) {
     hash ^= zobrist_table.castling_rights[castling_hash];
     // encode en-passant target
     if(pos.en_passant_target_square){ 
+        // we hash the e.p. target ONLY if capture is actually possible
         _BitScanForward64(&square, pos.en_passant_target_square);
-        hash ^= zobrist_table.en_passant_file[square % 8];
+        uint64_t attacks;
+        if(pos.white_to_move){
+            // imagine a fictitious pawn in the e.p. target and compute its attacks
+            attacks = black_pawn_covered_squares_bitboards[square];
+            // if there's a white pawn there, hash!
+            if(attacks & pos.pieces[WHITE_PAWN]) hash ^= zobrist_table.en_passant_file[square % 8];
+        } else {
+            attacks = white_pawn_covered_squares_bitboards[square];
+            if(attacks & pos.pieces[BLACK_PAWN]) hash ^= zobrist_table.en_passant_file[square % 8];
+        }
     }
     return hash;
+}
+
+uint64_t repetition_stack[SIZE_REPETITION_STACK] = { };
+
+void PrintRepetitionStack(){
+    for(int i = 0; i < SIZE_REPETITION_STACK; i++){
+        if(repetition_stack[i] == 0) break;
+        std::cout << repetition_stack[i] << "; ";
+    }
+    std::cout << "\n";
+}
+
+void ResetRepetitionStack(){
+    for(int i = 0; i < SIZE_REPETITION_STACK; i++){
+        repetition_stack[i] = 0;
+    }
+}
+
+bool ThreeRepetitions(const Position& pos, int ply){
+    // if not enough deep down the tree, draw by repetition is impossible
+    // this line will change when we will include game history.
+    if(ply < 6) return false;
+
+    int count = 0;
+    // steps of 2 because a repetition can be found only if the side to move is the current side to move 
+    for(int i = 0; i <= pos.half_move_counter; i += 2){
+        if(repetition_stack[ply - i] == pos.zobrist_key)
+            count++;
+        if(count == 2) return true;
+    }
+    return false;
 }
