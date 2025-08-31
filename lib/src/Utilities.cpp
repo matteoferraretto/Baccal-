@@ -52,14 +52,7 @@ uint64_t rand64(){
     return rng();
 }; 
 
-/*
-int IntPow(int x, unsigned int p){
-    if (p == 0) return 1;
-    if (p == 1) return x; 
-    int tmp = IntPow(x, p/2);
-    if (p%2 == 0) return tmp * tmp;
-    else return x * tmp * tmp;
-}*/
+
 void write_to_file(const uint64_t *arr, size_t N, std::string file_name){
     std::ofstream fout(file_name);
     if(!fout){

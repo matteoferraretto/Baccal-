@@ -274,6 +274,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\src\Utilities.cpp" />
     <ClCompile Include="C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\src\Bitboards.cpp" />
     <ClCompile Include="C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\src\TranspositionTable.cpp" />
+    <ClCompile Include="C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\src\Game.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="C:\Users\matte\Documents\Study_C++\ChessEngine2.0\build_release\ZERO_CHECK.vcxproj">

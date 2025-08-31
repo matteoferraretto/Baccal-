@@ -8,6 +8,7 @@
 #include <Move.h>
 #include <Baccala.h>
 #include <TranspositionTable.h>
+#include <Game.h>
 #include <fstream>
 #include <intrin.h>
 
@@ -20,24 +21,29 @@ int main(){
     HistoryInit();
     PreComputeBitboards(true); // true = read from file
 
+    /*
     std::string pos_fen;
     unsigned int max_depth;
     std::cout << "Insert a valid FEN string \n";
     std::getline( std::cin, pos_fen );
     Position pos = PositionFromFen(pos_fen);
-    PrintBoard(pos);
+    PrintBoard(pos, pos.white_to_move);
+    while(!PositionIsPlayable(pos)){
+        std::cout << "Position is illegal. Insert legal position\n";
+        std::getline( std::cin, pos_fen );
+        pos = PositionFromFen(pos_fen);
+        PrintBoard(pos, pos.white_to_move);
+    }
+    PrintLegalMoves(pos);
     std::cout << "Insert max depth of search \n";
-    std::cin >> max_depth;
+    std::cin >> max_depth;*/
 
     // start clock 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
-    //std::cout << "Poistion score: " << PositionScore(pos);
-    //std::cout << "\n\t doubled pawns for white: " << count_doubled_pawns(pos.pieces[5]);
-    //std::cout << "\n\t doubled pawns for black: " << count_doubled_pawns(pos.pieces[11]) << "\n";
+    Game game;
+    game.Play();
 
-    Move best_move = IterativeDeepening(pos, 1, max_depth, 1);
-    
     /*unsigned long long int perft = 0, total = 0;
     Move pseudolegal_moves[256] = { };
     Move move = 0;
@@ -67,10 +73,9 @@ int main(){
 
     std::cout << "\nPerft = " << total << "\n"; 
 */
-    //PerftTesting();
 
-    //std::cout << "Is check? " << InCheck(pos) << "\n";
-    //std::cout << "Only pawns? " << OnlyPawnsRemaining(pos) << "\n";*/
+    //Move best_move = IterativeDeepening(pos, 1, max_depth, 1);
+    //PerftTesting();
 
     // stop clock 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();

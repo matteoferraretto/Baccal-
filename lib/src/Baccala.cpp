@@ -19,6 +19,12 @@ inline bool time_up(std::chrono::steady_clock::time_point START_TIME) {
     ).count() >= THINK_TIME_MS;
 }
 
+inline bool time_up(std::chrono::steady_clock::time_point start_time, int think_time) {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - start_time
+    ).count() >= think_time;
+}
+
 uint64_t N_EXPLORED_NODES = 0;
 uint64_t N_CUTOFFS = 0;
 uint64_t TT_HITS = 0; 
@@ -47,7 +53,7 @@ void PrintPV(Position pos, Move best_move) {
 
     Move move = best_move;
     while (move) {
-        PrintMove(move); std::cout << " ";
+        PrintMoveAlgebraicNotation(pos, move); std::cout << " ";
         MakeMove(pos, move, state);
         //PrintBoard(pos);
         entry = TTProbe(pos.zobrist_key);
@@ -62,9 +68,8 @@ void PrintPV(Position pos, Move best_move) {
 unsigned long long int Perft(Position& pos, int depth){
     if(depth == 0){ return 1ULL; }
 
-    //uint64_t zobrist_key = ZobristHashing(pos);
-    //TTEntry* entry = TTProbe(zobrist_key);
-    //if(entry && entry->depth == depth){ return entry->score; }
+    TTEntryPerft* entry = TTPerftProbe(pos.zobrist_key);
+    if(entry && entry->depth == depth){ return entry->perft; }
 
     // number of nodes
     unsigned long long int n_nodes = 0;
@@ -85,7 +90,7 @@ unsigned long long int Perft(Position& pos, int depth){
         UnmakeMove(pos, move, state);
     }
 
-    //TTStorePerft(depth, zobrist_key, n_nodes);
+    TTPerftStore(depth, pos.zobrist_key, n_nodes);
 
     return n_nodes;
 }
@@ -113,6 +118,15 @@ void PerftTesting(){
     std::cout << "Testing position 4: "; std::cout << (Perft(pos4, depth) == 15833292) << "\n";
     std::cout << "Testing position 5: "; std::cout << (Perft(pos5, depth) == 89941194) << "\n";
     std::cout << "Testing position 6: "; std::cout << (Perft(pos6, depth) == 164075551) << "\n";
+}
+
+
+bool NullMoveOk(const Position& pos, int depth, bool previous_null) {
+    if(previous_null) return false; // can't make a null move after another null move
+    if(depth < MIN_DEPTH_NULL) return false; // only active for deep searches
+    if(InCheck(pos)) return false; // side to move should not be in check
+    if(OnlyPawnsRemaining(pos)) return false; // avoid playing a null in zwugzwang positions
+    return true;
 }
 
 
@@ -353,17 +367,12 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, bool previous_
     // ------------------------------------------------
     // -------------- NULL MOVE PRUNING ---------------
     // ------------------------------------------------
-    if(
-        !InCheck(pos) && // side to move not in check
-        !previous_null && // no response to another null move
-        !OnlyPawnsRemaining(pos) && // no risk of zwugzwang
-        depth >= 1 + 3 // we only make null move pruning for deep searches, not for shallow ones
-    ){
+    if(NullMoveOk(pos, depth, previous_null)){
         StateMemory null_state;
         // white skip their move
         if(pos.white_to_move){
             MakeNullMove(pos, null_state);
-            null_eval = BestEvaluation(pos, depth - 1 - 3, beta - 1, beta, true);
+            null_eval = BestEvaluation(pos, depth - 1 - DEPTH_REDUCTION_NULL, beta - 1, beta, true);
             // if the null move fails high, we can safely prune
             if(null_eval >= beta){
                 TTStore(depth, pos.zobrist_key, beta, LOWERBOUND, 0); // best index is 255 -> it means this move will never be considered! ok because there's no real hash move...
@@ -377,7 +386,7 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, bool previous_
         // black skip their move
         else{
             MakeNullMove(pos, null_state);
-            null_eval = BestEvaluation(pos, depth - 1 - 3, alpha, alpha + 1, true);
+            null_eval = BestEvaluation(pos, depth - 1 - DEPTH_REDUCTION_NULL, alpha, alpha + 1, true);
             // if the null move fails high, we can safely prune
             if(null_eval <= alpha){
                 TTStore(depth, pos.zobrist_key, alpha, UPPERBOUND, 0);
@@ -477,7 +486,7 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, bool previous_
                     if(best_evaluation > alpha){ alpha = best_evaluation; }
                 }
                 // else, the move was just a bad move, let's pick the next one
-                if(best_evaluation >= 100000){
+                if(best_evaluation >= MATE_SCORE){
                     UnmakeMove(pos, move, state); 
                     break; 
                 }
@@ -524,7 +533,7 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, bool previous_
                     if(best_evaluation < beta){ beta = best_evaluation; }
                 }
                 // else, the move was just a bad move, let's pick the next one
-                if(best_evaluation <= -100000){
+                if(best_evaluation <= -MATE_SCORE){
                     UnmakeMove(pos, move, state); 
                     break; 
                 }
@@ -544,7 +553,7 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, bool previous_
             if(SquareIsAttacked(pos, king_square)){
                 pos.white_to_move = true;
                 PLY--;
-                return (-100000-depth);
+                return (- MATE_SCORE - depth);
             }
             // if it's not attacked, STALEMATE!
             else{ 
@@ -556,13 +565,13 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, bool previous_
         }
         // BLACK HAS NO LEGAL MOVES -> is black king attacked?
         else{
-            _BitScanForward64(&king_square, pos.pieces[6]);
+            _BitScanForward64(&king_square, pos.pieces[BLACK_KING]);
             pos.white_to_move = true; // make a null move 
             // if it's attacked, CHECKMATE FOR WHITE
             if(SquareIsAttacked(pos, king_square)){
                 pos.white_to_move = false;
                 PLY--;
-                return (100000 + depth);
+                return (MATE_SCORE + depth);
             }
             // if it's not attacked, STALEMATE!
             else{
@@ -667,10 +676,10 @@ Move IterativeDeepening(Position& pos, int min_depth, int max_depth, int depth_s
             std::cout << "move: "; PrintMove(move);
 
             // if move leads to forced loss, do not consider it!
-            if(scores[idx] < - 100000){ 
+            if(scores[idx] < - MATE_SCORE){ 
                 std::cout << "\t eval: forced loss\n"; continue; 
             }
-            else if(scores[idx] > 100000){ 
+            else if(scores[idx] > MATE_SCORE){ 
                 best_move_this_depth = move;
                 win_detected = true;
                 std::cout << "\t eval: forced win in " << (depth - scores[idx] + 100000)/2 << " moves\n"; 
@@ -734,6 +743,126 @@ Move IterativeDeepening(Position& pos, int min_depth, int max_depth, int depth_s
 
     std::cout << "Best move is: "; PrintMove(best_move); std::cout << "\n";
     PrintPV(pos, best_move);
+
+    return best_move;
+}
+
+
+Move QuietIterativeDeepening(Position& pos, int think_time){
+    // start the clock
+    std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+
+    int eval, best_eval_this_depth;
+    int best_eval = pos.white_to_move ? negative_infinity : positive_infinity;
+    Move move = 0;
+    Move best_move = 0, best_move_this_depth = 0;
+    Move moves[MAX_NUMBER_OF_MOVES] = { };
+    int scores[MAX_NUMBER_OF_MOVES] = { };
+    bool win_detected = false;
+
+    // generate pseudolegal moves from current pos.
+    PseudoLegalMoves(pos, moves);
+
+    // filter out illegal moves
+    int n_legal_moves = 0, legal_idx = 0;
+    for(int idx = 0; idx < MAX_NUMBER_OF_MOVES; idx++){
+        move = moves[idx];
+        if(move == 0) break;
+        StateMemory state;
+        MakeMove(pos, move, state);
+        if(IsLegal(pos, move)){
+            moves[legal_idx] = move;
+            legal_idx++;
+            n_legal_moves++;
+        }
+        UnmakeMove(pos, move, state);
+    }
+    // score legal moves
+    for(int idx = 0; idx < n_legal_moves; idx++){
+        scores[idx] = ScoreMove(pos, moves[idx]);
+    }
+
+
+    // ITERATIVE DEEPENING LOOP
+    for(int depth = 1; depth <= 50; depth++){
+
+        // Reset stuff
+        best_eval_this_depth = pos.white_to_move ? negative_infinity : positive_infinity;
+        best_move_this_depth = 0; 
+        PLY = 0;
+        ResetRepetitionStack();
+        repetition_stack[0] = pos.zobrist_key;
+        if(depth >= MIN_DEPTH_LMR) LMR_ACTIVE = true;
+
+        // Loop over legal moves
+        for(int idx = 0; idx < n_legal_moves; idx++){
+
+            // time out 
+            if(time_up(start_time, think_time)) return best_move;
+
+            // pick the best move down the list (from the current index)
+            for(int j = idx + 1; j < n_legal_moves; j++){
+                if(scores[j] > scores[idx]){
+                    std::swap(scores[idx], scores[j]);
+                    std::swap(moves[idx], moves[j]);
+                }
+            }
+            move = moves[idx];
+
+            // if move leads to forced loss, do not consider it!
+            if(scores[idx] < - MATE_SCORE) continue; 
+            
+            else if(scores[idx] > MATE_SCORE){ 
+                best_move_this_depth = move;
+                win_detected = true;
+                break; 
+            }
+
+            // initialize the best move, if not initialized yet
+            if(best_move_this_depth == 0) best_move_this_depth = move;
+
+            // make the move and evaluate it
+            StateMemory state_1;
+            MakeMove(pos, move, state_1);
+            N_TRIED_MOVES++;
+            repetition_stack[1] = pos.zobrist_key;
+            eval = BestEvaluation(pos, depth - 1, negative_infinity, positive_infinity, false);
+            UnmakeMove(pos, move, state_1);
+
+            // update best move if possible and the moves' score
+            if(pos.white_to_move){
+                scores[idx] = eval; // update move score
+                if(eval > best_eval_this_depth){
+                    best_move_this_depth = move; 
+                    best_eval_this_depth = eval;
+                }
+                if(best_eval_this_depth > best_eval){
+                    best_move = best_move_this_depth;
+                    best_eval = best_eval_this_depth;
+                }
+            }
+            else{
+                scores[idx] = - eval;
+                if(eval < best_eval_this_depth){
+                    best_move_this_depth = move;
+                    best_eval_this_depth = eval;
+                }
+                if(best_eval_this_depth < best_eval){
+                    best_move = best_move_this_depth;
+                    best_eval = best_eval_this_depth;
+                }
+            }
+
+        }
+
+        best_eval = best_eval_this_depth;
+        best_move = best_move_this_depth;
+
+        // win detected
+        if(win_detected)
+            break;
+
+    }
 
     return best_move;
 }

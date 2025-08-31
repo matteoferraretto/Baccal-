@@ -3,6 +3,7 @@
 #include <algorithm>
 
 TTEntry transposition_table[TT_SIZE];
+TTEntryPerft transposition_table_perft[TT_SIZE];
 
 void TTInit(){
     for(int i = 0; i < TT_SIZE; i++){
@@ -11,6 +12,14 @@ void TTInit(){
         transposition_table[i].flag = EXACT;
         transposition_table[i].score = 0;
         transposition_table[i].best_move = 0;
+    }
+}
+
+void TTPerftInit(){
+    for(int i = 0; i < TT_SIZE; i++){
+        transposition_table_perft[i].depth = -1;
+        transposition_table_perft[i].hash = 0ULL;
+        transposition_table_perft[i].perft = 0;
     }
 }
 
@@ -24,12 +33,29 @@ TTEntry* TTProbe(uint64_t zobrist_key){
     return nullptr;
 }
 
+TTEntryPerft* TTPerftProbe(uint64_t zobrist_key){
+    // go at the memory address of table corresponding to the given Zobrist key
+    TTEntryPerft& entry = transposition_table_perft[zobrist_key % TT_SIZE];
+    // if entry's position hash matches the Zobrist key, return a pointer to that entry
+    if(entry.hash == zobrist_key){
+        return &entry;
+    }
+    return nullptr;
+}
+
 void TTStore(int depth, uint64_t hash, int score, NodeFlag flag, Move best_move){
     TTEntry& entry = transposition_table[hash % TT_SIZE];
     if(depth >= entry.depth){
         TT_ENTRIES++;
         if(entry.hash == hash) TT_ENTRIES--;
         entry = {depth, hash, score, flag, best_move};
+    }
+}
+
+void TTPerftStore(int depth, uint64_t hash, unsigned long long int score){
+    TTEntryPerft& entry = transposition_table_perft[hash % TT_SIZE];
+    if(depth >= entry.depth){
+        entry = {depth, hash, score};
     }
 }
 

@@ -2,15 +2,6 @@
 #include <cstdint>
 #include <Utilities.h>
 
-/*
-// change one --> change the others
-const int n_bits_rook = 12; // bits used for magic hashing with rooks
-const int n_bits_bishop = 9; // bits used for magic hashing with bishops
-constexpr int n_attacks_rook = 1 << n_bits_rook; // 2^n_bits_rook
-constexpr int n_attacks_bishop = 1 << n_bits_bishop; // 2^n_bits_bishop
-constexpr int shift_rook = 64 - n_bits_rook; // 64 - n_bits_rook
-constexpr int shift_bishop = 64 - n_bits_bishop; // 64 - n_bits_bishop
-*/
 const uint8_t N_BITS_ROOK = 12;
 const uint8_t N_BITS_BISHOP = 9;
 constexpr uint16_t N_ATTACKS_ROOK = 1 << N_BITS_ROOK;

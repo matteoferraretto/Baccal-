@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <Utilities.h>
+#include <Bitboards.h>
 
 // [4 bits] [6 bits] [6 bits]
 //  flags      to      from
@@ -46,7 +47,7 @@ struct StateMemory{
     int moved_piece_index = NO_PIECE;
     int captured_piece_index = NO_PIECE;
     int promoted_piece_index = NO_PIECE;
-    int half_move_counter = 0;
+    uint8_t half_move_counter = 0;
     bool can_white_castle_kingside = false;
     bool can_white_castle_queenside = false;
     bool can_black_castle_kingside = false;
@@ -58,12 +59,6 @@ struct StateMemory{
 const int MAX_NUMBER_OF_MOVES = 256;
 
 inline Move EncodeMove(unsigned long from, unsigned long to, uint16_t flags){
-    //Move move = 0;
-    // progress of move bits:       // 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-    //move = static_cast<uint16_t>(from);          // 0 0 0 0 0 0 0 0 0 0 s s s s s s 
-    //move |= (static_cast<uint16_t>(to) << 6);    // 0 0 0 0 t t t t t t s s s s s s
-    //move |= flags << 12;            // f f f f t t t t t t s s s s s s
-    //return move;
     uint16_t f = static_cast<uint16_t>(from & 0x3F);  // 6 bit validi
     uint16_t t = static_cast<uint16_t>(to & 0x3F);    // 6 bit validi
     uint16_t fl = static_cast<uint16_t>(flags & 0x0F); // 4 bit validi

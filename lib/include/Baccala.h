@@ -41,12 +41,18 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, bool previous_
 const int MAX_QUIESCE_DEPTH = 12;
 int QuiescenceSearch(Position& pos, int alpha, int beta, int quiesce_ply);
 
+// NULL MOVE LOGIC
+const int MIN_DEPTH_NULL = 4;
+const int DEPTH_REDUCTION_NULL = 3;
+bool NullMoveOk(const Position& pos, int depth, bool previous_null);
+
 // ITERATIVE DEEPENING
 Move IterativeDeepening(Position& pos, int min_depth, int max_depth, int depth_step);
+Move QuietIterativeDeepening(Position& pos, int max_depth);
 
 // LATE MOVE REDUCTION (LMR): after a given depth, research a bunch of moves at full depth, while the late moves are searched at reduced depth
 const int MIN_DEPTH_LMR = 6;
-const int N_MOVES_FULL_DEPTH = 4;
+const int N_MOVES_FULL_DEPTH = 3;
 const int DEPTH_REDUCTION_LMR = 1;
 extern bool LMR_ACTIVE;
 

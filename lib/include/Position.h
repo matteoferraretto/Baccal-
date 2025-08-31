@@ -64,7 +64,14 @@ struct Position
 
 Position PositionFromFen(std::string fen);
 
-void PrintBoard(Position pos);
+// A playable position is a position where the rules of chess don't break
+// and from which it is possible to play on using the rules. 
+// This is different from a LEGAL position, which is a position that should be compatible with the starting position
+// for example, a position with 20 white queens is playable, but illegal, because we can apply the rules and play the game from here,
+// but it can't stem from the starting position (max 9 white queens if all 8 pawns are promoted)
+bool PositionIsPlayable(Position pos);
+
+void PrintBoard(Position pos, bool white_perspective);
 
 int PositionScore(Position& pos);
 
@@ -133,17 +140,14 @@ inline int ScoreMove(const Position& pos, const Move& move){
     uint16_t flags = (move >> 12);
 
     // quiet move -> no bonus
-    if(flags == 0 || flags == 1){
+    if(flags == QUIET_MOVE || flags == DOUBLE_PAWN_PUSH || flags == NOTHING_1 || flags == NOTHING_2)
         return 0;
-    }
-    else if(flags == 15){
+    else if(flags == PROMOTION_QUEEN_CAPTURE)
         score += BONUS_QUEEN_PROMO_WITH_CAPTURE;
-    }
-    else if(flags == 11){
+    else if(flags == PROMOTION_QUEEN)
         score += BONUS_QUEEN_PROMO;
-    }
     // capture: MVV - LVA
-    else if(flags == 4){
+    else if(flags == CAPTURE){
         score += BONUS_CAPTURE;
         if(pos.white_to_move){
             // check what piece is on the target square:
@@ -179,18 +183,14 @@ inline int ScoreMove(const Position& pos, const Move& move){
         }
     }
     // en passant capture -> victim is pawn, attacker is pawn -> ranked as a pawn-pawn capture
-    else if(flags == 1){
+    else if(flags == EN_PASSANT)
         score += BONUS_CAPTURE;
-    }
-    else if(flags < 15 && flags > 11){
+    else if(flags < PROMOTION_QUEEN_CAPTURE && flags > PROMOTION_QUEEN)
         score += BONUS_UNDERPROMO_WITH_CAPTURE; 
-    }
-    else if(flags < 11 && flags > 7){
+    else if(flags < PROMOTION_QUEEN && flags > NOTHING_2)
         score += BONUS_UNDERPROMO;
-    }
-    else if(flags == 2 || flags == 3){
+    else if(flags == O_O || flags == O_O_O)
         score += BONUS_KING_SAFETY;
-    }
     
     return score;
 }
@@ -204,3 +204,168 @@ bool InCheck(const Position& pos);
 bool OnlyPawnsRemaining(const Position& pos);
 // verify draw for insufficient check-mating material
 bool InsufficientMaterial(const Position& pos);
+
+
+// Print moves
+inline void PrintMoveAlgebraicNotation(Position pos, const Move move){
+    uint8_t from = static_cast<uint8_t>(move & 0b0000000000111111);
+    uint8_t to = static_cast<uint8_t>((move >> 6) & 0b0000000000111111);
+    Bitboard from_bb = (1ULL << from);
+    Bitboard to_bb = (1ULL << to);
+    uint8_t to_rank = to / 8, to_file = to % 8;
+    uint8_t from_rank = from / 8, from_file = from % 8;
+    int flags = (move >> 12);
+
+    // castling
+    if(flags == O_O){
+        std::cout << "O-O"; return;
+    }
+    else if(flags == O_O_O){
+        std::cout << "O-O-O"; return;
+    }
+
+    MaskAndMagic mm;
+    uint64_t hash;
+    Bitboard attacks, horizontal_attackers, vertical_attackers;
+
+    // retrieve moved piece
+    int moved_piece_index = NO_PIECE;
+    for(int idx = 0; idx < 12; idx++){
+        if(pos.pieces[idx] & from_bb){
+            moved_piece_index = idx;
+            break;
+        }
+    }
+    std::string move_str = std::string();
+    if(moved_piece_index != WHITE_PAWN && moved_piece_index != BLACK_PAWN)
+        move_str += "KQRBNPKQRBNP"[moved_piece_index];
+
+    // disambiguation of the starting square
+    if(moved_piece_index == WHITE_ROOK || moved_piece_index == BLACK_ROOK){
+        // pretend there's a rook on the "to" square
+        // compute mask of horizontal attacks (do not filter out occupied squares yet)
+        // count the bits of (horizontal_attacks & your_pieces) -> if > 1: ambiguity
+        // if the "from" square is within the resulting mask, print file
+        mm = rook_mm[to];
+        hash = ((pos.all_pieces & mm.mask) * mm.magic) >> SHIFT_ROOK;
+        attacks = rook_covered_squares_bb[to][hash];
+        horizontal_attackers = attacks & ranks_bitboards[to_rank] & pos.pieces[pos.white_to_move ? WHITE_ROOK : BLACK_ROOK];
+        if(horizontal_attackers & from_bb){
+            if(pop_count(horizontal_attackers) > 1)
+                move_str += "abcdefgh"[from_file];
+        }
+        // similar logic for vertical attacks
+        vertical_attackers = attacks & files_bitboards[to_file] & pos.pieces[pos.white_to_move ? WHITE_ROOK : BLACK_ROOK];
+        if(vertical_attackers & from_bb){
+            if(pop_count(vertical_attackers) > 1)
+                move_str += "87654321"[from_rank];
+        }
+    }
+    else if(moved_piece_index == WHITE_BISHOP || moved_piece_index == BLACK_BISHOP){
+        // start from the "to" square and generate bishop attacks
+        // AND with the bb of same color bishops 
+        // if in the resulting bb we have 2 bishops on the same rank, specify the file
+        // if in the resulting bb we have 2 bishops on the same file, specify the rank
+        mm = bishop_mm[to];
+        hash = ((pos.all_pieces & mm.mask) * mm.magic) >> SHIFT_BISHOP;
+        attacks = bishop_covered_squares_bb[to][hash];
+        horizontal_attackers = attacks & ranks_bitboards[from_rank] & pos.pieces[pos.white_to_move ? WHITE_BISHOP : BLACK_BISHOP];
+        if(horizontal_attackers & from_bb){
+            if(pop_count(horizontal_attackers) > 1)
+                move_str += "abcdefgh"[from_file];
+        }
+        vertical_attackers = attacks & files_bitboards[from_file] & pos.pieces[pos.white_to_move ? WHITE_BISHOP : BLACK_BISHOP];
+        if(vertical_attackers & from_bb){
+            if(pop_count(vertical_attackers) > 1)
+                move_str += "87654321"[from_rank];
+        }
+    }
+    else if(moved_piece_index == WHITE_QUEEN || moved_piece_index == BLACK_QUEEN){
+        // start from the "to" square and generate bishop attacks
+        // AND with the bb of same color bishops 
+        // if in the resulting bb we have 2 bishops on the same rank, specify the file
+        // if in the resulting bb we have 2 bishops on the same file, specify the rank
+        mm = rook_mm[to];
+        hash = ((pos.all_pieces & mm.mask) * mm.magic) >> SHIFT_ROOK;
+        attacks = rook_covered_squares_bb[to][hash];
+        mm = bishop_mm[to];
+        hash = ((pos.all_pieces & mm.mask) * mm.magic) >> SHIFT_BISHOP;
+        attacks |= bishop_covered_squares_bb[to][hash];
+        horizontal_attackers = attacks & ranks_bitboards[from_rank] & pos.pieces[pos.white_to_move ? WHITE_QUEEN : BLACK_QUEEN];
+        if(horizontal_attackers & from_bb){
+            if(pop_count(horizontal_attackers) > 1)
+                move_str += "abcdefgh"[from_file];
+        }
+        vertical_attackers = attacks & files_bitboards[from_file] & pos.pieces[pos.white_to_move ? WHITE_QUEEN : BLACK_QUEEN];
+        if(vertical_attackers & from_bb){
+            if(pop_count(vertical_attackers) > 1)
+                move_str += "87654321"[from_rank];
+        }
+    }
+    else if(moved_piece_index == WHITE_KNIGHT || moved_piece_index == BLACK_KNIGHT){
+        attacks = knight_covered_squares_bitboards[to];
+        horizontal_attackers = attacks & ranks_bitboards[from_rank] & pos.pieces[pos.white_to_move ? WHITE_KNIGHT : BLACK_KNIGHT];
+        if(horizontal_attackers & from_bb){
+            if(pop_count(horizontal_attackers) > 1)
+                move_str += "abcdefgh"[from_file];
+        }
+        vertical_attackers = attacks & files_bitboards[from_file] & pos.pieces[pos.white_to_move ? WHITE_KNIGHT : BLACK_KNIGHT];
+        if(vertical_attackers & from_bb){
+            if(pop_count(vertical_attackers) > 1)
+                move_str += "87654321"[from_rank];
+        }
+    }
+    else if(moved_piece_index == WHITE_PAWN || moved_piece_index == BLACK_PAWN){
+        if(flags == CAPTURE || flags == EN_PASSANT || flags == PROMOTION_QUEEN_CAPTURE || flags == PROMOTION_ROOK_CAPTURE || flags == PROMOTION_BISHOP_CAPTURE || flags == PROMOTION_KNIGHT_CAPTURE){
+            move_str += "abcdefgh"[from_file];
+        }
+    }
+
+    // detect if the move is a capture
+    for(int idx = 0; idx < 12; idx++){
+        if(pos.pieces[idx] & to_bb || flags == EN_PASSANT){
+            move_str += "x";
+            break;
+        }
+    }
+
+    move_str += SquareToAlphabet(to);
+    // manage promotions
+    if(flags == PROMOTION_QUEEN_CAPTURE || flags == PROMOTION_QUEEN)
+        move_str += "=Q";
+    else if(flags == PROMOTION_ROOK_CAPTURE || flags == PROMOTION_ROOK)
+        move_str += "=R";
+    else if(flags == PROMOTION_BISHOP_CAPTURE || flags == PROMOTION_BISHOP)
+        move_str += "=B";
+    else if(flags == PROMOTION_KNIGHT_CAPTURE || flags == PROMOTION_KNIGHT)
+        move_str += "=N";
+
+    // verify if move is check
+    StateMemory state;
+    MakeMove(pos, move, state);
+    if(InCheck(pos)) move_str += "+";
+
+    // print final result
+    std::cout << move_str;
+}
+
+
+inline void PrintLegalMoves(Position pos){
+    std::cout << "Legal moves: \n";
+    Move move = 0;
+    Move moves[MAX_NUMBER_OF_MOVES] = { };
+    PseudoLegalMoves(pos, moves);
+    for(int idx = 0; idx < MAX_NUMBER_OF_MOVES; idx++){
+        move = moves[idx];
+        if(move == 0) break;
+        StateMemory state;
+        MakeMove(pos, move, state);
+        if(!IsLegal(pos, move)){
+            UnmakeMove(pos, move, state);
+            continue;
+        }
+        UnmakeMove(pos, move, state);
+        PrintMoveAlgebraicNotation(pos, move); std::cout << ", ";
+    }
+    std::cout << "\n";
+}

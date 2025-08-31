@@ -23,7 +23,12 @@ struct TTEntry {
     int score;
     NodeFlag flag;
     Move best_move;
-    //int best_idx;
+};
+
+struct TTEntryPerft {
+    int depth; 
+    uint64_t hash;
+    unsigned long long int perft;
 };
 
 // Transposition Table (TT)
@@ -33,17 +38,21 @@ extern uint64_t TT_HITS; // counter of hits
 extern uint64_t TT_ENTRIES;
 
 extern TTEntry transposition_table[TT_SIZE];
+extern TTEntryPerft transposition_table_perft[TT_SIZE];
 
 void TTInit();
+void TTPerftInit();
 
 // check if the given zobrist_key matches some entry in the transposition table
 // and in case of success, return a pointer to that entry
 TTEntry* TTProbe(uint64_t zobrist_key);
+TTEntryPerft* TTPerftProbe(uint64_t zobrist_key);
 
 // store entry in the table ONLY in 2 cases:
 // - if the table at that index is empty
 // - if the depth of the entry that we are storing is greater than the depth of the entry that we attempt to overwrite
 void TTStore(int depth, uint64_t hash, int score, NodeFlag flag, Move best_move);
+void TTPerftStore(int depth, uint64_t hash, unsigned long long int score);
 
 // Zobrist hashing is a method to map a position to a (almost unique) number:
 //                   Zobrist hashing

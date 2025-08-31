@@ -117,10 +117,53 @@ Position PositionFromFen(std::string fen)
 }
 
 
-void PrintBoard(Position pos){
+bool PositionIsPlayable(Position pos){
+    // 1. check if there are exactly 2 kings of opposite colors
+    Bitboard piece;
+    piece = pos.pieces[WHITE_KING];
+    if(pop_count(piece) != 1) return false;
+    piece = pos.pieces[BLACK_KING];
+    if(pop_count(piece) != 1) return false;
+    // 2. no pawns should be present in the 1st and 8th rank
+    piece = pos.pieces[WHITE_PAWN] | pos.pieces[BLACK_PAWN];
+    if(piece & ranks_bitboards[0]) return false;
+    if(piece & ranks_bitboards[7]) return false;
+    // 4. no castling rights should be active rook and king are not in the starting square
+    if(pos.can_white_castle_kingside){
+        if(!bit_get(pos.pieces[WHITE_KING], 60) || !bit_get(pos.pieces[WHITE_ROOK], 63))
+            return false;
+    }
+    if(pos.can_white_castle_queenside){
+        if(!bit_get(pos.pieces[WHITE_KING], 60) || !bit_get(pos.pieces[WHITE_ROOK], 56))
+            return false;
+    }
+    if(pos.can_black_castle_kingside){
+        if(!bit_get(pos.pieces[BLACK_KING], 4) || !bit_get(pos.pieces[BLACK_ROOK], 7))
+            return false;
+    }
+    if(pos.can_black_castle_queenside){
+        if(!bit_get(pos.pieces[BLACK_KING], 4) || !bit_get(pos.pieces[BLACK_ROOK], 0))
+            return false;
+    }
+    // 5. if en passant target and no pawn is in front, this is illegal
+    if(pos.en_passant_target_square){
+        unsigned long ep_square;
+        _BitScanForward64(&ep_square, pos.en_passant_target_square);
+        if(pos.white_to_move && !bit_get(pos.pieces[BLACK_PAWN], ep_square + 8)) return false;
+        if(!pos.white_to_move && !bit_get(pos.pieces[WHITE_PAWN], ep_square - 8)) return false;
+    }
+    // 6. half-move counter above 50
+    if(pos.half_move_counter > 50) return false;
+    // 7. positions with a number of pieces 
+    // if you survive all this... 
+    return true;
+}
+
+
+void PrintBoard(Position pos, bool white_perspective){
     char board[64];
     char pieces_list[12] = {'K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p'};
-    for(int square = 0; square < 64; square++){ board[square] = '0'; } // initialize board
+    for(int square = 0; square < 64; square++){ board[square] = '.'; } // initialize board
     unsigned long square;
     uint64_t piece;
     // loop through pieces bitboards
@@ -135,10 +178,25 @@ void PrintBoard(Position pos){
             }
         }
     }
-    // print
-    for(int square = 0; square < 64; square++){
-        if(square % 8 == 0){ std::cout << "\n"; }
-        std::cout << board[square] << " ";
+    // print from white perspective
+    if(white_perspective){
+        for(int square = 0; square < 64; square++){
+            if(square % 8 == 0){ std::cout << 8 - square/8 << " | "; }
+            std::cout << board[square] << "  ";
+            if(square % 8 == 7){ std::cout << "\n"; }
+        }
+        std::cout << "__|________________________\n";
+        std::cout << "    a  b  c  d  e  f  g  h";
+    }
+    // print from black perspective
+    else{
+        for(int square = 63; square >= 0; square--){
+            if(square % 8 == 7) std::cout << (8 - square/8) << " | ";
+            std::cout << board[square] << "  ";
+            if(square % 8 == 0) std::cout << "\n";             
+        }
+        std::cout << "__|________________________\n";
+        std::cout << "    h  g  f  e  d  c  b  a";
     }
     std::cout << "\n";
 };
@@ -263,7 +321,7 @@ int PositionScore(Position& pos){
     piece = pos.pieces[WHITE_KING];
     if(piece){
         _BitScanForward64(&square, piece);
-        score += (int)( lambda * WHITE_KING_PST_MIDDLEGAME[square] + (1.0 - lambda) * KING_PST_ENDGAME[square] );
+        score += static_cast<int>( lambda * WHITE_KING_PST_MIDDLEGAME[square] + (1.0 - lambda) * KING_PST_ENDGAME[square] );
     }
     // black king
     piece = pos.pieces[BLACK_KING];
@@ -716,17 +774,17 @@ void MakeMove(Position& pos, const Move& move, StateMemory& state){
     // WHITE TO MOVE
     if(pos.white_to_move){
         // retrieve what piece has moved
-        for(int piece_index = WHITE_KING; piece_index <= WHITE_PAWN; piece_index++){
-            if(pos.pieces[piece_index] & from_bb){
-                moved_piece_index = piece_index;
+        for(int idx = WHITE_KING; idx <= WHITE_PAWN; idx++){
+            if(pos.pieces[idx] & from_bb){
+                moved_piece_index = idx;
                 break;
             }
         }
         // retrieve info about captured piece (if any)
-        for(int piece_index = BLACK_QUEEN; piece_index <= BLACK_PAWN; piece_index++){
+        for(int idx = BLACK_QUEEN; idx <= BLACK_PAWN; idx++){
             // standard capture
-            if(pos.pieces[piece_index] & to_bb){
-                captured_piece_index = piece_index;
+            if(pos.pieces[idx] & to_bb){
+                captured_piece_index = idx;
                 break;
             } 
             // en-passant capture
@@ -871,17 +929,17 @@ void MakeMove(Position& pos, const Move& move, StateMemory& state){
     // BLACK TO MOVE
     else{
         // retrieve what piece has moved
-        for(int piece_index = BLACK_KING; piece_index < 12; piece_index++){
-            if(pos.pieces[piece_index] & from_bb){
-                moved_piece_index = piece_index;
+        for(int idx = BLACK_KING; idx < 12; idx++){
+            if(pos.pieces[idx] & from_bb){
+                moved_piece_index = idx;
                 break;
             }
         }
         // retrieve info about captured piece (if any)
-        for(int piece_index = WHITE_QUEEN; piece_index <= WHITE_PAWN; piece_index++){
+        for(int idx = WHITE_QUEEN; idx <= WHITE_PAWN; idx++){
             // standard capture
-            if(pos.pieces[piece_index] & to_bb){
-                captured_piece_index = piece_index;
+            if(pos.pieces[idx] & to_bb){
+                captured_piece_index = idx;
                 break;
             } 
             // en-passant capture

@@ -230,12 +230,11 @@ const int WHITE_KNIGHT_VALUE = 320;
 const int BLACK_KNIGHT_VALUE = -320;
 const int WHITE_QUEEN_VALUE = 900;
 const int BLACK_QUEEN_VALUE = -900;
-const int WHITE_KING_VALUE = 100000;
-const int BLACK_KING_VALUE = -100000;
+const int MATE_SCORE = 100000;
 const int WHITE_PAWN_VALUE = +100;
 const int BLACK_PAWN_VALUE = -100;
 const int PIECES_VALUES[12] = {
-    10000, 900, 500, 330, 320, 100, -10000, -900, -500, -330, -320, -100
+    100000, 900, 500, 330, 320, 100, -100000, -900, -500, -330, -320, -100
 };
 
 // geometry of the board
@@ -248,6 +247,16 @@ const uint8_t RANK_OF_SQUARE[64] = {
     5, 5, 5, 5, 5, 5, 5, 5,
     6, 6, 6, 6, 6, 6, 6, 6,
     7, 7, 7, 7, 7, 7, 7, 7
+};
+const uint8_t FILE_OF_SQUARE[64] = {
+    0, 1, 2, 3, 4, 5, 6, 7,
+    0, 1, 2, 3, 4, 5, 6, 7,
+    0, 1, 2, 3, 4, 5, 6, 7,
+    0, 1, 2, 3, 4, 5, 6, 7,
+    0, 1, 2, 3, 4, 5, 6, 7,
+    0, 1, 2, 3, 4, 5, 6, 7,
+    0, 1, 2, 3, 4, 5, 6, 7,
+    0, 1, 2, 3, 4, 5, 6, 7
 };
 const bool WHITE_PAWN_IN_STARTING_RANK[64] = {
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -323,9 +332,3 @@ const int white_pawn_deltas[2][2] = {
 const int black_pawn_deltas[2][2] = {
     {1, 1}, {1, -1}
 };
-
-
-
-// constants relevant to Zobrist hasing
-//const unsigned int MAX_CAPACITY_TT = 25000;
-//const int MAX_QUIESCE_DEPTH = 12; // <-- keep this value large: this is meant to be a safety measure to avoid lengthy calculations early on in the search
