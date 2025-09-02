@@ -102,7 +102,7 @@ uint64_t ZobristHashing(Position& pos);
 // STACK OF REPETITIONS
 // in order to account for draw by repetition, we need to store all the positions visited on a path in the tree-search.
 // max depth of search: 
-const int SIZE_REPETITION_STACK = 128; 
+const int SIZE_REPETITION_STACK = 64; 
 extern uint64_t repetition_stack[SIZE_REPETITION_STACK];
 
 void PrintRepetitionStack();
@@ -117,4 +117,6 @@ void ResetRepetitionStack();
 // positions before the irreversible node are necessarily different from the current one
 // N.B. null moves are considered irreversible nodes. 
 //      We never compare positions reached BEFORE null_move and AFTER null_move.
+// N.B. 2: the search goes ahead before root_ply in case of a game
 bool ThreeRepetitions(const Position& pos, int ply);
+bool ThreeRepetitions(const Position& pos, uint64_t *history, int root_ply, int ply);

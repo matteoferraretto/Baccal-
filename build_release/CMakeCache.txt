@@ -20,14 +20,14 @@ Baccala_BINARY_DIR:STATIC=C:/Users/matte/Documents/Study_C++/ChessEngine2.0/buil
 //Value Computed by CMake
 Baccala_IS_TOP_LEVEL:STATIC=OFF
 
+//Dependencies for the target
+Baccala_LIB_DEPENDS:STATIC=general;SDL2;general;SDL2main;general;SDL2_ttf;general;SDL2_image;
+
 //Value Computed by CMake
 Baccala_SOURCE_DIR:STATIC=C:/Users/matte/Documents/Study_C++/ChessEngine2.0/lib
 
 //Path to a program.
 CMAKE_AR:FILEPATH=C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Tools/MSVC/14.16.27023/bin/Hostx86/x64/lib.exe
-
-//No help, variable specified on the command line.
-CMAKE_BUILD_TYPE:UNINITIALIZED=Release
 
 //Semicolon separated list of supported configuration types, only
 // supports Debug, Release, MinSizeRel, and RelWithDebInfo, anything

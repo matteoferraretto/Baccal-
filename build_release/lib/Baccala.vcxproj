@@ -75,7 +75,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;C:\Users\matte\C++_libraries\SDL2-devel-2.30.11-VC\SDL2-2.30.11\include;C:\Users\matte\C++_libraries\SDL2_ttf-devel-2.24.0-VC\SDL2_ttf-2.24.0\include;C:\Users\matte\C++_libraries\SDL2_image-devel-2.8.8-VC\SDL2_image-2.8.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -94,10 +94,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;C:\Users\matte\C++_libraries\SDL2-devel-2.30.11-VC\SDL2-2.30.11\include;C:\Users\matte\C++_libraries\SDL2_ttf-devel-2.24.0-VC\SDL2_ttf-2.24.0\include;C:\Users\matte\C++_libraries\SDL2_image-devel-2.8.8-VC\SDL2_image-2.8.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;C:\Users\matte\C++_libraries\SDL2-devel-2.30.11-VC\SDL2-2.30.11\include;C:\Users\matte\C++_libraries\SDL2_ttf-devel-2.24.0-VC\SDL2_ttf-2.24.0\include;C:\Users\matte\C++_libraries\SDL2_image-devel-2.8.8-VC\SDL2_image-2.8.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -110,7 +110,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;C:\Users\matte\C++_libraries\SDL2-devel-2.30.11-VC\SDL2-2.30.11\include;C:\Users\matte\C++_libraries\SDL2_ttf-devel-2.24.0-VC\SDL2_ttf-2.24.0\include;C:\Users\matte\C++_libraries\SDL2_image-devel-2.8.8-VC\SDL2_image-2.8.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <ExceptionHandling>Sync</ExceptionHandling>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
@@ -129,10 +129,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;C:\Users\matte\C++_libraries\SDL2-devel-2.30.11-VC\SDL2-2.30.11\include;C:\Users\matte\C++_libraries\SDL2_ttf-devel-2.24.0-VC\SDL2_ttf-2.24.0\include;C:\Users\matte\C++_libraries\SDL2_image-devel-2.8.8-VC\SDL2_image-2.8.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;C:\Users\matte\C++_libraries\SDL2-devel-2.30.11-VC\SDL2-2.30.11\include;C:\Users\matte\C++_libraries\SDL2_ttf-devel-2.24.0-VC\SDL2_ttf-2.24.0\include;C:\Users\matte\C++_libraries\SDL2_image-devel-2.8.8-VC\SDL2_image-2.8.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -145,7 +145,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;C:\Users\matte\C++_libraries\SDL2-devel-2.30.11-VC\SDL2-2.30.11\include;C:\Users\matte\C++_libraries\SDL2_ttf-devel-2.24.0-VC\SDL2_ttf-2.24.0\include;C:\Users\matte\C++_libraries\SDL2_image-devel-2.8.8-VC\SDL2_image-2.8.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <ExceptionHandling>Sync</ExceptionHandling>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
@@ -164,10 +164,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;C:\Users\matte\C++_libraries\SDL2-devel-2.30.11-VC\SDL2-2.30.11\include;C:\Users\matte\C++_libraries\SDL2_ttf-devel-2.24.0-VC\SDL2_ttf-2.24.0\include;C:\Users\matte\C++_libraries\SDL2_image-devel-2.8.8-VC\SDL2_image-2.8.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;C:\Users\matte\C++_libraries\SDL2-devel-2.30.11-VC\SDL2-2.30.11\include;C:\Users\matte\C++_libraries\SDL2_ttf-devel-2.24.0-VC\SDL2_ttf-2.24.0\include;C:\Users\matte\C++_libraries\SDL2_image-devel-2.8.8-VC\SDL2_image-2.8.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -180,7 +180,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;C:\Users\matte\C++_libraries\SDL2-devel-2.30.11-VC\SDL2-2.30.11\include;C:\Users\matte\C++_libraries\SDL2_ttf-devel-2.24.0-VC\SDL2_ttf-2.24.0\include;C:\Users\matte\C++_libraries\SDL2_image-devel-2.8.8-VC\SDL2_image-2.8.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -198,10 +198,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;C:\Users\matte\C++_libraries\SDL2-devel-2.30.11-VC\SDL2-2.30.11\include;C:\Users\matte\C++_libraries\SDL2_ttf-devel-2.24.0-VC\SDL2_ttf-2.24.0\include;C:\Users\matte\C++_libraries\SDL2_image-devel-2.8.8-VC\SDL2_image-2.8.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\matte\Documents\Study_C++\ChessEngine2.0\lib\include;C:\Users\matte\C++_libraries\SDL2-devel-2.30.11-VC\SDL2-2.30.11\include;C:\Users\matte\C++_libraries\SDL2_ttf-devel-2.24.0-VC\SDL2_ttf-2.24.0\include;C:\Users\matte\C++_libraries\SDL2_image-devel-2.8.8-VC\SDL2_image-2.8.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>

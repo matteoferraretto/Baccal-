@@ -20,6 +20,9 @@ Baccala_BINARY_DIR:STATIC=C:/Users/matte/Documents/Study_C++/ChessEngine2.0/buil
 //Value Computed by CMake
 Baccala_IS_TOP_LEVEL:STATIC=OFF
 
+//Dependencies for the target
+Baccala_LIB_DEPENDS:STATIC=general;SDL2;general;SDL2main;general;SDL2_ttf;general;SDL2_image;
+
 //Value Computed by CMake
 Baccala_SOURCE_DIR:STATIC=C:/Users/matte/Documents/Study_C++/ChessEngine2.0/lib
 

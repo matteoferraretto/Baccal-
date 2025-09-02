@@ -153,3 +153,19 @@ bool ThreeRepetitions(const Position& pos, int ply){
     }
     return false;
 }
+
+
+bool ThreeRepetitions(const Position& pos, uint64_t *history, int root_ply, int ply){
+    // if not enough deep down the tree, draw by repetition is impossible
+    // this line will change when we will include game history.
+    if(ply < 6) return false;
+
+    int count = 0;
+    // steps of 2 because a repetition can be found only if the side to move is the current side to move 
+    for(int i = 0; i <= pos.half_move_counter; i += 2){
+        if(history[root_ply + ply - i] == pos.zobrist_key)
+            count++;
+        if(count == 2) return true;
+    }
+    return false;
+}

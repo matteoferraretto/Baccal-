@@ -6,7 +6,6 @@
 #include <TranspositionTable.h>
 #include <algorithm>
 #include <iostream>
-#include <chrono>
 #include <intrin.h>
 #include <assert.h>
 
@@ -19,7 +18,7 @@ inline bool time_up(std::chrono::steady_clock::time_point START_TIME) {
     ).count() >= THINK_TIME_MS;
 }
 
-inline bool time_up(std::chrono::steady_clock::time_point start_time, int think_time) {
+bool time_up(std::chrono::steady_clock::time_point start_time, int think_time) {
     return std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - start_time
     ).count() >= think_time;
@@ -810,9 +809,9 @@ Move QuietIterativeDeepening(Position& pos, int think_time){
             move = moves[idx];
 
             // if move leads to forced loss, do not consider it!
-            if(scores[idx] < - MATE_SCORE) continue; 
+            //if(scores[idx] < - MATE_SCORE) continue; 
             
-            else if(scores[idx] > MATE_SCORE){ 
+            if(scores[idx] > MATE_SCORE){ 
                 best_move_this_depth = move;
                 win_detected = true;
                 break; 
@@ -824,7 +823,6 @@ Move QuietIterativeDeepening(Position& pos, int think_time){
             // make the move and evaluate it
             StateMemory state_1;
             MakeMove(pos, move, state_1);
-            N_TRIED_MOVES++;
             repetition_stack[1] = pos.zobrist_key;
             eval = BestEvaluation(pos, depth - 1, negative_infinity, positive_infinity, false);
             UnmakeMove(pos, move, state_1);
@@ -859,8 +857,7 @@ Move QuietIterativeDeepening(Position& pos, int think_time){
         best_move = best_move_this_depth;
 
         // win detected
-        if(win_detected)
-            break;
+        if(win_detected) break;
 
     }
 

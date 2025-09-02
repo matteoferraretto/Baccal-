@@ -11,18 +11,19 @@
 #include <Game.h>
 #include <fstream>
 #include <intrin.h>
+#include <SDL.h>
 
 #pragma message("Compiling with MSVC")
 
-int main(){
+int main(int argc, char* argv[]){
 
     InitializeZobrist();
     TTInit();
     HistoryInit();
     PreComputeBitboards(true); // true = read from file
 
-    /*
-    std::string pos_fen;
+    
+    /*std::string pos_fen;
     unsigned int max_depth;
     std::cout << "Insert a valid FEN string \n";
     std::getline( std::cin, pos_fen );
@@ -42,7 +43,7 @@ int main(){
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     Game game;
-    game.Play();
+    game.PlayVsEngine();
 
     /*unsigned long long int perft = 0, total = 0;
     Move pseudolegal_moves[256] = { };

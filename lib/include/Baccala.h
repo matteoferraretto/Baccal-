@@ -1,9 +1,12 @@
 #pragma once
 #include <Position.h>
+#include <chrono>
 
 extern uint64_t N_EXPLORED_NODES;
 extern uint64_t N_CUTOFFS;
 extern int PLY;
+
+bool time_up(std::chrono::steady_clock::time_point start_time, int think_time);
 
 // Initialize history heuristics
 void HistoryInit();
