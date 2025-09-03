@@ -18,8 +18,12 @@ Game::Game(){
 
     std::string normal_game;
     std::string position_fen;
+    std::string theme;
     std::cout << "Play normal game [n]; Play a game from arbitrary starting position [a]\n";
     std::getline( std::cin, normal_game );
+    std::cout << "Choose a theme\n";
+    std::getline( std::cin, theme );
+    ChooseTheme(theme);
     std::cout << "Let the battle begin!\n\n";
 
     if(normal_game == "n")
@@ -71,9 +75,14 @@ Game::Game(){
             else if(event.type == SDL_MOUSEBUTTONUP){
                 if (event.button.button == SDL_BUTTON_LEFT && dragging) {
                     dragging = false;
+                    // generate moves
                     to = SquareFromMouseClick(event.button.x, event.button.y);
-                    // Check if proposed move is legal
                     player_move = from | (to << 6);
+                    // if promotion, freeze the screen and ask for promoted piece
+                    is_promo = AskPromotion(); // break the event loop
+                    if(is_promo) break;
+
+                    // compare with pseudolegal moves, and if there's matching, make the move and check legality
                     uint16_t mask = 0b0000111111111111;
                     for(int idx = 0; idx < MAX_NUMBER_OF_MOVES; idx++){
                         // if we have finished the pseudolegal moves, break
@@ -82,15 +91,16 @@ Game::Game(){
                         if((pseudolegal_moves[idx] & mask) == player_move){
                             player_move = pseudolegal_moves[idx];
                             MakeMove(pos, player_move, state);
-                            if(!IsLegal(pos, player_move)) UnmakeMove(pos, player_move, state);
-                            else{
+                            if(!IsLegal(pos, player_move)) 
+                                UnmakeMove(pos, player_move, state);
+                            else{ // move is legal
+                                n_moves++;
+                                repetition_stack[n_moves] = pos.zobrist_key;
                                 ResetPseudoLegalMoves();
                                 PseudoLegalMoves(pos, pseudolegal_moves);
                             }
                         }
                     }
-                    n_moves++;
-                    repetition_stack[n_moves] = pos.zobrist_key;
                 }
             }
             else if (event.type == SDL_MOUSEMOTION) {
@@ -217,8 +227,8 @@ void Game::DrawBoard(){
         rect[square].w = SQUARE_SIZE;
         rect[square].h = SQUARE_SIZE;
 
-        if((i+j) % 2 == 0) SDL_SetRenderDrawColor(renderer, 200, 150, 80, 255);
-        else SDL_SetRenderDrawColor(renderer, 250, 200, 160, 255);
+        if((i+j) % 2 == 0) SDL_SetRenderDrawColor(renderer, /*200, 150, 80,*/LIGHT_SQUARES[0], LIGHT_SQUARES[1], LIGHT_SQUARES[2], 255);
+        else SDL_SetRenderDrawColor(renderer, /*250, 200, 160,*/DARK_SQUARES[0], DARK_SQUARES[1], DARK_SQUARES[2], 255);
 
         SDL_RenderFillRect(renderer, &rect[square]);
     }
@@ -420,6 +430,112 @@ void Game::PlayVsEngine(void){
     }
 }
 
+
+bool Game::AskPromotion(){
+    
+    uint16_t i = to / 8, j = to % 8;
+
+    SDL_Rect options[4];
+    int promoted_piece_indexes[4];
+
+    // if white is promoting
+    if(moved_piece_index == WHITE_PAWN && i == 0){
+        for(int idx = 0; idx < 4; idx++){
+            options[idx] = {
+                LEFT_PADDING + j * SQUARE_SIZE, 
+                TOP_PADDING + idx * SQUARE_SIZE,
+                SQUARE_SIZE,
+                SQUARE_SIZE
+            };
+            promoted_piece_indexes[idx] = 1 + idx; 
+        }
+    }
+    // if black is promoting
+    else if(moved_piece_index == BLACK_PAWN && i == 7){
+        for(int idx = 0; idx < 4; idx++){
+            options[idx] = {
+                LEFT_PADDING + j * SQUARE_SIZE, 
+                TOP_PADDING + (7 - idx) * SQUARE_SIZE,
+                SQUARE_SIZE,
+                SQUARE_SIZE
+            };
+            promoted_piece_indexes[idx] = 6 + idx; 
+        }
+    }
+    // don't deal with other types of move in this function
+    else return false;
+
+    // before asking for promotion, check legality
+    // if illegal -> return to main loop
+    StateMemory state;
+    uint16_t flags;
+
+    // compare with pseudolegal moves, and if there's matching, make the move and check legality
+    uint16_t mask = 0b0000111111111111;
+    for(int idx = 0; idx < MAX_NUMBER_OF_MOVES; idx++){
+        // if we have finished the pseudolegal moves, break
+        if(pseudolegal_moves[idx] == 0) break;
+        // if the input move matches one of the precomputed pseudolegal moves
+        if((pseudolegal_moves[idx] & mask) == player_move){
+            MakeMove(pos, pseudolegal_moves[idx], state);
+            if(!IsLegal(pos, pseudolegal_moves[idx])) {
+                UnmakeMove(pos, pseudolegal_moves[idx], state);
+                return false;
+            }
+            UnmakeMove(pos, pseudolegal_moves[idx], state);
+        } 
+    }
+                        
+    // If we are really promoting,
+    // Freeze the board during promotion 
+    bool wait = true; 
+    while (wait) {
+        // render board + highlight options
+        SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, board_texture, NULL, NULL);
+        DrawPieces();
+        for(int idx = 0; idx < 4; idx++){
+            SDL_RenderCopy(renderer, pieces_texture, &piece_clips[promoted_piece_indexes[idx]], &options[idx]);
+        }
+        SDL_RenderPresent(renderer);
+
+        // manage events
+        SDL_Event e;
+        while (SDL_PollEvent(&e)) {
+            // quit
+            if (e.type == SDL_QUIT) { is_running = false; wait = false; }
+
+            // left click
+            if (e.type == SDL_MOUSEBUTTONDOWN) {
+                int mx = e.button.x, my = e.button.y; // mouse click coordinates
+                // check where the player clicked
+                for (uint16_t idx = 0; idx < 4; idx++) {
+                    if (mx >= options[idx].x && mx < options[idx].x + options[idx].w &&
+                        my >= options[idx].y && my < options[idx].y + options[idx].h) {
+                        // flag is different if it is simple promo or promo with capture
+                        //   - normal promotion
+                        if(from == to + 8 || from == to - 8) flags = 11 - idx;
+                        //   - promotion with capture 
+                        else flags = 15 - idx;
+                        // update move and make it (we ensured that this is legal)
+                        player_move |= static_cast<uint16_t>(flags << 12);
+                        PrintMove(player_move); std::cout << "\n";
+                        MakeMove(pos, player_move, state);
+                        n_moves++;
+                        repetition_stack[n_moves] = pos.zobrist_key;
+                        ResetPseudoLegalMoves();
+                        PseudoLegalMoves(pos, pseudolegal_moves);
+                        // un-freeze the board
+                        wait = false;
+                    }
+                }
+            }
+        }
+    }
+    return true;
+}
+
+
 bool Game::GameOver(){
     int n_legal_moves = 0;
     StateMemory state;
@@ -482,12 +598,11 @@ Move Game::IterativeDeepening(){
         MakeMove(pos, move, state);
         if(IsLegal(pos, move)){
             moves[n_legal_moves] = move;
+            best_move = move;
             n_legal_moves++;
         }
         UnmakeMove(pos, move, state);
     }
-
-    best_move = moves[0];
 
     // score legal moves
     for(int idx = 0; idx < n_legal_moves; idx++){
@@ -500,7 +615,6 @@ Move Game::IterativeDeepening(){
 
         // Reset stuff
         best_eval_this_depth = pos.white_to_move ? negative_infinity : positive_infinity;
-        best_move_this_depth = 0; 
         PLY = n_moves;
         if(depth >= MIN_DEPTH_LMR) LMR_ACTIVE = true;
 
@@ -611,6 +725,22 @@ void Game::FindPiece(int square){
         }
         moved_piece_index = NO_PIECE;
         dragging = false;
+    }
+}
+
+
+void Game::ChooseTheme(std::string theme){
+    if(theme == "pink"){
+        LIGHT_SQUARES[0] = 255; LIGHT_SQUARES[1] = 143; LIGHT_SQUARES[2] = 233;
+        DARK_SQUARES[0] = 250; DARK_SQUARES[1] = 220; DARK_SQUARES[2] = 244;
+    }
+    else if(theme == "sea"){
+        LIGHT_SQUARES[0] = 185; LIGHT_SQUARES[1] = 225; LIGHT_SQUARES[2] = 255;
+        DARK_SQUARES[0] = 15; DARK_SQUARES[1] = 150; DARK_SQUARES[2] = 250;
+    }
+    else {
+        LIGHT_SQUARES[0] = 255; LIGHT_SQUARES[1] = 200; LIGHT_SQUARES[2] = 150;
+        DARK_SQUARES[0] = 200; DARK_SQUARES[1] = 140; DARK_SQUARES[2] = 68;
     }
 }
 

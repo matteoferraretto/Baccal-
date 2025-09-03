@@ -54,6 +54,9 @@ class Game{
 
         void PlayVsEngine(void);
 
+        // freeze the screen and offer the choice. Use the choice to add a flag to "move"
+        bool AskPromotion();
+
         bool GameOver();
 
         Move IterativeDeepening();
@@ -70,6 +73,9 @@ class Game{
         const int HEIGHT = 960; // height of screen
         int SQUARE_SIZE = 110;
         int LEFT_PADDING = 40, TOP_PADDING = 40;
+        int LIGHT_SQUARES[3];
+        int DARK_SQUARES[3];
+        void ChooseTheme(std::string theme); // choose chessboart theme
         bool is_running = true;
         SDL_Window* window;
         SDL_Renderer* renderer;
@@ -82,6 +88,7 @@ class Game{
         int moved_piece_index = NO_PIECE;
         uint16_t from = 64, to = 64;
         bool dragging = false;
+        bool is_promo = false;
         int mouse_x, mouse_y;
         void FindPiece(int square);
         void HandleEvent(SDL_Event event);
