@@ -125,6 +125,8 @@ bool NullMoveOk(const Position& pos, int depth, bool previous_null) {
     if(depth < MIN_DEPTH_NULL) return false; // only active for deep searches
     if(InCheck(pos)) return false; // side to move should not be in check
     if(OnlyPawnsRemaining(pos)) return false; // avoid playing a null in zwugzwang positions
+    Bitboard all_pieces = pos.all_pieces;
+    if(pop_count(all_pieces) < 4) return false;
     return true;
 }
 
@@ -484,11 +486,6 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, bool previous_
                     best_move = move;
                     if(best_evaluation > alpha){ alpha = best_evaluation; }
                 }
-                // else, the move was just a bad move, let's pick the next one
-                if(best_evaluation >= MATE_SCORE){
-                    UnmakeMove(pos, move, state); 
-                    break; 
-                }
             }
             UnmakeMove(pos, move, state);
         }
@@ -531,11 +528,6 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, bool previous_
                     best_move = move;
                     if(best_evaluation < beta){ beta = best_evaluation; }
                 }
-                // else, the move was just a bad move, let's pick the next one
-                if(best_evaluation <= -MATE_SCORE){
-                    UnmakeMove(pos, move, state); 
-                    break; 
-                }
             }
             UnmakeMove(pos, move, state);
         }
@@ -543,7 +535,7 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, bool previous_
 
     // NO LEGAL MOVES: CHECKMATE OR STALEMATE 
     if(n_legal_moves == 0){
-        unsigned long int king_square;
+        /*unsigned long int king_square;
         // WHITE HAS NO LEGAL MOVES -> is white king attacked?
         if(pos.white_to_move){
             _BitScanForward64(&king_square, pos.pieces[0]);
@@ -579,6 +571,14 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, bool previous_
                 return 0; 
             }
             pos.white_to_move = false; // unmake the null move
+        }*/
+        if(InCheck(pos)){
+            PLY--;
+            return pos.white_to_move ? (- MATE_SCORE - depth) : (MATE_SCORE + depth);
+        }
+        else {
+            PLY--;
+            return 0;
         }
     }
 

@@ -43,7 +43,7 @@ int main(int argc, char* argv[]){
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     Game game;
-    game.PlayVsEngine();
+    //game.PlayVsEngine();
 
     /*unsigned long long int perft = 0, total = 0;
     Move pseudolegal_moves[256] = { };

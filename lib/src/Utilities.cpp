@@ -10,6 +10,15 @@ size_t pop_count(Bitboard& bitboard){
     return b.count();
 }
 
+int chebyshev_distance(unsigned long square1, unsigned long square2){
+    int vertical = (square1 / 8) - (square2 / 8);
+    int horizontal = (square1 % 8) - (square2 % 8);
+    if(vertical < 0) vertical = - vertical;
+    if(horizontal < 0) horizontal = - horizontal;
+    if(horizontal > vertical) return horizontal;
+    else return vertical;
+}
+
 void PrintBitboard(Bitboard bitboard){
     bool bit = 0;
     // loop through the bits

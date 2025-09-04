@@ -43,6 +43,8 @@ inline void clear_last_active_bit(Bitboard& bitboard){
 
 size_t pop_count(Bitboard& bitboard); // count the number of 1 in the binary representation of bitboard
 
+int chebyshev_distance(unsigned long square1, unsigned long square2);
+
 
 // Utilities 
 void PrintBitboard(Bitboard bitboard);

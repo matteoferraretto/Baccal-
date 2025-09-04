@@ -206,10 +206,10 @@ int PositionScore(Position& pos){
     // we assume that material value is pre-calculated! It should be done when a position is generated
     // this is the starting point for the position score
     int score = 0;
-    unsigned long square;
+    unsigned long square, square2;
     Bitboard piece = 0ULL;
     uint8_t n_pieces = 0; // counts only queens, rooks, bishops, knights. Used for detecting finals
-        
+
     // white queen
     piece = pos.pieces[WHITE_QUEEN];
     while(piece){ // loop until all the white queens are considered
@@ -318,17 +318,24 @@ int PositionScore(Position& pos){
     //   lambda * middlegame_PST + (1 - lambda) * endgame_PST
     float lambda = n_pieces/14.0f;
     // white king
-    piece = pos.pieces[WHITE_KING];
-    if(piece){
-        _BitScanForward64(&square, piece);
+    _BitScanForward64(&square, pos.pieces[WHITE_KING]);
+    // with huge advantage (opponent has only the king), bring the king closer
+    if (pop_count(pos.black_pieces) == 1) {
+        _BitScanForward64(&square2, pos.pieces[BLACK_KING]);
+        score += (14 - chebyshev_distance(square, square2)) * 40;  // bonus for driving closer
+    }
+    // normally, use PST for the king
+    else
         score += static_cast<int>( lambda * WHITE_KING_PST_MIDDLEGAME[square] + (1.0 - lambda) * KING_PST_ENDGAME[square] );
-    }
+
     // black king
-    piece = pos.pieces[BLACK_KING];
-    if(piece){
-        _BitScanForward64(&square, piece);
-        score -= static_cast<int>( lambda * BLACK_KING_PST_MIDDLEGAME[square] + (1.0 - lambda) * KING_PST_ENDGAME[square] );
+    _BitScanForward64(&square, pos.pieces[BLACK_KING]);
+    if (pop_count(pos.white_pieces) == 1) {
+        _BitScanForward64(&square2, pos.pieces[WHITE_KING]);
+        score -= (14 - chebyshev_distance(square, square2)) * 40;  // bonus for driving closer
     }
+    else
+        score -= static_cast<int>( lambda * BLACK_KING_PST_MIDDLEGAME[square] + (1.0 - lambda) * KING_PST_ENDGAME[square] );
 
     // malus for doubled pawns (or bonus for opponent's doubled pawns):
     score += static_cast<int>((

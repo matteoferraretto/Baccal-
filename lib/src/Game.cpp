@@ -454,12 +454,12 @@ bool Game::AskPromotion(){
     else if(moved_piece_index == BLACK_PAWN && i == 7){
         for(int idx = 0; idx < 4; idx++){
             options[idx] = {
-                LEFT_PADDING + j * SQUARE_SIZE, 
-                TOP_PADDING + (7 - idx) * SQUARE_SIZE,
+                LEFT_PADDING + (7 - j) * SQUARE_SIZE, 
+                TOP_PADDING + idx * SQUARE_SIZE,
                 SQUARE_SIZE,
                 SQUARE_SIZE
             };
-            promoted_piece_indexes[idx] = 6 + idx; 
+            promoted_piece_indexes[idx] = 7 + idx; 
         }
     }
     // don't deal with other types of move in this function
@@ -505,7 +505,7 @@ bool Game::AskPromotion(){
             // quit
             if (e.type == SDL_QUIT) { is_running = false; wait = false; }
 
-            // left click
+            // left click -> choose piece
             if (e.type == SDL_MOUSEBUTTONDOWN) {
                 int mx = e.button.x, my = e.button.y; // mouse click coordinates
                 // check where the player clicked
@@ -519,7 +519,6 @@ bool Game::AskPromotion(){
                         else flags = 15 - idx;
                         // update move and make it (we ensured that this is legal)
                         player_move |= static_cast<uint16_t>(flags << 12);
-                        PrintMove(player_move); std::cout << "\n";
                         MakeMove(pos, player_move, state);
                         n_moves++;
                         repetition_stack[n_moves] = pos.zobrist_key;
@@ -587,7 +586,7 @@ Move Game::IterativeDeepening(){
     Move best_move = 0, best_move_this_depth = 0;
     Move moves[MAX_NUMBER_OF_MOVES] = { };
     int scores[MAX_NUMBER_OF_MOVES] = { };
-    bool win_detected = false;
+    //bool win_detected = false;
 
     // filter out illegal moves
     int n_legal_moves = 0;
@@ -604,6 +603,9 @@ Move Game::IterativeDeepening(){
         UnmakeMove(pos, move, state);
     }
 
+    // if only one move, avoid search and play immediately
+    if(n_legal_moves == 1) return best_move;
+
     // score legal moves
     for(int idx = 0; idx < n_legal_moves; idx++){
         scores[idx] = ScoreMove(pos, moves[idx]);
@@ -617,6 +619,7 @@ Move Game::IterativeDeepening(){
         best_eval_this_depth = pos.white_to_move ? negative_infinity : positive_infinity;
         PLY = n_moves;
         if(depth >= MIN_DEPTH_LMR) LMR_ACTIVE = true;
+        if(pop_count(pos.all_pieces) < 4) LMR_ACTIVE = false;
 
         // Loop over legal moves
         for(int idx = 0; idx < n_legal_moves; idx++){
@@ -634,13 +637,14 @@ Move Game::IterativeDeepening(){
             move = moves[idx];
 
             // if move leads to forced loss, do not consider it!
-            if(scores[idx] < - MATE_SCORE) continue; 
+            /*if(scores[idx] < - MATE_SCORE) continue; 
             
             if(scores[idx] > MATE_SCORE){ 
                 best_move_this_depth = move;
                 win_detected = true;
+                std::cout << "mate eval " << scores[idx] << "\n";
                 break; 
-            }
+            }*/
 
             // initialize the best move, if not initialized yet
             if(best_move_this_depth == 0) best_move_this_depth = move;
@@ -651,6 +655,9 @@ Move Game::IterativeDeepening(){
             zobrist_keys_list[n_moves + 1] = pos.zobrist_key;
             eval = BestEvaluation(pos, depth - 1, negative_infinity, positive_infinity, false);
             UnmakeMove(pos, move, state_1);
+
+            //if((pos.white_to_move && eval >= MATE_SCORE) || (!pos.white_to_move && eval <= - MATE_SCORE))
+            //    win_detected = true;
 
             // update best move if possible and the moves' score
             if(pos.white_to_move){
@@ -682,7 +689,7 @@ Move Game::IterativeDeepening(){
         best_move = best_move_this_depth;
 
         // win detected
-        if(win_detected) break;
+        //if(win_detected) break;
 
     }
 
