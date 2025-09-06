@@ -6,8 +6,94 @@
 #include <string>
 #include <chrono>
 
+
+int YELLOW_RGB[3] = { 255, 255, 0 };
+int RED_RGB[3] = { 255, 0, 0 };
+int GREEN_RGB[3] = { 0, 255, 0 };
+
+
 Game::Game(){
 
+    PresentGame();
+
+    InitGraphics();
+    
+    SDL_RenderCopy(renderer, board_texture, NULL, NULL);
+    SDL_RenderPresent(renderer);
+
+    while (is_running) {
+
+        EngineMove();
+
+        PlayerMove();
+        
+        SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, board_texture, NULL, NULL);
+
+        if(from < 64)
+            HighlightSquare(from, YELLOW_RGB); 
+        if(to < 64)
+            HighlightSquare(to, YELLOW_RGB);
+        DrawPieces();
+
+        if(dragging && moved_piece_index != NO_PIECE){
+            SDL_Rect dest = { mouse_x - SQUARE_SIZE/2, mouse_y - SQUARE_SIZE/2, SQUARE_SIZE, SQUARE_SIZE };
+            SDL_RenderCopy(renderer, pieces_texture, &piece_clips[moved_piece_index], &dest);
+        }
+
+        SDL_RenderPresent(renderer);
+        
+        // check game over
+        game_over = GameOver();
+        if(game_over){
+            SDL_Event e;
+            bool wait = true;
+            while (wait) {
+                while (SDL_PollEvent(&e)) {
+                    if (e.type == SDL_QUIT) {
+                        wait = false;
+                        is_running = false;
+                        Clean();
+                    }
+                }
+
+                SDL_RenderClear(renderer);
+                SDL_RenderCopy(renderer, board_texture, NULL, NULL);
+
+                unsigned long white_king_sq, black_king_sq;
+                _BitScanForward64(&white_king_sq, pos.pieces[WHITE_KING]);
+                _BitScanForward64(&black_king_sq, pos.pieces[BLACK_KING]);
+                if(white_wins){
+                    HighlightSquare(static_cast<uint16_t> (white_king_sq), GREEN_RGB);
+                    HighlightSquare(static_cast<uint16_t> (black_king_sq), RED_RGB);
+                }
+                else if(black_wins){
+                    HighlightSquare(static_cast<uint16_t> (white_king_sq), RED_RGB);
+                    HighlightSquare(static_cast<uint16_t> (black_king_sq), GREEN_RGB);
+                }
+                else {
+                    HighlightSquare(static_cast<uint16_t> (white_king_sq), YELLOW_RGB);
+                    HighlightSquare(static_cast<uint16_t> (black_king_sq), YELLOW_RGB);
+                }
+
+                DrawPieces();
+                SDL_RenderPresent(renderer);
+
+                SDL_Delay(50); // avoid burning CPU
+            }
+        }
+
+        SDL_Delay(16); // ~60 fps
+    }
+}
+
+Game::~Game() {
+    Clean();
+}
+
+
+// game options
+void Game::PresentGame(void) {
     std::string side;
     std::cout << "Choose your color!\n";
     std::getline( std::cin, side );
@@ -24,126 +110,30 @@ Game::Game(){
     std::cout << "Choose a theme\n";
     std::getline( std::cin, theme );
     ChooseTheme(theme);
+
+    // reset stuff
+    ResetHistory();
+    ResetPseudoLegalMoves();
+    PLY = 0;
+    ResetRepetitionStack();
+
+    while(true){
+        if(normal_game == "n")
+            position_fen = starting_position_fen;
+        else{
+            std::cout << "Insert FEN string of starting position\n";
+            std::getline( std::cin, position_fen );
+        }
+        pos = PositionFromFen(position_fen);
+        if(PositionIsPlayable(pos)) break;
+        std::cout << "Invalid position.\n";
+    }
+
+    PrintBoard(pos, !engine_is_white);
+    PseudoLegalMoves(pos, pseudolegal_moves);
+    repetition_stack[0] = pos.zobrist_key;
+
     std::cout << "Let the battle begin!\n\n";
-
-    if(normal_game == "n")
-        StartNewGame();
-    else{
-        std::cout << "Insert FEN string of starting position\n";
-        std::getline( std::cin, position_fen );
-        StartNewGame(position_fen);
-    }
-
-    InitGraphics();
-    DrawBoard();      // genera la texture della scacchiera
-    //DrawPieces();
-    // Componi tutto in un unico frame
-    //SDL_RenderClear(renderer);
-    SDL_RenderCopy(renderer, board_texture, NULL, NULL);
-    SDL_RenderPresent(renderer);
-
-    SDL_Event event;
-    StateMemory state;
-
-    while (is_running) {
-
-        // engine move
-        if(pos.white_to_move == engine_is_white){
-            engine_move = IterativeDeepening();
-            MakeMove(pos, engine_move, state);
-            ResetPseudoLegalMoves();
-            PseudoLegalMoves(pos, pseudolegal_moves);
-            n_moves++;
-            repetition_stack[n_moves] = pos.zobrist_key;
-        }
-
-        // player move
-        while (SDL_PollEvent(&event)) {
-            // Quit the game
-            if (event.type == SDL_QUIT) {
-                is_running = false;
-                Clean();
-            }
-            // Pick up a piece
-            else if(event.type == SDL_MOUSEBUTTONDOWN){
-                if (event.button.button == SDL_BUTTON_LEFT) {
-                    from = SquareFromMouseClick(event.button.x, event.button.y);
-                    // check if a piece is on that square
-                    FindPiece(from);
-                }
-            }
-            else if(event.type == SDL_MOUSEBUTTONUP){
-                if (event.button.button == SDL_BUTTON_LEFT && dragging) {
-                    dragging = false;
-                    // generate moves
-                    to = SquareFromMouseClick(event.button.x, event.button.y);
-                    player_move = from | (to << 6);
-                    // if promotion, freeze the screen and ask for promoted piece
-                    is_promo = AskPromotion(); // break the event loop
-                    if(is_promo) break;
-
-                    // compare with pseudolegal moves, and if there's matching, make the move and check legality
-                    uint16_t mask = 0b0000111111111111;
-                    for(int idx = 0; idx < MAX_NUMBER_OF_MOVES; idx++){
-                        // if we have finished the pseudolegal moves, break
-                        if(pseudolegal_moves[idx] == 0) break;
-                        // if the input move matches one of the precomputed pseudolegal moves
-                        if((pseudolegal_moves[idx] & mask) == player_move){
-                            player_move = pseudolegal_moves[idx];
-                            MakeMove(pos, player_move, state);
-                            if(!IsLegal(pos, player_move)) 
-                                UnmakeMove(pos, player_move, state);
-                            else{ // move is legal
-                                n_moves++;
-                                repetition_stack[n_moves] = pos.zobrist_key;
-                                ResetPseudoLegalMoves();
-                                PseudoLegalMoves(pos, pseudolegal_moves);
-                            }
-                        }
-                    }
-                }
-            }
-            else if (event.type == SDL_MOUSEMOTION) {
-                mouse_x = event.motion.x;
-                mouse_y = event.motion.y;
-            }
-        }
-
-        
-        SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, board_texture, NULL, NULL);
-        DrawPieces();
-
-        if(dragging && moved_piece_index != NO_PIECE){
-            SDL_Rect dest = { mouse_x - SQUARE_SIZE/2, mouse_y - SQUARE_SIZE/2, SQUARE_SIZE, SQUARE_SIZE };
-            SDL_RenderCopy(renderer, pieces_texture, &piece_clips[moved_piece_index], &dest);
-        }
-
-        SDL_RenderPresent(renderer);
-
-        // check game over
-        game_over = GameOver();
-        if(game_over){
-            SDL_Event e;
-            bool wait = true;
-            while (wait) {
-                while (SDL_PollEvent(&e)) {
-                    if (e.type == SDL_QUIT) {
-                        wait = false;
-                        is_running = false;
-                        Clean();
-                    }
-                }
-                SDL_Delay(50); // avoid burning CPU
-            }
-        }
-
-        SDL_Delay(16); // ~60 fps
-    }
-}
-
-Game::~Game() {
-    Clean();
 }
 
 
@@ -203,6 +193,7 @@ void Game::InitGraphics(){
     piece_clips[BLACK_ROOK] = { 4*w, h, w, h };
     piece_clips[BLACK_PAWN] = { 5*w, h, w, h };
 
+    DrawBoard();
 }
 
 
@@ -217,7 +208,6 @@ void Game::DrawBoard(){
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
     // quadrato colorato (per test)
-    const int size = 90, left_padding = 40, top_padding = 40;
     int i, j;
     SDL_Rect rect[64];
     for(int square = 0; square < 64; square++){
@@ -227,8 +217,10 @@ void Game::DrawBoard(){
         rect[square].w = SQUARE_SIZE;
         rect[square].h = SQUARE_SIZE;
 
-        if((i+j) % 2 == 0) SDL_SetRenderDrawColor(renderer, /*200, 150, 80,*/LIGHT_SQUARES[0], LIGHT_SQUARES[1], LIGHT_SQUARES[2], 255);
-        else SDL_SetRenderDrawColor(renderer, /*250, 200, 160,*/DARK_SQUARES[0], DARK_SQUARES[1], DARK_SQUARES[2], 255);
+        if((i+j) % 2 == 0) 
+            SDL_SetRenderDrawColor(renderer, LIGHT_SQUARES[0], LIGHT_SQUARES[1], LIGHT_SQUARES[2], 255);
+        else 
+            SDL_SetRenderDrawColor(renderer, DARK_SQUARES[0], DARK_SQUARES[1], DARK_SQUARES[2], 255);
 
         SDL_RenderFillRect(renderer, &rect[square]);
     }
@@ -258,6 +250,104 @@ void Game::DrawPieces() {
             dest = { LEFT_PADDING + x * SQUARE_SIZE, TOP_PADDING + y * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE };
             SDL_RenderCopy(renderer, pieces_texture, &piece_clips[idx], &dest);
             clear_last_active_bit(piece);
+        }
+    }
+
+}
+
+
+void Game::HighlightSquare(uint16_t square, int color[3]) {
+    uint16_t i = square / 8;
+    uint16_t j = square % 8;
+
+    if(i < 0 || i > 7 || j < 0 || j > 7) return;
+
+    if(engine_is_white){
+        i = 7 - i; j = 7 - j;
+    }
+
+    SDL_Rect rect = {LEFT_PADDING + j * SQUARE_SIZE, TOP_PADDING + i * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE};
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, color[0], color[1], color[2], 128); // translucent yellow
+    SDL_RenderFillRect(renderer, &rect);
+}
+
+
+void Game::EngineMove() {
+    StateMemory state;
+    // engine's turn
+    if(pos.white_to_move == engine_is_white){
+        engine_move = IterativeDeepening();
+        MakeMove(pos, engine_move, state);
+        // safety check: is move legal?
+        if(engine_move == 0 || !IsLegal(pos, engine_move)){
+            UnmakeMove(pos, engine_move, state);
+            return;
+        }
+        // if move is legal, recompute pseudolegals and update the stack
+        ResetPseudoLegalMoves();
+        PseudoLegalMoves(pos, pseudolegal_moves);
+        n_moves++;
+        repetition_stack[n_moves] = pos.zobrist_key;
+        from = engine_move & 0b0000000000111111;
+        to = (engine_move >> 6) & 0b0000000000111111;
+    }
+}
+
+
+void Game::PlayerMove() {
+    SDL_Event event;
+    uint16_t mask = 0b0000111111111111;
+
+    // player move
+    while (SDL_PollEvent(&event)) {
+        // Quit the game
+        if (event.type == SDL_QUIT) {
+            is_running = false;
+            Clean();
+        }
+        // Pick up a piece
+        else if(event.type == SDL_MOUSEBUTTONDOWN){
+            if (event.button.button == SDL_BUTTON_LEFT) {
+                from = SquareFromMouseClick(event.button.x, event.button.y);
+                // check if a piece is on that square
+                FindPiece(from);
+            }
+        }
+        else if(event.type == SDL_MOUSEBUTTONUP){
+            if (event.button.button == SDL_BUTTON_LEFT && dragging) {
+                dragging = false;
+                // generate moves
+                to = SquareFromMouseClick(event.button.x, event.button.y);
+                player_move = from | (to << 6);
+                // if promotion, freeze the screen and ask for promoted piece
+                is_promo = AskPromotion(); // break the event loop
+                if(is_promo) break;
+
+                // compare with pseudolegal moves, and if there's matching, make the move and check legality
+                for(int idx = 0; idx < MAX_NUMBER_OF_MOVES; idx++){
+                    // if we have finished the pseudolegal moves, break
+                    if(pseudolegal_moves[idx] == 0) break;
+                    // if the input move matches one of the precomputed pseudolegal moves
+                    if((pseudolegal_moves[idx] & mask) == player_move){
+                        player_move = pseudolegal_moves[idx];
+                        StateMemory state;
+                        MakeMove(pos, player_move, state);
+                        if(!IsLegal(pos, player_move)) 
+                            UnmakeMove(pos, player_move, state);
+                        else{ // move is legal
+                            n_moves++;
+                            repetition_stack[n_moves] = pos.zobrist_key;
+                            ResetPseudoLegalMoves();
+                            PseudoLegalMoves(pos, pseudolegal_moves);
+                        }
+                    }
+                }
+            }
+        }
+        else if (event.type == SDL_MOUSEMOTION) {
+            mouse_x = event.motion.x;
+            mouse_y = event.motion.y;
         }
     }
 
@@ -377,30 +467,6 @@ void Game::ReadMove(void){
 }
 
 
-void Game::StartNewGame(void){
-    ResetHistory();
-    ResetPseudoLegalMoves();
-    PLY = 0;
-    ResetRepetitionStack();
-    pos = PositionFromFen(starting_position_fen);
-    PrintBoard(pos, !engine_is_white);
-    PseudoLegalMoves(pos, pseudolegal_moves);
-    repetition_stack[0] = pos.zobrist_key;
-}
-
-
-void Game::StartNewGame(std::string position_fen){
-    ResetHistory();
-    ResetPseudoLegalMoves();
-    PLY = 0;
-    ResetRepetitionStack();
-    pos = PositionFromFen(position_fen);
-    PrintBoard(pos, !engine_is_white);
-    PseudoLegalMoves(pos, pseudolegal_moves);
-    repetition_stack[0] = pos.zobrist_key;
-}
-
-
 void Game::PlayVsEngine(void){
     Move engine_move;
     StateMemory state;
@@ -435,8 +501,15 @@ bool Game::AskPromotion(){
     
     uint16_t i = to / 8, j = to % 8;
 
+    if(moved_piece_index != WHITE_PAWN && moved_piece_index != BLACK_PAWN)
+        return false;
+    else if(moved_piece_index == WHITE_PAWN && i != 0)
+        return false;
+    else if(moved_piece_index == BLACK_PAWN && i != 7)
+        return false;
+
     SDL_Rect options[4];
-    int promoted_piece_indexes[4];
+    int promoted_piece_indexes[4] = { NO_PIECE, NO_PIECE, NO_PIECE, NO_PIECE };
 
     // if white is promoting
     if(moved_piece_index == WHITE_PAWN && i == 0){
@@ -450,6 +523,7 @@ bool Game::AskPromotion(){
             promoted_piece_indexes[idx] = 1 + idx; 
         }
     }
+
     // if black is promoting
     else if(moved_piece_index == BLACK_PAWN && i == 7){
         for(int idx = 0; idx < 4; idx++){
@@ -469,20 +543,23 @@ bool Game::AskPromotion(){
     // if illegal -> return to main loop
     StateMemory state;
     uint16_t flags;
+    Move move;
 
     // compare with pseudolegal moves, and if there's matching, make the move and check legality
     uint16_t mask = 0b0000111111111111;
     for(int idx = 0; idx < MAX_NUMBER_OF_MOVES; idx++){
         // if we have finished the pseudolegal moves, break
-        if(pseudolegal_moves[idx] == 0) break;
+        move = pseudolegal_moves[idx];
+        if(move == 0) return false;
         // if the input move matches one of the precomputed pseudolegal moves
-        if((pseudolegal_moves[idx] & mask) == player_move){
-            MakeMove(pos, pseudolegal_moves[idx], state);
-            if(!IsLegal(pos, pseudolegal_moves[idx])) {
-                UnmakeMove(pos, pseudolegal_moves[idx], state);
+        if((move & mask) == player_move){
+            MakeMove(pos, move, state);
+            if(!IsLegal(pos, move)) {
+                UnmakeMove(pos, move, state);
                 return false;
             }
-            UnmakeMove(pos, pseudolegal_moves[idx], state);
+            UnmakeMove(pos, move, state);
+            break;
         } 
     }
                         
@@ -550,25 +627,32 @@ bool Game::GameOver(){
     if(n_legal_moves == 0){
         // checkmate
         if(InCheck(pos)){
-            if(pos.white_to_move)
+            if(pos.white_to_move){
                 std::cout << "Checkmate. Black wins.\n";
-            else
+                black_wins = true;
+            }
+            else{
                 std::cout << "Checkmate. White wins.\n";
+                white_wins = true;
+            }
         }
         // otherwise it's stalemate
         else{
             std::cout << "Draw by stalemate.\n";
+            draw = true;
         }
         return true;
     }
     // ..
     if(InsufficientMaterial(pos)){
         std::cout << "Draw by insufficient material.\n";
+        draw = true;
         return true;
     }
     // check draw by repetition or insufficient material
     if(DrawByRepetitions()){
         std::cout << "Draw by repetitions.\n";
+        draw = true;
         return true;
     }
 
@@ -611,21 +695,18 @@ Move Game::IterativeDeepening(){
         scores[idx] = ScoreMove(pos, moves[idx]);
     }
 
-
     // ITERATIVE DEEPENING LOOP
     for(int depth = 1; depth <= 50; depth++){
 
         // Reset stuff
         best_eval_this_depth = pos.white_to_move ? negative_infinity : positive_infinity;
+        best_move_this_depth = 0;
         PLY = n_moves;
         if(depth >= MIN_DEPTH_LMR) LMR_ACTIVE = true;
         if(pop_count(pos.all_pieces) < 4) LMR_ACTIVE = false;
 
         // Loop over legal moves
         for(int idx = 0; idx < n_legal_moves; idx++){
-
-            // time out 
-            if(time_up(start_time, think_time)) return best_move;
 
             // pick the best move down the list (from the current index)
             for(int j = idx + 1; j < n_legal_moves; j++){
@@ -683,6 +764,9 @@ Move Game::IterativeDeepening(){
                 }
             }
 
+            // time out 
+            if(time_up(start_time, think_time)) return best_move;
+
         }
 
         best_eval = best_eval_this_depth;
@@ -690,7 +774,6 @@ Move Game::IterativeDeepening(){
 
         // win detected
         //if(win_detected) break;
-
     }
 
     return best_move;
@@ -713,10 +796,12 @@ uint16_t Game::SquareFromMouseClick(int x, int y){
         return static_cast<uint16_t>(8*i + j);
 }
 
+
 void Game::FindPiece(int square){
     // square is not valid (the click was not on any square)
     if(square > 63){
         moved_piece_index = NO_PIECE;
+        dragging = false;
         return; 
     }
     else{
@@ -738,8 +823,8 @@ void Game::FindPiece(int square){
 
 void Game::ChooseTheme(std::string theme){
     if(theme == "pink"){
-        LIGHT_SQUARES[0] = 255; LIGHT_SQUARES[1] = 143; LIGHT_SQUARES[2] = 233;
-        DARK_SQUARES[0] = 250; DARK_SQUARES[1] = 220; DARK_SQUARES[2] = 244;
+        LIGHT_SQUARES[0] = 250; LIGHT_SQUARES[1] = 220; LIGHT_SQUARES[2] = 245;
+        DARK_SQUARES[0] = 255; DARK_SQUARES[1] = 140; DARK_SQUARES[2] = 230;
     }
     else if(theme == "sea"){
         LIGHT_SQUARES[0] = 185; LIGHT_SQUARES[1] = 225; LIGHT_SQUARES[2] = 255;

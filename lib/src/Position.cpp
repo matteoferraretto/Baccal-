@@ -124,7 +124,11 @@ bool PositionIsPlayable(Position pos){
     if(pop_count(piece) != 1) return false;
     piece = pos.pieces[BLACK_KING];
     if(pop_count(piece) != 1) return false;
-    // 2. no pawns should be present in the 1st and 8th rank
+    // 2. kings should not be in adjacent squares
+    unsigned long black_king_sq;
+    _BitScanForward64(&black_king_sq, pos.pieces[BLACK_KING]);
+    if(king_covered_squares_bitboards[black_king_sq] & pos.pieces[WHITE_KING]) return false;
+    // 3. no pawns should be present in the 1st and 8th rank
     piece = pos.pieces[WHITE_PAWN] | pos.pieces[BLACK_PAWN];
     if(piece & ranks_bitboards[0]) return false;
     if(piece & ranks_bitboards[7]) return false;
@@ -154,7 +158,6 @@ bool PositionIsPlayable(Position pos){
     }
     // 6. half-move counter above 50
     if(pos.half_move_counter > 50) return false;
-    // 7. positions with a number of pieces 
     // if you survive all this... 
     return true;
 }
@@ -322,7 +325,8 @@ int PositionScore(Position& pos){
     // with huge advantage (opponent has only the king), bring the king closer
     if (pop_count(pos.black_pieces) == 1) {
         _BitScanForward64(&square2, pos.pieces[BLACK_KING]);
-        score += (14 - chebyshev_distance(square, square2)) * 40;  // bonus for driving closer
+        score += (8 - chebyshev_distance(square, square2)) * 40;  // bonus for driving closer
+        score += (3 - DISTANCE_FROM_EDGES[square2]) * 50;
     }
     // normally, use PST for the king
     else
@@ -332,7 +336,8 @@ int PositionScore(Position& pos){
     _BitScanForward64(&square, pos.pieces[BLACK_KING]);
     if (pop_count(pos.white_pieces) == 1) {
         _BitScanForward64(&square2, pos.pieces[WHITE_KING]);
-        score -= (14 - chebyshev_distance(square, square2)) * 40;  // bonus for driving closer
+        score -= (8 - chebyshev_distance(square, square2)) * 40;  // bonus for driving closer
+        score -= (3 - DISTANCE_FROM_EDGES[square2]) * 50;
     }
     else
         score -= static_cast<int>( lambda * BLACK_KING_PST_MIDDLEGAME[square] + (1.0 - lambda) * KING_PST_ENDGAME[square] );

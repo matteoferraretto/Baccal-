@@ -8,13 +8,7 @@
 #include <SDL_image.h>
 
 
-const int MAX_N_MOVES_IN_GAME = 256;
-
-struct Piece {
-    int type;
-    SDL_Rect rect;
-};
-
+const int MAX_N_MOVES_IN_GAME = 200; // max n. of half-moves to avoid risk of memory leaks
 
 class Game{
     public:
@@ -23,45 +17,46 @@ class Game{
         Move moves_list[MAX_N_MOVES_IN_GAME] = { };
         Position positions_list[MAX_N_MOVES_IN_GAME];
         uint64_t zobrist_keys_list[MAX_N_MOVES_IN_GAME] = { };
-        bool game_over;
+        bool game_over = false, white_wins = false, black_wins = false, draw = false;
         bool engine_is_white = false;
-        Piece board[64];
 
         Game();
         ~Game();
 
+        // game options
+        void PresentGame(void);
+
+        // graphics 
         void InitGraphics(void);
-
-        // reset all the attributes, show the board
-        void StartNewGame(void);
-        void StartNewGame(std::string position_fen);
-
         void DrawBoard(void);
         void DrawPieces(void);
+        void HighlightSquare(uint16_t square, int color[3]);
+        void ChooseTheme(std::string theme);
 
+        // reset
         void ResetHistory(void);
         void ResetPseudoLegalMoves(void);
+        void Clean(void);
 
-        bool DrawByRepetitions(void);
-
+        // read user input
+        void ReadMove(void);
         void ReadGameFromPNG(std::string game_png);
 
-        // ask the user to type a move, check if it's legal and add it to the stack
-        void ReadMove(void);
-
-        // transform the input string (given in square-square notation) into a Move
+        // gameplay 
         Move MoveFromString(std::string move_str);
-
         void PlayVsEngine(void);
-
-        // freeze the screen and offer the choice. Use the choice to add a flag to "move"
         bool AskPromotion();
-
-        bool GameOver();
-
         Move IterativeDeepening();
+        void FindPiece(int square);
+        void HandleEvent(SDL_Event event);
+        uint16_t SquareFromMouseClick(int x, int y);
+        void EngineMove(void);
+        void PlayerMove(void);
 
-        void Clean(void);
+        // game over 
+        bool DrawByRepetitions(void);
+        bool GameOver();
+        
 
     private: 
         Position pos; // current position
@@ -75,7 +70,6 @@ class Game{
         int LEFT_PADDING = 40, TOP_PADDING = 40;
         int LIGHT_SQUARES[3];
         int DARK_SQUARES[3];
-        void ChooseTheme(std::string theme); // choose chessboart theme
         bool is_running = true;
         SDL_Window* window;
         SDL_Renderer* renderer;
@@ -84,12 +78,9 @@ class Game{
         SDL_Rect piece_clips[12]; // ritagli dalla sprite-sheet
 
         // input management 
-        uint16_t SquareFromMouseClick(int x, int y);
         int moved_piece_index = NO_PIECE;
         uint16_t from = 64, to = 64;
         bool dragging = false;
         bool is_promo = false;
         int mouse_x, mouse_y;
-        void FindPiece(int square);
-        void HandleEvent(SDL_Event event);
 };

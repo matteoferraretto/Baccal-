@@ -398,7 +398,7 @@ int BestEvaluation(Position& pos, int depth, int alpha, int beta, bool previous_
             }
             UnmakeNullMove(pos, null_state);
         }
-    } 
+    }
 
     // else generate all the new positions applying all the legal moves 
     // then recursively call this function and update best_evaluation if needed

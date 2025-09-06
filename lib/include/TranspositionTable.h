@@ -101,8 +101,9 @@ uint64_t ZobristHashing(Position& pos);
 
 // STACK OF REPETITIONS
 // in order to account for draw by repetition, we need to store all the positions visited on a path in the tree-search.
-// max depth of search: 
-const int SIZE_REPETITION_STACK = 64; 
+// SIZE_REPETITION_STACK > 2 * max_number_of_moves_in_a_game + max_depth_iterative_deepening
+// assuming max_number_of_moves_in_a_game = 100 and max_depth_iterative_deepening = 50
+const int SIZE_REPETITION_STACK = 256; 
 extern uint64_t repetition_stack[SIZE_REPETITION_STACK];
 
 void PrintRepetitionStack();
