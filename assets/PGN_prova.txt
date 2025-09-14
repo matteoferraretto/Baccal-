@@ -1,0 +1,22 @@
+[Event "Let\\'s Play!"]
+[Site "Chess.com"]
+[Date "2025.08.13"]
+[Round "?"]
+[White "BagoDomine"]
+[Black "MatteoFerraretto"]
+[Result "*"]
+[TimeControl "1/86400"]
+[WhiteElo "1069"]
+[BlackElo "1328"]
+[Termination "unterminated"]
+[ECO "C55"]
+[Link "https://www.chess.com/game/daily/850590556"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. d3 d5 5. exd5 Nxd5 6. Bxd5 Qxd5 7. Nc3 Bb4 8.
+Bd2 Bxc3 9. Bxc3 Bg4 10. Qe2 O-O 11. O-O Rfe8 12. Qe4 Bxf3 13. Qxf3 Qxf3 14.
+gxf3 Re6 15. Rfe1 Nd4 16. Bxd4 Rg6+ 17. Kf1 exd4 18. Re7 Rc6 19. Rae1 Kf8 20.
+R1e2 Rc8 21. Rd7 Re8 22. Rd2 Rb6 23. c3 dxc3 24. bxc3 Re7 25. Rd8+ Re8 26. Rd7
+Rb1+ 27. Kg2 c6 28. c4 Re6 29. Rd8+ Ke7 30. Rd4 c5 31. Re4 Rb6 32. Kg3 Kf8 33.
+h4 Rbd6 34. Rxe6 fxe6 35. a4 Ke7 36. f4 Rd4 37. f3 b6 38. Kg4 e5 39. Kg3 Rxf4
+40. Re2 Kd6 41. Re4 Rf7 42. f4 exf4+ 43. Rxf4 Ke6 44. Re4+ Kd6 45. Rf4 Rf6 46.
+Re4 Rf1 *

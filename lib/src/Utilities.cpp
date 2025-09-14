@@ -88,3 +88,36 @@ void read_from_file(uint64_t *arr, size_t N, std::string file_name){
     }
     fin.close();
 }
+
+
+std::vector<std::string> ReadGameFromPGN(std::string filename) {
+    std::ifstream fin(filename);
+    std::string line;
+    std::ostringstream move_text;
+    bool in_moves = false;
+
+    while (std::getline(fin, line)) {
+        // Skip tags
+        if (!in_moves) {
+            if (line.empty()) {
+                in_moves = true; // blank line marks end of tags
+            }
+            continue;
+        }
+        // Collect move text (could span multiple lines)
+        move_text << " " << line;
+    }
+
+    // Tokenize by spaces
+    std::vector<std::string> tokens;
+    std::istringstream iss(move_text.str());
+    std::string token;
+    while (iss >> token) {
+        // Skip move numbers and results
+        if (token.find('.') != std::string::npos) continue;  // "1.", "23..."
+        if (token == "1-0" || token == "0-1" || token == "1/2-1/2" || token == "*") continue;
+        tokens.push_back(token);
+    }
+
+    return tokens; // e.g. ["e4", "e5", "Nf3", "Nc6", ...]
+}

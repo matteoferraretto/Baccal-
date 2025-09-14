@@ -3,6 +3,9 @@
 #include <string>
 #include <cstdint>
 #include <bitset>
+#include <vector>
+#include <sstream>
+
 
 // piece type
 enum piece_type{
@@ -217,6 +220,9 @@ inline void read_from_file(uint64_t (&arr)[N][M], std::string file_name){
 
 void write_to_file(const uint64_t *arr, size_t N, std::string file_name);
 void read_from_file(uint64_t *arr, size_t N, std::string file_name);
+
+// convert PGN file to vector of moves as strings in SAN form
+std::vector<std::string> ReadGameFromPGN(std::string filename);
 
 // relevant positions
 const std::string starting_position_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0";

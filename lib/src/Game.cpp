@@ -14,77 +14,6 @@ int GREEN_RGB[3] = { 0, 255, 0 };
 
 Game::Game(){
 
-    PresentGame();
-
-    InitGraphics();
-    
-    SDL_RenderCopy(renderer, board_texture, NULL, NULL);
-    SDL_RenderPresent(renderer);
-
-    while (is_running) {
-
-        EngineMove();
-
-        PlayerMove();
-        
-        SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, board_texture, NULL, NULL);
-
-        if(from < 64)
-            HighlightSquare(from, YELLOW_RGB); 
-        if(to < 64)
-            HighlightSquare(to, YELLOW_RGB);
-        DrawPieces();
-
-        if(dragging && moved_piece_index != NO_PIECE){
-            SDL_Rect dest = { mouse_x - SQUARE_SIZE/2, mouse_y - SQUARE_SIZE/2, SQUARE_SIZE, SQUARE_SIZE };
-            SDL_RenderCopy(renderer, pieces_texture, &piece_clips[moved_piece_index], &dest);
-        }
-
-        SDL_RenderPresent(renderer);
-        
-        // check game over
-        game_over = GameOver();
-        if(game_over){
-            SDL_Event e;
-            bool wait = true;
-            while (wait) {
-                while (SDL_PollEvent(&e)) {
-                    if (e.type == SDL_QUIT) {
-                        wait = false;
-                        is_running = false;
-                        Clean();
-                    }
-                }
-
-                SDL_RenderClear(renderer);
-                SDL_RenderCopy(renderer, board_texture, NULL, NULL);
-
-                unsigned long white_king_sq, black_king_sq;
-                _BitScanForward64(&white_king_sq, pos.pieces[WHITE_KING]);
-                _BitScanForward64(&black_king_sq, pos.pieces[BLACK_KING]);
-                if(white_wins){
-                    HighlightSquare(static_cast<uint16_t> (white_king_sq), GREEN_RGB);
-                    HighlightSquare(static_cast<uint16_t> (black_king_sq), RED_RGB);
-                }
-                else if(black_wins){
-                    HighlightSquare(static_cast<uint16_t> (white_king_sq), RED_RGB);
-                    HighlightSquare(static_cast<uint16_t> (black_king_sq), GREEN_RGB);
-                }
-                else {
-                    HighlightSquare(static_cast<uint16_t> (white_king_sq), YELLOW_RGB);
-                    HighlightSquare(static_cast<uint16_t> (black_king_sq), YELLOW_RGB);
-                }
-
-                DrawPieces();
-                SDL_RenderPresent(renderer);
-
-                SDL_Delay(50); // avoid burning CPU
-            }
-        }
-
-        SDL_Delay(16); // ~60 fps
-    }
 }
 
 Game::~Game() {
@@ -125,7 +54,10 @@ void Game::PresentGame(void) {
             std::getline( std::cin, position_fen );
         }
         pos = PositionFromFen(position_fen);
-        if(PositionIsPlayable(pos)) break;
+        if(PositionIsPlayable(pos)){
+            positions_list[0] = pos;
+            break;
+        }
         std::cout << "Invalid position.\n";
     }
 
@@ -288,6 +220,9 @@ void Game::EngineMove() {
         ResetPseudoLegalMoves();
         PseudoLegalMoves(pos, pseudolegal_moves);
         n_moves++;
+        idx_move_in_game++;
+        moves_list[n_moves - 1] = engine_move;
+        positions_list[n_moves] = pos;
         repetition_stack[n_moves] = pos.zobrist_key;
         from = engine_move & 0b0000000000111111;
         to = (engine_move >> 6) & 0b0000000000111111;
@@ -314,6 +249,7 @@ void Game::PlayerMove() {
                 FindPiece(from);
             }
         }
+        // release piece
         else if(event.type == SDL_MOUSEBUTTONUP){
             if (event.button.button == SDL_BUTTON_LEFT && dragging) {
                 dragging = false;
@@ -337,6 +273,9 @@ void Game::PlayerMove() {
                             UnmakeMove(pos, player_move, state);
                         else{ // move is legal
                             n_moves++;
+                            idx_move_in_game++;
+                            moves_list[n_moves - 1] = player_move;
+                            positions_list[n_moves] = pos;
                             repetition_stack[n_moves] = pos.zobrist_key;
                             ResetPseudoLegalMoves();
                             PseudoLegalMoves(pos, pseudolegal_moves);
@@ -345,9 +284,47 @@ void Game::PlayerMove() {
                 }
             }
         }
+        // drag piece
         else if (event.type == SDL_MOUSEMOTION) {
             mouse_x = event.motion.x;
             mouse_y = event.motion.y;
+        }
+        // visualize game history
+        else if(event.type == SDL_KEYDOWN){
+            // go forward (right arrow)
+            if (event.key.keysym.sym == SDLK_RIGHT) {
+                if(idx_move_in_game < n_moves){
+                    idx_move_in_game++;
+                    from = moves_list[idx_move_in_game - 1] & 0b0000000000111111;
+                    to = (moves_list[idx_move_in_game - 1] >> 6) & 0b0000000000111111;
+                    pos = positions_list[idx_move_in_game];
+                    pos.white_to_move = !engine_is_white; // trick to ensure that the engine does not play a move while visualizing game history
+                }
+            }
+            // go backwards (left arrow)
+            else if(event.key.keysym.sym == SDLK_LEFT) { 
+                if(idx_move_in_game > 0){
+                    idx_move_in_game--;
+                    from = moves_list[idx_move_in_game] & 0b0000000000111111;
+                    to = (moves_list[idx_move_in_game] >> 6) & 0b0000000000111111;
+                    pos = positions_list[idx_move_in_game];
+                    pos.white_to_move = !engine_is_white; // trick to ensure that the engine does not play a move while visualizing game history
+                }
+            }
+            // go to current pos (down arrow)
+            else if(event.key.keysym.sym == SDLK_DOWN) {
+                idx_move_in_game = 0;
+                from = 64; to = 64;
+                pos = positions_list[0];
+            }
+            // go to the starting pos (up arrow)
+            else if(event.key.keysym.sym == SDLK_UP) {
+                idx_move_in_game = n_moves;
+                from = moves_list[idx_move_in_game - 1] & 0b0000000000111111;
+                to = (moves_list[idx_move_in_game - 1] >> 6) & 0b0000000000111111;
+                pos = positions_list[n_moves];
+                pos.white_to_move = !engine_is_white; // trick to ensure that the engine does not play a move while visualizing game history
+            }
         }
     }
 
@@ -468,7 +445,7 @@ void Game::ReadMove(void){
 
 
 void Game::PlayVsEngine(void){
-    Move engine_move;
+    /*Move engine_move;
     StateMemory state;
     bool game_over = false;
     while(true){
@@ -493,6 +470,77 @@ void Game::PlayVsEngine(void){
         repetition_stack[n_moves] = pos.zobrist_key;
         game_over = GameOver();
         if(game_over) break;
+    }*/
+    PresentGame();
+
+    InitGraphics();
+    
+    SDL_RenderCopy(renderer, board_texture, NULL, NULL);
+    SDL_RenderPresent(renderer);
+
+    while (is_running) {
+
+        EngineMove();
+
+        PlayerMove();
+        
+        SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, board_texture, NULL, NULL);
+
+        if(from < 64)
+            HighlightSquare(from, YELLOW_RGB); 
+        if(to < 64)
+            HighlightSquare(to, YELLOW_RGB);
+        DrawPieces();
+
+        if(dragging && moved_piece_index != NO_PIECE){
+            SDL_Rect dest = { mouse_x - SQUARE_SIZE/2, mouse_y - SQUARE_SIZE/2, SQUARE_SIZE, SQUARE_SIZE };
+            SDL_RenderCopy(renderer, pieces_texture, &piece_clips[moved_piece_index], &dest);
+        }
+
+        SDL_RenderPresent(renderer);
+        
+        // check game over
+        game_over = GameOver();
+        if(game_over){
+            SDL_Event e;
+            bool wait = true;
+            while (wait) {
+                while (SDL_PollEvent(&e)) {
+                    if (e.type == SDL_QUIT) {
+                        wait = false;
+                        is_running = false;
+                        Clean();
+                    }
+                }
+
+                SDL_RenderClear(renderer);
+                SDL_RenderCopy(renderer, board_texture, NULL, NULL);
+
+                unsigned long white_king_sq, black_king_sq;
+                _BitScanForward64(&white_king_sq, pos.pieces[WHITE_KING]);
+                _BitScanForward64(&black_king_sq, pos.pieces[BLACK_KING]);
+                if(white_wins){
+                    HighlightSquare(static_cast<uint16_t> (white_king_sq), GREEN_RGB);
+                    HighlightSquare(static_cast<uint16_t> (black_king_sq), RED_RGB);
+                }
+                else if(black_wins){
+                    HighlightSquare(static_cast<uint16_t> (white_king_sq), RED_RGB);
+                    HighlightSquare(static_cast<uint16_t> (black_king_sq), GREEN_RGB);
+                }
+                else {
+                    HighlightSquare(static_cast<uint16_t> (white_king_sq), YELLOW_RGB);
+                    HighlightSquare(static_cast<uint16_t> (black_king_sq), YELLOW_RGB);
+                }
+
+                DrawPieces();
+                SDL_RenderPresent(renderer);
+
+                SDL_Delay(50); // avoid burning CPU
+            }
+        }
+
+        SDL_Delay(16); // ~60 fps
     }
 }
 
@@ -598,6 +646,9 @@ bool Game::AskPromotion(){
                         player_move |= static_cast<uint16_t>(flags << 12);
                         MakeMove(pos, player_move, state);
                         n_moves++;
+                        idx_move_in_game++;
+                        moves_list[n_moves - 1] = player_move;
+                        positions_list[n_moves] = pos;
                         repetition_stack[n_moves] = pos.zobrist_key;
                         ResetPseudoLegalMoves();
                         PseudoLegalMoves(pos, pseudolegal_moves);
@@ -834,6 +885,116 @@ void Game::ChooseTheme(std::string theme){
         LIGHT_SQUARES[0] = 255; LIGHT_SQUARES[1] = 200; LIGHT_SQUARES[2] = 150;
         DARK_SQUARES[0] = 200; DARK_SQUARES[1] = 140; DARK_SQUARES[2] = 68;
     }
+}
+
+
+void Game::ShowGame(std::string pgn_file){
+    // extract list of moves from the PGN file and save as vector of strings in Standard Algebraic Notation [SAN]
+    std::vector<std::string> moves_SAN_history = ReadGameFromPGN(pgn_file);
+    size_t n_moves = moves_SAN_history.size();
+    Position starting_pos = PositionFromFen(starting_position_fen);
+    pos = starting_pos;
+    ResetRepetitionStack();
+    ResetPseudoLegalMoves();
+    PseudoLegalMoves(pos, pseudolegal_moves);
+
+    Move move = 0;
+    std::string move_str;
+    int idx_move_in_game = 0;
+    SDL_Event event;
+    StateMemory state;
+    
+    // LOOP over game history in SAN: 
+    //    1. generate pseudolegal moves from pos
+    //    2. LOOP over these moves and skip illegal ones
+    //    3. translate the others in SAN
+    //    4. if one of them matches the current move in SAN, update pos applying this move
+    for(idx_move_in_game = 0; idx_move_in_game < n_moves; idx_move_in_game++){
+        for(int idx = 0; idx < 256; idx++){
+            move = pseudolegal_moves[idx];
+            if(move == 0) break;
+            move_str = AlgebraicNotation(pos, move);
+
+            MakeMove(pos, move, state);
+            if(!IsLegal(pos, move)){
+                UnmakeMove(pos, move, state);
+                continue;
+            }
+            if(move_str == moves_SAN_history[idx_move_in_game]){
+                moves_list[idx_move_in_game] = move;
+                break;
+            }
+            else{
+                UnmakeMove(pos, move, state);
+            }
+        }
+
+        if(move == 0) break;
+
+        ResetPseudoLegalMoves();
+        PseudoLegalMoves(pos, pseudolegal_moves);
+    }
+
+
+    InitGraphics();
+    SDL_RenderCopy(renderer, board_texture, NULL, NULL);
+    SDL_RenderPresent(renderer);
+
+    idx_move_in_game = 0;
+    pos = starting_pos;
+    StateMemory states[MAX_N_MOVES_IN_GAME];
+
+    while (is_running) {
+
+        while (SDL_PollEvent(&event)) {
+            // Quit the game
+            if (event.type == SDL_QUIT) {
+                is_running = false;
+                Clean();
+            }
+            // Explore the game
+            else if(event.type == SDL_KEYDOWN){
+                // right arrow
+                if (event.key.keysym.sym == SDLK_RIGHT) {
+                    if(idx_move_in_game < n_moves - 1){
+                        move = moves_list[idx_move_in_game];
+                        from = move & 0b0000000000111111;
+                        to = (move >> 6) & 0b0000000000111111;
+                        MakeMove(pos, move, states[idx_move_in_game]);
+                        idx_move_in_game++;
+                    }
+                }
+                // left arrow
+                else if(event.key.keysym.sym == SDLK_LEFT) { 
+                    if(idx_move_in_game > 0) {
+                        idx_move_in_game--;
+                        move = moves_list[idx_move_in_game];
+                        from = move & 0b0000000000111111;
+                        to = (move >> 6) & 0b0000000000111111;
+                        UnmakeMove(pos, move, states[idx_move_in_game]);
+                    }
+                }
+            }
+        }
+
+        SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, board_texture, NULL, NULL);
+
+        if(from < 64)
+            HighlightSquare(from, YELLOW_RGB); 
+        if(to < 64)
+            HighlightSquare(to, YELLOW_RGB);
+        DrawPieces();
+
+        SDL_RenderPresent(renderer);
+        
+        SDL_Delay(16); // ~60 fps
+    }
+    /*
+    for(int idx_move_in_game = 0; idx_move_in_game < moves_SAN_history.size(); idx_move_in_game++){
+        move = moves_history[idx_move_in_game];
+        PrintMove(move); std::cout << " ";
+    }*/
 }
 
 

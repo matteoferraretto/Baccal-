@@ -52,7 +52,7 @@ void PrintPV(Position pos, Move best_move) {
 
     Move move = best_move;
     while (move) {
-        PrintMoveAlgebraicNotation(pos, move); std::cout << " ";
+        std::cout << AlgebraicNotation(pos, move) << " ";
         MakeMove(pos, move, state);
         //PrintBoard(pos);
         entry = TTProbe(pos.zobrist_key);

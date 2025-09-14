@@ -207,7 +207,7 @@ bool InsufficientMaterial(const Position& pos);
 
 
 // Print moves
-inline void PrintMoveAlgebraicNotation(Position pos, const Move move){
+inline std::string AlgebraicNotation(Position pos, const Move move){
     uint8_t from = static_cast<uint8_t>(move & 0b0000000000111111);
     uint8_t to = static_cast<uint8_t>((move >> 6) & 0b0000000000111111);
     Bitboard from_bb = (1ULL << from);
@@ -215,18 +215,22 @@ inline void PrintMoveAlgebraicNotation(Position pos, const Move move){
     uint8_t to_rank = to / 8, to_file = to % 8;
     uint8_t from_rank = from / 8, from_file = from % 8;
     int flags = (move >> 12);
+    std::string move_str = std::string();
 
     // castling
     if(flags == O_O){
-        std::cout << "O-O"; return;
+        return "O-O";
     }
     else if(flags == O_O_O){
-        std::cout << "O-O-O"; return;
+        return "O-O-O";
     }
 
     MaskAndMagic mm;
     uint64_t hash;
-    Bitboard attacks, horizontal_attackers, vertical_attackers;
+    Bitboard piece, attacks, horizontal_attackers, vertical_attackers;
+    unsigned long square;
+    Move other_move = move;
+    StateMemory state;
 
     // retrieve moved piece
     int moved_piece_index = NO_PIECE;
@@ -236,20 +240,57 @@ inline void PrintMoveAlgebraicNotation(Position pos, const Move move){
             break;
         }
     }
-    std::string move_str = std::string();
     if(moved_piece_index != WHITE_PAWN && moved_piece_index != BLACK_PAWN)
         move_str += "KQRBNPKQRBNP"[moved_piece_index];
 
     // disambiguation of the starting square
     if(moved_piece_index == WHITE_ROOK || moved_piece_index == BLACK_ROOK){
+        // find other rooks (exclude the moved rook)
+        piece = pos.pieces[pos.white_to_move ? WHITE_ROOK : BLACK_ROOK] ^ from_bb;
+        // loop over these pieces to find if one of them can go to the "to" square
+        while(piece){
+            _BitScanForward64(&square, piece);
+            mm = rook_mm[square];
+            hash = ((pos.all_pieces & mm.mask) * mm.magic) >> SHIFT_ROOK;
+            attacks = rook_covered_squares_bb[square][hash];
+            attacks &= to_bb; 
+            // is the "to" squares attacked by this other rook? 
+            // If yes, generate the pseudomove and check legality.
+            if(attacks){
+                other_move = move & 0b1111111111000000; // delete "from" bits
+                other_move |= static_cast<uint16_t>(square) & 0b0000000000111111; // substitute the bits with the new "from"
+                // check move legality
+                MakeMove(pos, other_move, state);
+                if(IsLegal(pos, other_move)){
+                    UnmakeMove(pos, other_move, state);
+                    // ambiguity type: do from and square have different files? If so, specify file.
+                    if(static_cast<uint8_t>(square % 8) != from_file)
+                        move_str += "abcdefgh"[from_file];
+                    // if same file, remove ambiguity with rank
+                    else 
+                        move_str += "87654321"[from_rank];
+                }
+                UnmakeMove(pos, other_move, state);
+            }
+            clear_last_active_bit(piece);
+        }
         // pretend there's a rook on the "to" square
         // compute mask of horizontal attacks (do not filter out occupied squares yet)
         // count the bits of (horizontal_attacks & your_pieces) -> if > 1: ambiguity
         // if the "from" square is within the resulting mask, print file
-        mm = rook_mm[to];
+        /*mm = rook_mm[to];
         hash = ((pos.all_pieces & mm.mask) * mm.magic) >> SHIFT_ROOK;
         attacks = rook_covered_squares_bb[to][hash];
-        horizontal_attackers = attacks & ranks_bitboards[to_rank] & pos.pieces[pos.white_to_move ? WHITE_ROOK : BLACK_ROOK];
+        attacks &= pos.pieces[pos.white_to_move ? WHITE_ROOK : BLACK_ROOK];
+        // if ambiguity
+        if(pop_count(attacks) > 1){
+            // disambiguate by starting rank only if 2 rooks are vertically aligned
+            vertical_attackers = attacks & files_bitboards[to_file];
+            if(pop_count(vertical_attackers) > 1) move_str += "87654321"[from_rank];
+            // disambiguate by starting file in any other case
+            else move_str += "abcdefgh"[from_file];
+        } */
+        /*horizontal_attackers = attacks & ranks_bitboards[to_rank] & pos.pieces[pos.white_to_move ? WHITE_ROOK : BLACK_ROOK];
         if(horizontal_attackers & from_bb){
             if(pop_count(horizontal_attackers) > 1)
                 move_str += "abcdefgh"[from_file];
@@ -259,7 +300,7 @@ inline void PrintMoveAlgebraicNotation(Position pos, const Move move){
         if(vertical_attackers & from_bb){
             if(pop_count(vertical_attackers) > 1)
                 move_str += "87654321"[from_rank];
-        }
+        }*/
     }
     else if(moved_piece_index == WHITE_BISHOP || moved_piece_index == BLACK_BISHOP){
         // start from the "to" square and generate bishop attacks
@@ -341,12 +382,12 @@ inline void PrintMoveAlgebraicNotation(Position pos, const Move move){
         move_str += "=N";
 
     // verify if move is check
-    StateMemory state;
     MakeMove(pos, move, state);
     if(InCheck(pos)) move_str += "+";
+    UnmakeMove(pos, move, state);
 
     // print final result
-    std::cout << move_str;
+    return move_str;
 }
 
 
@@ -365,7 +406,7 @@ inline void PrintLegalMoves(Position pos){
             continue;
         }
         UnmakeMove(pos, move, state);
-        PrintMoveAlgebraicNotation(pos, move); std::cout << ", ";
+        std::cout << AlgebraicNotation(pos, move) << ", ";
     }
     std::cout << "\n";
 }

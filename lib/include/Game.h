@@ -1,6 +1,8 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <sstream>
+#include <fstream>
 #include <Utilities.h>
 #include <Move.h>
 #include <Position.h>
@@ -12,7 +14,7 @@ const int MAX_N_MOVES_IN_GAME = 200; // max n. of half-moves to avoid risk of me
 
 class Game{
     public:
-        const int think_time = 2000; // milliseconds
+        const int think_time = 1000; // milliseconds
         int n_moves = 0;
         Move moves_list[MAX_N_MOVES_IN_GAME] = { };
         Position positions_list[MAX_N_MOVES_IN_GAME];
@@ -40,7 +42,6 @@ class Game{
 
         // read user input
         void ReadMove(void);
-        void ReadGameFromPNG(std::string game_png);
 
         // gameplay 
         Move MoveFromString(std::string move_str);
@@ -52,6 +53,7 @@ class Game{
         uint16_t SquareFromMouseClick(int x, int y);
         void EngineMove(void);
         void PlayerMove(void);
+        void ShowGame(std::string pgn_file);
 
         // game over 
         bool DrawByRepetitions(void);
@@ -62,14 +64,15 @@ class Game{
         Position pos; // current position
         Move pseudolegal_moves[MAX_NUMBER_OF_MOVES];
         Move player_move = 0, engine_move = 0;
+        int idx_move_in_game = 0;
 
         // graphics variables
         const int WIDTH  = 960; // width of screen
         const int HEIGHT = 960; // height of screen
         int SQUARE_SIZE = 110;
         int LEFT_PADDING = 40, TOP_PADDING = 40;
-        int LIGHT_SQUARES[3];
-        int DARK_SQUARES[3];
+        int LIGHT_SQUARES[3] = {255, 200, 150};
+        int DARK_SQUARES[3] = {200, 140, 68};
         bool is_running = true;
         SDL_Window* window;
         SDL_Renderer* renderer;
