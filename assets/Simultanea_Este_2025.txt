@@ -1,0 +1,10 @@
+[Event "Simultanea Este 2025"] 
+[Site "Chess.com iPhone"] 
+[Date "2025.10.12"] 
+[Round "1"] 
+[White "Matteo Ferraretto"] 
+[Black "GM Kenneth Solomon"] 
+[Result "*"] 
+[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"] 
+ 
+1. d4 Nf6 2. Bf4 d5 3. Nf3 c5 4. c3 e6 5. e3 Nc6 6. Nbd2 Bd6 7. Bg3 O-O 8. Bd3 Re8 9. Qc2 cxd4 10. exd4 e5 11. dxe5 Nxe5 12. O-O Nxd3 13. Qxd3 Bxg3 14. hxg3 Ne4 15. Rfe1 Bf5 16. Qd4 h6 17. Nh4 Bh7 18. Nhf3 Qc7 19. Qa4 Re6 20. Nxe4 dxe4 21. Nd4 Ra6 22. Qb5 Rb6 23. Qe2 Re8 24. a4 a6 25. Rac1 h5 26. b4 Rh6 27. Qe3 h4 28. gxh4 Rxh4 29. Nf3 Rh5 30. g3 Re6 31. Ng5 Reh6 32. Nxe4 Rh1+ 33. Kg2 R1h2+ 34. Kf1 Qc4+ 35. Kg1 Rh1+ 36. Kg2 Bxe4+ 37. Qxe4 Qxe4+ 38. Rxe4 Rxc1 39. c4 Rc6 40. Re8+ Kh7 41. Rb8 b6 42. b5 axb5 43. cxb5 Rf6 44. a5 bxa5 45. b6 Rc2 46. b7 {*}

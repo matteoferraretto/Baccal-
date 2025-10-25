@@ -221,11 +221,15 @@ void Game::EngineMove() {
         PseudoLegalMoves(pos, pseudolegal_moves);
         n_moves++;
         idx_move_in_game++;
-        moves_list[n_moves - 1] = engine_move;
+        idx_pos_in_game++;
+        moves_list[idx_move_in_game] = engine_move;
         positions_list[n_moves] = pos;
         repetition_stack[n_moves] = pos.zobrist_key;
         from = engine_move & 0b0000000000111111;
         to = (engine_move >> 6) & 0b0000000000111111;
+        // print stuff
+        if(!pos.white_to_move) std::cout << 1 + n_moves/2 << ". ";
+        std::cout << AlgebraicNotation(positions_list[n_moves-1], engine_move) << " ";
     }
 }
 
@@ -273,12 +277,15 @@ void Game::PlayerMove() {
                             UnmakeMove(pos, player_move, state);
                         else{ // move is legal
                             n_moves++;
-                            idx_move_in_game++;
-                            moves_list[n_moves - 1] = player_move;
+                            idx_move_in_game++; idx_pos_in_game++;
+                            moves_list[idx_move_in_game] = player_move;
                             positions_list[n_moves] = pos;
                             repetition_stack[n_moves] = pos.zobrist_key;
                             ResetPseudoLegalMoves();
                             PseudoLegalMoves(pos, pseudolegal_moves);
+                            // print stuff
+                            if(!pos.white_to_move) std::cout << 1 + n_moves/2 << ". ";
+                            std::cout << AlgebraicNotation(positions_list[n_moves-1], player_move) << " ";
                         }
                     }
                 }
@@ -293,37 +300,41 @@ void Game::PlayerMove() {
         else if(event.type == SDL_KEYDOWN){
             // go forward (right arrow)
             if (event.key.keysym.sym == SDLK_RIGHT) {
-                if(idx_move_in_game < n_moves){
+                if(idx_pos_in_game < n_moves && idx_pos_in_game >= 0){
                     idx_move_in_game++;
-                    from = moves_list[idx_move_in_game - 1] & 0b0000000000111111;
-                    to = (moves_list[idx_move_in_game - 1] >> 6) & 0b0000000000111111;
-                    pos = positions_list[idx_move_in_game];
+                    from = moves_list[idx_move_in_game] & 0b0000000000111111;
+                    to = (moves_list[idx_move_in_game] >> 6) & 0b0000000000111111;
+                    idx_pos_in_game++;
+                    pos = positions_list[idx_pos_in_game];
                     pos.white_to_move = !engine_is_white; // trick to ensure that the engine does not play a move while visualizing game history
                 }
             }
             // go backwards (left arrow)
             else if(event.key.keysym.sym == SDLK_LEFT) { 
-                if(idx_move_in_game > 0){
-                    idx_move_in_game--;
+                if(idx_pos_in_game > 0 && idx_pos_in_game <= n_moves){        
                     from = moves_list[idx_move_in_game] & 0b0000000000111111;
                     to = (moves_list[idx_move_in_game] >> 6) & 0b0000000000111111;
-                    pos = positions_list[idx_move_in_game];
+                    idx_move_in_game--;
+                    idx_pos_in_game--;
+                    pos = positions_list[idx_pos_in_game];
                     pos.white_to_move = !engine_is_white; // trick to ensure that the engine does not play a move while visualizing game history
                 }
             }
-            // go to current pos (down arrow)
+            // go to starting pos (down arrow)
             else if(event.key.keysym.sym == SDLK_DOWN) {
-                idx_move_in_game = 0;
+                idx_move_in_game = -1;
+                idx_pos_in_game = 0;
                 from = 64; to = 64;
                 pos = positions_list[0];
-            }
-            // go to the starting pos (up arrow)
-            else if(event.key.keysym.sym == SDLK_UP) {
-                idx_move_in_game = n_moves;
-                from = moves_list[idx_move_in_game - 1] & 0b0000000000111111;
-                to = (moves_list[idx_move_in_game - 1] >> 6) & 0b0000000000111111;
-                pos = positions_list[n_moves];
                 pos.white_to_move = !engine_is_white; // trick to ensure that the engine does not play a move while visualizing game history
+            }
+            // go to the current pos (up arrow)
+            else if(event.key.keysym.sym == SDLK_UP) {
+                idx_move_in_game = n_moves - 1;
+                idx_pos_in_game = n_moves;
+                from = moves_list[n_moves - 1] & 0b0000000000111111;
+                to = (moves_list[n_moves - 1] >> 6) & 0b0000000000111111;
+                pos = positions_list[n_moves];
             }
         }
     }
@@ -647,11 +658,15 @@ bool Game::AskPromotion(){
                         MakeMove(pos, player_move, state);
                         n_moves++;
                         idx_move_in_game++;
-                        moves_list[n_moves - 1] = player_move;
+                        idx_pos_in_game++;
+                        moves_list[idx_move_in_game] = player_move;
                         positions_list[n_moves] = pos;
                         repetition_stack[n_moves] = pos.zobrist_key;
                         ResetPseudoLegalMoves();
                         PseudoLegalMoves(pos, pseudolegal_moves);
+                        // print stuff
+                        if(!pos.white_to_move) std::cout << 1 + n_moves/2 << ". ";
+                        std::cout << AlgebraicNotation(positions_list[n_moves-1], player_move) << " ";
                         // un-freeze the board
                         wait = false;
                     }
