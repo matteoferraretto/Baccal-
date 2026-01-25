@@ -9,6 +9,7 @@
 #include <Baccala.h>
 #include <TranspositionTable.h>
 #include <Game.h>
+#include <Book.h>
 #include <fstream>
 #include <intrin.h>
 #include <SDL.h>
@@ -24,7 +25,6 @@ int main(int argc, char* argv[]){
     HistoryInit();
     PreComputeBitboards(true); // true = read from file
 
-    
     /*std::string pos_fen;
     unsigned int max_depth;
     std::cout << "Insert a valid FEN string \n";
@@ -45,8 +45,9 @@ int main(int argc, char* argv[]){
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     Game game;
-    game.PlayVsEngine();
-    //game.ShowGame("../assets/PGN_prova.txt");
+    //game.PlayVsEngine();
+    //game.ShowGame();
+    game.Menu();
 
     //Move best_move = IterativeDeepening(pos, 1, max_depth, 1);
     //PerftTesting();

@@ -16,6 +16,7 @@ add_library(Baccala STATIC
     src/Bitboards.cpp 
     src/TranspositionTable.cpp 
     src/Game.cpp
+    src/Book.cpp
 )
 
 target_include_directories(Baccala 

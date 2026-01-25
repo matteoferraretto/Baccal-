@@ -8,12 +8,14 @@
 #include <Position.h>
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_ttf.h>
 
 
 const int MAX_N_MOVES_IN_GAME = 200; // max n. of half-moves to avoid risk of memory leaks
 
 class Game{
     public:
+        std::string initial_pos_fen = starting_position_fen; // default: start by the usual initial position
         const int think_time = 1000; // milliseconds
         int n_moves = 0; // number of half-moves played in the game
         Move moves_list[MAX_N_MOVES_IN_GAME] = { }; // 0, ..., n_moves - 1, [garbage]  (n_moves non-garbage entries)
@@ -34,6 +36,7 @@ class Game{
         void DrawPieces(void);
         void HighlightSquare(uint16_t square, int color[3]);
         void ChooseTheme(std::string theme);
+        void ChooseTheme(int theme);
 
         // reset
         void ResetHistory(void);
@@ -44,6 +47,8 @@ class Game{
         void ReadMove(void);
 
         // gameplay 
+        void Menu(void);
+        void SettingsMenu(void);
         Move MoveFromString(std::string move_str);
         void PlayVsEngine(void);
         bool AskPromotion();
@@ -53,7 +58,7 @@ class Game{
         uint16_t SquareFromMouseClick(int x, int y);
         void EngineMove(void);
         void PlayerMove(void);
-        void ShowGame(std::string pgn_file);
+        void ShowGame();
 
         // game over 
         bool DrawByRepetitions(void);
@@ -77,8 +82,12 @@ class Game{
         bool is_running = true;
         SDL_Window* window;
         SDL_Renderer* renderer;
+        TTF_Font* font;
+        SDL_Texture* text_texture;
         SDL_Texture* board_texture;
         SDL_Texture* pieces_texture;
+        SDL_Texture* settings_texture;
+        SDL_Texture* back_arrow_texture;
         SDL_Rect piece_clips[12]; // ritagli dalla sprite-sheet
 
         // input management 

@@ -13,7 +13,7 @@ int GREEN_RGB[3] = { 0, 255, 0 };
 
 
 Game::Game(){
-
+    InitGraphics();
 }
 
 Game::~Game() {
@@ -69,7 +69,212 @@ void Game::PresentGame(void) {
 }
 
 
+void Game::Menu(void){
+    
+    // 3. Create text surface
+    SDL_Color WHITE = {255, 255, 255, 255};
+    const char* text = "Choose your color";
+    SDL_Surface* text_surface = TTF_RenderText_Blended(font, text, WHITE);
+    if (!text_surface) {
+        SDL_Log("Failed to create text surface: %s", TTF_GetError());
+        TTF_CloseFont(font);
+        return;
+    }
+    SDL_Texture* text_texture = SDL_CreateTextureFromSurface(renderer, text_surface);
+    SDL_FreeSurface(text_surface);
+    if (!text_texture) {
+        SDL_Log("Failed to create text texture: %s", SDL_GetError());
+        TTF_CloseFont(font);
+        return;
+    }
+
+    // 5. Center the text
+    SDL_Rect text_rect;
+    text_rect.w = 200;
+    text_rect.h = 200;
+    text_rect.x = (WIDTH  - text_rect.w) / 2;
+    text_rect.y = (HEIGHT - text_rect.h) / 2;
+
+    // 6. Present
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+    SDL_QueryTexture(text_texture, nullptr, nullptr, &text_rect.w, &text_rect.h);
+    SDL_RenderCopy(renderer, text_texture, nullptr, &text_rect);
+
+    SDL_Rect white_king_rect = { 400, 400, 100, 100 };
+    SDL_Rect black_king_rect = { 500, 400, 100, 100 };
+    SDL_Rect settings_rect = { WIDTH - 110, 10, 80, 80 };
+    SDL_RenderCopy(renderer, pieces_texture, &piece_clips[WHITE_KING], &white_king_rect);
+    SDL_RenderCopy(renderer, pieces_texture, &piece_clips[BLACK_KING], &black_king_rect);
+    SDL_RenderCopy(renderer, settings_texture, nullptr, &settings_rect);
+    SDL_RenderPresent(renderer);
+
+    SDL_Event event;
+    bool show_menu = true;
+    while (show_menu) {
+        while (SDL_PollEvent(&event)) {
+            // Quit the game
+            if (event.type == SDL_QUIT) {
+                Clean();
+                return;
+            }
+            // Choose a color
+            else if(event.type == SDL_MOUSEBUTTONDOWN){
+                if (event.button.button == SDL_BUTTON_LEFT) {
+                    SDL_Point mouse = { event.button.x , event.button.y };
+                    if (SDL_PointInRect(&mouse, &white_king_rect)){
+                        engine_is_white = false;
+                        show_menu = false;
+                        break;
+                    }
+                    else if (SDL_PointInRect(&mouse, &black_king_rect)){
+                        engine_is_white = true;
+                        show_menu = false;
+                        break;
+                    }
+                    else if (SDL_PointInRect(&mouse, &settings_rect)) {
+                        SettingsMenu();
+                        return;
+                    }
+                }
+            }
+        }
+        SDL_Delay(50);
+    }
+
+    // reset stuff
+    ResetHistory();
+    ResetPseudoLegalMoves();
+    PLY = 0;
+    ResetRepetitionStack();
+    // prepare position
+    pos = PositionFromFen(initial_pos_fen);
+    PseudoLegalMoves(pos, pseudolegal_moves);
+    repetition_stack[0] = pos.zobrist_key;
+
+    PlayVsEngine();
+
+    Clean();
+}
+
+
+void Game::SettingsMenu(void) {
+    const char* text_theme = "Theme: ";
+    SDL_Surface* text_theme_surface = TTF_RenderText_Blended(font, text_theme, /* white */{255,255,255,255});
+    SDL_Texture* text_theme_texture = SDL_CreateTextureFromSurface(renderer, text_theme_surface);
+    SDL_FreeSurface(text_theme_surface);
+    int chosen_theme = 0;
+
+    const char* text_askFEN = "Starting position FEN: ";
+    SDL_Surface* text_askFEN_surface = TTF_RenderText_Blended(font, text_askFEN, /* white */{255,255,255,255});
+    SDL_Texture* text_askFEN_texture = SDL_CreateTextureFromSurface(renderer, text_askFEN_surface);
+    SDL_FreeSurface(text_askFEN_surface);
+    
+
+    // Initialize rectangles
+    SDL_Rect square_rect;
+    SDL_Rect text_theme_rect = { 100, 200, 200, 200 };
+    SDL_Rect back_arrow_rect = { 50, 50, 60, 60 };
+    SDL_Rect classic_theme_rect = { 400, 200, 40, 40 };
+    SDL_Rect sea_theme_rect = { 500, 200, 40, 40 };
+    SDL_Rect pink_theme_rect = { 600, 200, 40, 40 };
+    SDL_Rect askFEN_rect = { 100, 300, 200, 200 };
+    SDL_Rect input_fen_rect = { 500, 300, 200, 200 };
+
+    // input text 
+    std::string input_fen;
+    SDL_Surface* input_fen_surface;
+    SDL_Texture* input_fen_texture;
+    SDL_StartTextInput();
+
+    SDL_Event event;
+    bool show_menu = true;
+
+    while (show_menu) {
+        SDL_RenderClear(renderer);
+
+        // Draw "Theme", "Ask FEN" and the "go back" arrow
+        SDL_QueryTexture(text_theme_texture, nullptr, nullptr, &text_theme_rect.w, &text_theme_rect.h);
+        SDL_RenderCopy(renderer, text_theme_texture, nullptr, &text_theme_rect);
+        SDL_QueryTexture(text_askFEN_texture, nullptr, nullptr, &askFEN_rect.w, &askFEN_rect.h);
+        SDL_RenderCopy(renderer, text_askFEN_texture, nullptr, &askFEN_rect);
+        SDL_RenderCopy(renderer, back_arrow_texture, nullptr, &back_arrow_rect);
+
+        // Draw the colored squares representing themes
+        for(int theme = 0; theme < 3; theme++){
+            ChooseTheme(theme);
+            for(int i = 0; i < 2; i++){
+                for(int j = 0; j < 2; j++){
+                    square_rect = { 400 + theme*100 + j*20, 200 + i*20, 20, 20 };
+                    if((i+j)%2 == 0) SDL_SetRenderDrawColor(renderer, LIGHT_SQUARES[0], LIGHT_SQUARES[1], LIGHT_SQUARES[2], 255);
+                    else SDL_SetRenderDrawColor(renderer, DARK_SQUARES[0], DARK_SQUARES[1], DARK_SQUARES[2], 255);
+                    SDL_RenderFillRect(renderer, &square_rect);
+                }
+            }
+        }
+        ChooseTheme(chosen_theme);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+
+        // Draw user's input text
+        input_fen_surface = TTF_RenderText_Blended(font, input_fen.c_str(), /* white */{255,255,255,255});
+        input_fen_texture = SDL_CreateTextureFromSurface(renderer, input_fen_surface);
+        SDL_FreeSurface(input_fen_surface);
+        SDL_QueryTexture(input_fen_texture, nullptr, nullptr, &input_fen_rect.w, &input_fen_rect.h);
+        SDL_RenderCopy(renderer, input_fen_texture, nullptr, &input_fen_rect);
+
+        SDL_RenderPresent(renderer);
+
+        // Handle events
+        while (SDL_PollEvent(&event)) {
+            // Quit the game
+            if (event.type == SDL_QUIT) {
+                SDL_DestroyTexture(text_theme_texture);
+                SDL_DestroyTexture(text_askFEN_texture);
+                SDL_DestroyTexture(input_fen_texture);
+                Clean(); return;
+            }
+            // Mouse click
+            else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
+                SDL_Point mouse = { event.button.x , event.button.y };
+                // back to main menu
+                if (SDL_PointInRect(&mouse, &back_arrow_rect)){
+                    Menu(); return;
+                }
+                // choose theme
+                else if (SDL_PointInRect(&mouse, &classic_theme_rect)) chosen_theme = 0;
+                else if (SDL_PointInRect(&mouse, &sea_theme_rect)) chosen_theme = 1;
+                else if (SDL_PointInRect(&mouse, &pink_theme_rect)) chosen_theme = 2;
+                // input text
+                // ... 
+            }
+            // Input FEN string
+            else if (event.type == SDL_TEXTINPUT){
+                input_fen += event.text.text;
+            }
+            if(event.type == SDL_KEYDOWN){
+                if (event.key.keysym.sym == SDLK_BACKSPACE && !input_fen.empty()) {
+                    input_fen.pop_back();
+                    input_fen_surface = TTF_RenderText_Blended(font, input_fen.c_str(), /* white */{255,255,255,255});
+                    input_fen_texture = SDL_CreateTextureFromSurface(renderer, input_fen_surface);
+                    SDL_FreeSurface(input_fen_surface);
+                    SDL_QueryTexture(input_fen_texture, nullptr, nullptr, &input_fen_rect.w, &input_fen_rect.h);
+                    SDL_RenderCopy(renderer, input_fen_texture, nullptr, &input_fen_rect);
+                    SDL_RenderPresent(renderer);
+                }
+                if (event.key.keysym.sym == SDLK_RETURN) {
+                    initial_pos_fen = input_fen;
+                    input_fen = "";
+                }
+            }
+        }
+    }
+
+    SDL_StopTextInput();
+}
+
+
 void Game::InitGraphics(){
+    // initialize SDL, images and fonts
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         std::cerr << "SDL_Init error: " << SDL_GetError() << std::endl;
         return;
@@ -78,7 +283,18 @@ void Game::InitGraphics(){
         std::cerr << "SDL_image Init Error: " << IMG_GetError() << std::endl;
         return;
     }
+    if (TTF_Init() == -1) {
+        SDL_Log("TTF_Init failed: %s", TTF_GetError());
+        return;
+    }
+    // load font
+    font = TTF_OpenFont("../assets/Roboto-Regular.ttf", 32);
+    if (!font) {
+        SDL_Log("Failed to load font: %s", TTF_GetError());
+        return;
+    }
 
+    // create window and renderer
     window = SDL_CreateWindow(
         "Chess GUI - demo",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -90,7 +306,6 @@ void Game::InitGraphics(){
         SDL_Quit();
         return;
     }
-
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
     // Carica la sprite-sheet dei pezzi
@@ -102,13 +317,11 @@ void Game::InitGraphics(){
     }
     pieces_texture = SDL_CreateTextureFromSurface(renderer, temp_surface);
     SDL_FreeSurface(temp_surface);
-
     if (!pieces_texture) {
         std::cerr << "CreateTextureFromSurface Error: " << SDL_GetError() << std::endl;
         Clean();
         return;
     }
-
     // Supponiamo immagine 2 righe x 6 colonne
     int w = 133; // <- cambia con la larghezza reale di ogni pezzo
     int h = 133; // <- cambia con l’altezza reale
@@ -125,7 +338,36 @@ void Game::InitGraphics(){
     piece_clips[BLACK_ROOK] = { 4*w, h, w, h };
     piece_clips[BLACK_PAWN] = { 5*w, h, w, h };
 
-    DrawBoard();
+    // Load settings symbol
+    // Carica la sprite-sheet dei pezzi
+    SDL_Surface* settings_surface = IMG_Load("../assets/settings.png");
+    if (!settings_surface) {
+        std::cerr << "IMG_Load Error: " << IMG_GetError() << std::endl;
+        Clean();
+        return;
+    }
+    settings_texture = SDL_CreateTextureFromSurface(renderer, settings_surface);
+    SDL_FreeSurface(settings_surface);
+    if (!settings_texture) {
+        std::cerr << "CreateTextureFromSurface Error: " << SDL_GetError() << std::endl;
+        Clean();
+        return;
+    }
+
+    // Load back arrow symbol
+    SDL_Surface* back_arrow_surface = IMG_Load("../assets/back_arrow.png");
+    if (!back_arrow_surface) {
+        std::cerr << "IMG_Load Error: " << IMG_GetError() << std::endl;
+        Clean();
+        return;
+    }
+    back_arrow_texture = SDL_CreateTextureFromSurface(renderer, back_arrow_surface);
+    SDL_FreeSurface(back_arrow_surface);
+    if (!back_arrow_texture) {
+        std::cerr << "CreateTextureFromSurface Error: " << SDL_GetError() << std::endl;
+        Clean();
+        return;
+    }
 }
 
 
@@ -352,11 +594,13 @@ void Game::ResetHistory(void){
     game_over = false;
 }
 
+
 void Game::ResetPseudoLegalMoves(void){
     for(int i = 0; i < MAX_NUMBER_OF_MOVES; i++){
         pseudolegal_moves[i] = 0;
     }
 }
+
 
 bool Game::DrawByRepetitions(void){
     if(n_moves < 6) return false;
@@ -482,9 +726,11 @@ void Game::PlayVsEngine(void){
         game_over = GameOver();
         if(game_over) break;
     }*/
-    PresentGame();
+    // PresentGame();
 
-    InitGraphics();
+    // InitGraphics();
+
+    DrawBoard();
     
     SDL_RenderCopy(renderer, board_texture, NULL, NULL);
     SDL_RenderPresent(renderer);
@@ -639,10 +885,13 @@ bool Game::AskPromotion(){
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
             // quit
-            if (e.type == SDL_QUIT) { is_running = false; wait = false; }
-
+            if (e.type == SDL_QUIT) {
+                is_running = false; 
+                wait = false; 
+                return false;
+            }
             // left click -> choose piece
-            if (e.type == SDL_MOUSEBUTTONDOWN) {
+            else if (e.type == SDL_MOUSEBUTTONDOWN) {
                 int mx = e.button.x, my = e.button.y; // mouse click coordinates
                 // check where the player clicked
                 for (uint16_t idx = 0; idx < 4; idx++) {
@@ -901,9 +1150,27 @@ void Game::ChooseTheme(std::string theme){
         DARK_SQUARES[0] = 200; DARK_SQUARES[1] = 140; DARK_SQUARES[2] = 68;
     }
 }
+void Game::ChooseTheme(int theme){
+    if(theme == 2){
+        LIGHT_SQUARES[0] = 250; LIGHT_SQUARES[1] = 220; LIGHT_SQUARES[2] = 245;
+        DARK_SQUARES[0] = 255; DARK_SQUARES[1] = 140; DARK_SQUARES[2] = 230;
+    }
+    else if(theme == 1){
+        LIGHT_SQUARES[0] = 185; LIGHT_SQUARES[1] = 225; LIGHT_SQUARES[2] = 255;
+        DARK_SQUARES[0] = 15; DARK_SQUARES[1] = 150; DARK_SQUARES[2] = 250;
+    }
+    else {
+        LIGHT_SQUARES[0] = 255; LIGHT_SQUARES[1] = 200; LIGHT_SQUARES[2] = 150;
+        DARK_SQUARES[0] = 200; DARK_SQUARES[1] = 140; DARK_SQUARES[2] = 68;
+    }
+}
 
 
-void Game::ShowGame(std::string pgn_file){
+void Game::ShowGame(){
+    std::cout << "Insert path to PGN file \n";
+    std::string pgn_file;
+    std::cin >> pgn_file;
+
     // extract list of moves from the PGN file and save as vector of strings in Standard Algebraic Notation [SAN]
     std::vector<std::string> moves_SAN_history = ReadGameFromPGN(pgn_file);
     size_t n_moves = moves_SAN_history.size();
@@ -952,6 +1219,7 @@ void Game::ShowGame(std::string pgn_file){
 
 
     InitGraphics();
+    DrawBoard();
     SDL_RenderCopy(renderer, board_texture, NULL, NULL);
     SDL_RenderPresent(renderer);
 
@@ -989,6 +1257,12 @@ void Game::ShowGame(std::string pgn_file){
                         UnmakeMove(pos, move, states[idx_move_in_game]);
                     }
                 }
+                // go to starting pos (down arrow)
+                else if(event.key.keysym.sym == SDLK_DOWN) {
+                    idx_move_in_game = 0;
+                    pos = starting_pos;
+                    from = 64; to = 64; // trick to avoid coloring the squares
+                }
             }
         }
 
@@ -1014,10 +1288,14 @@ void Game::ShowGame(std::string pgn_file){
 
 
 void Game::Clean(){
+    // 8. Cleanup
+    if (text_texture) SDL_DestroyTexture(text_texture);
+    if (font) TTF_CloseFont(font);
     if (pieces_texture) SDL_DestroyTexture(pieces_texture);
     if (board_texture) SDL_DestroyTexture(board_texture);
     if (renderer) SDL_DestroyRenderer(renderer);
     if (window) SDL_DestroyWindow(window);
+    TTF_Quit();
     IMG_Quit();
     SDL_Quit();
 }
