@@ -6,6 +6,7 @@
 #include <Utilities.h>
 #include <Move.h>
 #include <Position.h>
+#include <Book.h>
 #include <SDL.h>
 #include <SDL_image.h>
 #include <SDL_ttf.h>
@@ -16,7 +17,7 @@ const int MAX_N_MOVES_IN_GAME = 200; // max n. of half-moves to avoid risk of me
 class Game{
     public:
         std::string initial_pos_fen = starting_position_fen; // default: start by the usual initial position
-        const int think_time = 1000; // milliseconds
+        int think_time = 1000; // milliseconds
         int n_moves = 0; // number of half-moves played in the game
         Move moves_list[MAX_N_MOVES_IN_GAME] = { }; // 0, ..., n_moves - 1, [garbage]  (n_moves non-garbage entries)
         Position positions_list[MAX_N_MOVES_IN_GAME]; // 0, ..., n_moves, [garbage]    (n_moves + 1 non-garbage entries)
@@ -58,7 +59,7 @@ class Game{
         uint16_t SquareFromMouseClick(int x, int y);
         void EngineMove(void);
         void PlayerMove(void);
-        void ShowGame();
+        void ShowGame(std::string pgn_file);
 
         // game over 
         bool DrawByRepetitions(void);
@@ -77,8 +78,8 @@ class Game{
         const int HEIGHT = 960; // height of screen
         int SQUARE_SIZE = 110;
         int LEFT_PADDING = 40, TOP_PADDING = 40;
-        int LIGHT_SQUARES[3] = {255, 200, 150};
-        int DARK_SQUARES[3] = {200, 140, 68};
+        int LIGHT_SQUARES[3] = {255, 244, 230};
+        int DARK_SQUARES[3] = {190, 155, 123};
         bool is_running = true;
         SDL_Window* window;
         SDL_Renderer* renderer;

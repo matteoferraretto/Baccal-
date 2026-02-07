@@ -182,8 +182,10 @@ const int positive_infinity = std::numeric_limits<int>::max();
 // random generator of 64-bit unsigned integers
 uint64_t rand64();
 
-// integer power
-//int IntPow(int x, unsigned int p);
+
+// random generator of integer < n
+int random_int(int n);
+
 
 // write / read bitboard array to / from file
 template <size_t N, size_t M>

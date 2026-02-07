@@ -60,6 +60,11 @@ std::mt19937_64 rng(20250704); // Fixed seed for reproducibility
 uint64_t rand64(){
     return rng();
 }; 
+int random_int(int n){
+    static std::mt19937 rng(std::random_device{}()); // seeded once
+    std::uniform_int_distribution<int> dist(0, n-1);
+    return dist(rng);
+}
 
 
 void write_to_file(const uint64_t *arr, size_t N, std::string file_name){
@@ -99,9 +104,7 @@ std::vector<std::string> ReadGameFromPGN(std::string filename) {
     while (std::getline(fin, line)) {
         // Skip tags
         if (!in_moves) {
-            if (line.empty()) {
-                in_moves = true; // blank line marks end of tags
-            }
+            if (line.empty()) in_moves = true; // blank line marks end of tags
             continue;
         }
         // Collect move text (could span multiple lines)
@@ -117,6 +120,7 @@ std::vector<std::string> ReadGameFromPGN(std::string filename) {
         if (token.find('.') != std::string::npos) continue;  // "1.", "23..."
         if (token == "1-0" || token == "0-1" || token == "1/2-1/2" || token == "*") continue;
         tokens.push_back(token);
+        std::cout << token << "\n";
     }
 
     return tokens; // e.g. ["e4", "e5", "Nf3", "Nc6", ...]

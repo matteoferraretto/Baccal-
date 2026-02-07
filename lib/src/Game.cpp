@@ -142,16 +142,6 @@ void Game::Menu(void){
         SDL_Delay(50);
     }
 
-    // reset stuff
-    ResetHistory();
-    ResetPseudoLegalMoves();
-    PLY = 0;
-    ResetRepetitionStack();
-    // prepare position
-    pos = PositionFromFen(initial_pos_fen);
-    PseudoLegalMoves(pos, pseudolegal_moves);
-    repetition_stack[0] = pos.zobrist_key;
-
     PlayVsEngine();
 
     Clean();
@@ -165,27 +155,53 @@ void Game::SettingsMenu(void) {
     SDL_FreeSurface(text_theme_surface);
     int chosen_theme = 0;
 
-    const char* text_askFEN = "Starting position FEN: ";
+    const char* text_askFEN = "Starting pos. FEN: ";
     SDL_Surface* text_askFEN_surface = TTF_RenderText_Blended(font, text_askFEN, /* white */{255,255,255,255});
     SDL_Texture* text_askFEN_texture = SDL_CreateTextureFromSurface(renderer, text_askFEN_surface);
     SDL_FreeSurface(text_askFEN_surface);
-    
 
+    const char* text_askTime = "Think for [ms]: ";
+    SDL_Surface* text_askTime_surface = TTF_RenderText_Blended(font, text_askTime, /* white */{255,255,255,255});
+    SDL_Texture* text_askTime_texture = SDL_CreateTextureFromSurface(renderer, text_askTime_surface);
+    SDL_FreeSurface(text_askTime_surface);
+
+    const char* text_askShow = "Path to PGN: ";
+    SDL_Surface* text_askShow_surface = TTF_RenderText_Blended(font, text_askShow, /* white */{255,255,255,255});
+    SDL_Texture* text_askShow_texture = SDL_CreateTextureFromSurface(renderer, text_askShow_surface);
+    SDL_FreeSurface(text_askShow_surface);
+    
     // Initialize rectangles
     SDL_Rect square_rect;
-    SDL_Rect text_theme_rect = { 100, 200, 200, 200 };
+    SDL_Rect text_theme_rect = { 50, 200, 200, 200 };
     SDL_Rect back_arrow_rect = { 50, 50, 60, 60 };
-    SDL_Rect classic_theme_rect = { 400, 200, 40, 40 };
-    SDL_Rect sea_theme_rect = { 500, 200, 40, 40 };
-    SDL_Rect pink_theme_rect = { 600, 200, 40, 40 };
-    SDL_Rect askFEN_rect = { 100, 300, 200, 200 };
-    SDL_Rect input_fen_rect = { 500, 300, 200, 200 };
+    SDL_Rect classic_theme_rect = { 300, 200, 40, 40 };
+    SDL_Rect sea_theme_rect = { 400, 200, 40, 40 };
+    SDL_Rect pink_theme_rect = { 500, 200, 40, 40 };
+    SDL_Rect green_theme_rect = { 600, 200, 40, 40 };
+    SDL_Rect askFEN_rect = { 50, 300, 200, 200 };
+    SDL_Rect input_fen_rect = { 250, 300, 400, 40 };
+    SDL_Rect askTime_rect = { 50, 400, 200, 200 };
+    SDL_Rect input_time_rect = { 250, 400, 400, 40 };
+    SDL_Rect askShow_rect = { 50, 500, 200, 200 };
+    SDL_Rect input_show_rect = { 250, 500, 400, 40 };
 
-    // input text 
+    // input starting position FEN 
+    bool enable_input_fen = false;
     std::string input_fen;
     SDL_Surface* input_fen_surface;
     SDL_Texture* input_fen_texture;
-    SDL_StartTextInput();
+
+    // input thinking time
+    bool enable_input_time = false;
+    std::string input_time;
+    SDL_Surface* input_time_surface;
+    SDL_Texture* input_time_texture;
+
+    // input path to PGN file to be shown
+    bool enable_input_show = false;
+    std::string input_show;
+    SDL_Surface* input_show_surface;
+    SDL_Texture* input_show_texture;
 
     SDL_Event event;
     bool show_menu = true;
@@ -198,14 +214,22 @@ void Game::SettingsMenu(void) {
         SDL_RenderCopy(renderer, text_theme_texture, nullptr, &text_theme_rect);
         SDL_QueryTexture(text_askFEN_texture, nullptr, nullptr, &askFEN_rect.w, &askFEN_rect.h);
         SDL_RenderCopy(renderer, text_askFEN_texture, nullptr, &askFEN_rect);
+        SDL_QueryTexture(text_askTime_texture, nullptr, nullptr, &askTime_rect.w, &askTime_rect.h);
+        SDL_RenderCopy(renderer, text_askTime_texture, nullptr, &askTime_rect);
+        SDL_QueryTexture(text_askShow_texture, nullptr, nullptr, &askShow_rect.w, &askShow_rect.h);
+        SDL_RenderCopy(renderer, text_askShow_texture, nullptr, &askShow_rect);
         SDL_RenderCopy(renderer, back_arrow_texture, nullptr, &back_arrow_rect);
+        SDL_SetRenderDrawColor(renderer, 40, 40, 40, 255);
+        SDL_RenderFillRect(renderer, &input_fen_rect);
+        SDL_RenderFillRect(renderer, &input_time_rect);
+        SDL_RenderFillRect(renderer, &input_show_rect);       
 
         // Draw the colored squares representing themes
-        for(int theme = 0; theme < 3; theme++){
+        for(int theme = 0; theme < 4; theme++){
             ChooseTheme(theme);
             for(int i = 0; i < 2; i++){
                 for(int j = 0; j < 2; j++){
-                    square_rect = { 400 + theme*100 + j*20, 200 + i*20, 20, 20 };
+                    square_rect = { 300 + theme*100 + j*20, 200 + i*20, 20, 20 };
                     if((i+j)%2 == 0) SDL_SetRenderDrawColor(renderer, LIGHT_SQUARES[0], LIGHT_SQUARES[1], LIGHT_SQUARES[2], 255);
                     else SDL_SetRenderDrawColor(renderer, DARK_SQUARES[0], DARK_SQUARES[1], DARK_SQUARES[2], 255);
                     SDL_RenderFillRect(renderer, &square_rect);
@@ -222,7 +246,21 @@ void Game::SettingsMenu(void) {
         SDL_QueryTexture(input_fen_texture, nullptr, nullptr, &input_fen_rect.w, &input_fen_rect.h);
         SDL_RenderCopy(renderer, input_fen_texture, nullptr, &input_fen_rect);
 
+        input_time_surface = TTF_RenderText_Blended(font, input_time.c_str(), /* white */{255,255,255,255});
+        input_time_texture = SDL_CreateTextureFromSurface(renderer, input_time_surface);
+        SDL_FreeSurface(input_time_surface);
+        SDL_QueryTexture(input_time_texture, nullptr, nullptr, &input_time_rect.w, &input_time_rect.h);
+        SDL_RenderCopy(renderer, input_time_texture, nullptr, &input_time_rect);
+
+        input_show_surface = TTF_RenderText_Blended(font, input_show.c_str(), /* white */{255,255,255,255});
+        input_show_texture = SDL_CreateTextureFromSurface(renderer, input_show_surface);
+        SDL_FreeSurface(input_show_surface);
+        SDL_QueryTexture(input_show_texture, nullptr, nullptr, &input_show_rect.w, &input_show_rect.h);
+        SDL_RenderCopy(renderer, input_show_texture, nullptr, &input_show_rect);
+
         SDL_RenderPresent(renderer);
+
+        SDL_StartTextInput();
 
         // Handle events
         while (SDL_PollEvent(&event)) {
@@ -244,32 +282,64 @@ void Game::SettingsMenu(void) {
                 else if (SDL_PointInRect(&mouse, &classic_theme_rect)) chosen_theme = 0;
                 else if (SDL_PointInRect(&mouse, &sea_theme_rect)) chosen_theme = 1;
                 else if (SDL_PointInRect(&mouse, &pink_theme_rect)) chosen_theme = 2;
+                else if (SDL_PointInRect(&mouse, &green_theme_rect)) chosen_theme = 3;
                 // input text
-                // ... 
-            }
-            // Input FEN string
-            else if (event.type == SDL_TEXTINPUT){
-                input_fen += event.text.text;
-            }
-            if(event.type == SDL_KEYDOWN){
-                if (event.key.keysym.sym == SDLK_BACKSPACE && !input_fen.empty()) {
-                    input_fen.pop_back();
-                    input_fen_surface = TTF_RenderText_Blended(font, input_fen.c_str(), /* white */{255,255,255,255});
-                    input_fen_texture = SDL_CreateTextureFromSurface(renderer, input_fen_surface);
-                    SDL_FreeSurface(input_fen_surface);
-                    SDL_QueryTexture(input_fen_texture, nullptr, nullptr, &input_fen_rect.w, &input_fen_rect.h);
-                    SDL_RenderCopy(renderer, input_fen_texture, nullptr, &input_fen_rect);
-                    SDL_RenderPresent(renderer);
+                else if (SDL_PointInRect(&mouse, &input_fen_rect)){
+                    enable_input_fen = true; enable_input_time = false; enable_input_show = false;
                 }
-                if (event.key.keysym.sym == SDLK_RETURN) {
+                else if (SDL_PointInRect(&mouse, &input_time_rect)){
+                    enable_input_fen = false; enable_input_time = true; enable_input_show = false;
+                }
+                else if (SDL_PointInRect(&mouse, &input_show_rect)){
+                    enable_input_fen = false; enable_input_time = false; enable_input_show = true;
+                }
+            }
+            // Input FEN string, time etc.
+            else if (enable_input_fen && event.type == SDL_TEXTINPUT) input_fen += event.text.text;
+            else if (enable_input_time && event.type == SDL_TEXTINPUT) input_time += event.text.text;
+            else if (enable_input_show && event.type == SDL_TEXTINPUT) input_show += event.text.text;
+            // 
+            if(enable_input_fen && event.type == SDL_KEYDOWN){
+                if (event.key.keysym.sym == SDLK_BACKSPACE && !input_fen.empty()) input_fen.pop_back();
+                else if (event.key.keysym.sym == SDLK_RETURN) {
                     initial_pos_fen = input_fen;
                     input_fen = "";
+                    SDL_StopTextInput();
+                }
+                // Use ctrl + v to paste a FEN string
+                else if ( (event.key.keysym.mod & KMOD_CTRL) && event.key.keysym.sym == SDLK_v){
+                    char* clipboard = SDL_GetClipboardText();
+                    if (clipboard){
+                        input_fen += clipboard;
+                        SDL_free(clipboard);
+                    }
+                }
+            }
+            if(enable_input_time && event.type == SDL_KEYDOWN){
+                if (event.key.keysym.sym == SDLK_BACKSPACE && !input_time.empty()) input_time.pop_back();
+                else if (event.key.keysym.sym == SDLK_RETURN) {
+                    think_time = std::stoi( input_time );
+                    input_time = "";
+                    SDL_StopTextInput();
+                }
+            }
+            if(enable_input_show && event.type == SDL_KEYDOWN){
+                if (event.key.keysym.sym == SDLK_BACKSPACE && !input_show.empty()) input_show.pop_back();
+                else if (event.key.keysym.sym == SDLK_RETURN) {
+                    SDL_StopTextInput();
+                    ShowGame(input_show);
+                }
+                // Use ctrl + v to paste a FEN string
+                else if ( (event.key.keysym.mod & KMOD_CTRL) && event.key.keysym.sym == SDLK_v){
+                    char* clipboard = SDL_GetClipboardText();
+                    if (clipboard){
+                        input_show += clipboard;
+                        SDL_free(clipboard);
+                    }
                 }
             }
         }
     }
-
-    SDL_StopTextInput();
 }
 
 
@@ -288,7 +358,7 @@ void Game::InitGraphics(){
         return;
     }
     // load font
-    font = TTF_OpenFont("../assets/Roboto-Regular.ttf", 32);
+    font = TTF_OpenFont("../assets/Roboto-Regular.ttf", 24);
     if (!font) {
         SDL_Log("Failed to load font: %s", TTF_GetError());
         return;
@@ -451,7 +521,14 @@ void Game::EngineMove() {
     StateMemory state;
     // engine's turn
     if(pos.white_to_move == engine_is_white){
-        engine_move = IterativeDeepening();
+        // probe book or think
+        BookEntry* entry = BookProbe(pos.zobrist_key);
+        if(entry != nullptr){
+            int r = random_int((*entry).n_memorized_moves);
+            engine_move = (*entry).possible_moves[r];
+        } 
+        else engine_move = IterativeDeepening();
+        // make the move
         MakeMove(pos, engine_move, state);
         // safety check: is move legal?
         if(engine_move == 0 || !IsLegal(pos, engine_move)){
@@ -577,6 +654,20 @@ void Game::PlayerMove() {
                 from = moves_list[n_moves - 1] & 0b0000000000111111;
                 to = (moves_list[n_moves - 1] >> 6) & 0b0000000000111111;
                 pos = positions_list[n_moves];
+            }
+            // Retire the last move
+            else if(event.key.keysym.sym == SDLK_r) {
+                if(idx_pos_in_game > 1 && idx_pos_in_game <= n_moves && idx_move_in_game >= 1){        
+                    from = moves_list[idx_move_in_game-1] & 0b0000000000111111;
+                    to = (moves_list[idx_move_in_game-1] >> 6) & 0b0000000000111111;
+                    idx_move_in_game -= 2;
+                    idx_pos_in_game -= 2;
+                    n_moves -= 2;
+                    pos = positions_list[idx_pos_in_game];
+                    ResetPseudoLegalMoves();
+                    PseudoLegalMoves(pos, pseudolegal_moves);
+                    continue;
+                }
             }
         }
     }
@@ -729,6 +820,17 @@ void Game::PlayVsEngine(void){
     // PresentGame();
 
     // InitGraphics();
+
+    // reset stuff
+    ResetHistory();
+    ResetPseudoLegalMoves();
+    PLY = 0;
+    ResetRepetitionStack();
+    // prepare position
+    pos = PositionFromFen(initial_pos_fen);
+    PseudoLegalMoves(pos, pseudolegal_moves);
+    positions_list[0] = pos;
+    repetition_stack[0] = pos.zobrist_key;
 
     DrawBoard();
     
@@ -1137,6 +1239,10 @@ void Game::FindPiece(int square){
 
 
 void Game::ChooseTheme(std::string theme){
+    if(theme == "green"){
+        LIGHT_SQUARES[0] = 238; LIGHT_SQUARES[1] = 238; LIGHT_SQUARES[2] = 210;
+        DARK_SQUARES[0] = 118; DARK_SQUARES[1] = 150; DARK_SQUARES[2] = 86;
+    }
     if(theme == "pink"){
         LIGHT_SQUARES[0] = 250; LIGHT_SQUARES[1] = 220; LIGHT_SQUARES[2] = 245;
         DARK_SQUARES[0] = 255; DARK_SQUARES[1] = 140; DARK_SQUARES[2] = 230;
@@ -1146,12 +1252,18 @@ void Game::ChooseTheme(std::string theme){
         DARK_SQUARES[0] = 15; DARK_SQUARES[1] = 150; DARK_SQUARES[2] = 250;
     }
     else {
-        LIGHT_SQUARES[0] = 255; LIGHT_SQUARES[1] = 200; LIGHT_SQUARES[2] = 150;
-        DARK_SQUARES[0] = 200; DARK_SQUARES[1] = 140; DARK_SQUARES[2] = 68;
+        /*LIGHT_SQUARES[0] = 255; LIGHT_SQUARES[1] = 200; LIGHT_SQUARES[2] = 150;
+        DARK_SQUARES[0] = 200; DARK_SQUARES[1] = 140; DARK_SQUARES[2] = 68;*/
+        LIGHT_SQUARES[0] = 255; LIGHT_SQUARES[1] = 244; LIGHT_SQUARES[2] = 230;
+        DARK_SQUARES[0] = 190; DARK_SQUARES[1] = 155; DARK_SQUARES[2] = 123;
     }
 }
 void Game::ChooseTheme(int theme){
-    if(theme == 2){
+    if(theme == 3){
+        LIGHT_SQUARES[0] = 238; LIGHT_SQUARES[1] = 238; LIGHT_SQUARES[2] = 210;
+        DARK_SQUARES[0] = 118; DARK_SQUARES[1] = 150; DARK_SQUARES[2] = 86;
+    }
+    else if(theme == 2){
         LIGHT_SQUARES[0] = 250; LIGHT_SQUARES[1] = 220; LIGHT_SQUARES[2] = 245;
         DARK_SQUARES[0] = 255; DARK_SQUARES[1] = 140; DARK_SQUARES[2] = 230;
     }
@@ -1160,24 +1272,33 @@ void Game::ChooseTheme(int theme){
         DARK_SQUARES[0] = 15; DARK_SQUARES[1] = 150; DARK_SQUARES[2] = 250;
     }
     else {
-        LIGHT_SQUARES[0] = 255; LIGHT_SQUARES[1] = 200; LIGHT_SQUARES[2] = 150;
-        DARK_SQUARES[0] = 200; DARK_SQUARES[1] = 140; DARK_SQUARES[2] = 68;
+        /*LIGHT_SQUARES[0] = 255; LIGHT_SQUARES[1] = 200; LIGHT_SQUARES[2] = 150;
+        DARK_SQUARES[0] = 200; DARK_SQUARES[1] = 140; DARK_SQUARES[2] = 68;*/
+        LIGHT_SQUARES[0] = 255; LIGHT_SQUARES[1] = 244; LIGHT_SQUARES[2] = 230;
+        DARK_SQUARES[0] = 190; DARK_SQUARES[1] = 155; DARK_SQUARES[2] = 123;
     }
 }
 
 
-void Game::ShowGame(){
-    std::cout << "Insert path to PGN file \n";
+void Game::ShowGame(std::string pgn_file){
+    /*std::cout << "Insert path to PGN file \n";
     std::string pgn_file;
-    std::cin >> pgn_file;
+    std::cin >> pgn_file;*/
 
     // extract list of moves from the PGN file and save as vector of strings in Standard Algebraic Notation [SAN]
     std::vector<std::string> moves_SAN_history = ReadGameFromPGN(pgn_file);
+
+    for(auto s: moves_SAN_history){
+        std::cout << s << "\n";
+    }
+
     size_t n_moves = moves_SAN_history.size();
     Position starting_pos = PositionFromFen(starting_position_fen);
     pos = starting_pos;
+    ResetHistory();
     ResetRepetitionStack();
     ResetPseudoLegalMoves();
+    PLY = 0;
     PseudoLegalMoves(pos, pseudolegal_moves);
 
     Move move = 0;

@@ -25,6 +25,8 @@ int main(int argc, char* argv[]){
     HistoryInit();
     PreComputeBitboards(true); // true = read from file
 
+    BookInit();
+    FillBook();
     /*std::string pos_fen;
     unsigned int max_depth;
     std::cout << "Insert a valid FEN string \n";
